@@ -59,31 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { category, search, page = "1", limit = "20", sync = "false" } = req.query;
       
-      if (sync === "true") {
-        const apiSettings = await storage.getApiSettings(userId);
-        if (!apiSettings) {
-          return res.status(400).json({ message: "API settings not configured" });
-        }
-
-        const bigcommerce = new BigCommerceService(apiSettings);
-        const bigCommerceProducts = await bigcommerce.getProducts();
-
-        // Store products in database
-        for (const product of bigCommerceProducts) {
-          await storage.createProduct(userId, {
-            id: product.id.toString(),
-            name: product.name,
-            sku: product.sku,
-            description: product.description,
-            category: product.primary_category?.name || null,
-            regularPrice: product.price.toString(),
-            salePrice: product.sale_price ? product.sale_price.toString() : null,
-            stock: product.inventory_level || 0,
-            weight: product.weight ? product.weight.toString() : null,
-            status: product.is_visible ? "published" : "draft",
-          });
-        }
-      }
+      // Note: Sync functionality moved to dedicated POST /api/sync endpoint
 
       const filters = {
         category: category as string,
@@ -96,6 +72,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error: any) {
       console.error("Error in /api/products:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Dedicated sync endpoint for frontend
+  app.post("/api/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const apiSettings = await storage.getApiSettings(userId);
+      if (!apiSettings) {
+        return res.status(400).json({ message: "API settings not configured" });
+      }
+
+      const bigcommerce = new BigCommerceService(apiSettings);
+      const productsResponse = await bigcommerce.getProducts();
+      const bigCommerceProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
+
+      console.log(`BigCommerce API response:`, JSON.stringify(productsResponse, null, 2));
+      console.log(`Syncing ${bigCommerceProducts.length} products for user ${userId}`);
+
+      // Store products in database
+      for (const product of bigCommerceProducts) {
+        await storage.createProduct(userId, {
+          id: product.id.toString(),
+          name: product.name,
+          sku: product.sku,
+          description: product.description,
+          category: product.primary_category?.name || null,
+          regularPrice: product.price.toString(),
+          salePrice: product.sale_price ? product.sale_price.toString() : null,
+          stock: product.inventory_level || 0,
+          weight: product.weight ? product.weight.toString() : null,
+          status: product.is_visible ? "published" : "draft",
+        });
+      }
+
+      res.json({ 
+        message: `Successfully synced ${bigCommerceProducts.length} products`,
+        count: bigCommerceProducts.length 
+      });
+    } catch (error: any) {
+      console.error("Error in /api/sync:", error);
       res.status(500).json({ message: error.message });
     }
   });

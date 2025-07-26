@@ -56,6 +56,8 @@ export class BigCommerceService {
 
   async getProducts(page = 1, limit = 50): Promise<{ products: Product[]; total: number }> {
     try {
+      console.log(`Fetching products from BigCommerce (page: ${page}, limit: ${limit})`);
+      
       const [productsResponse, categoriesResponse] = await Promise.all([
         this.api.get('/catalog/products', {
           params: {
@@ -67,11 +69,14 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
+      console.log(`Raw BigCommerce products response:`, JSON.stringify(productsResponse.data, null, 2));
+      console.log(`Raw BigCommerce categories response:`, JSON.stringify(categoriesResponse.data, null, 2));
+
       const categories = new Map(
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat.name])
       );
 
-      const products: Product[] = productsResponse.data.data.map((bcProduct: BigCommerceProduct) => ({
+      const products: Product[] = productsResponse.data.data.map((bcProduct: any) => ({
         id: bcProduct.id.toString(),
         name: bcProduct.name,
         sku: bcProduct.sku || '',
