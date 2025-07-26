@@ -8,6 +8,15 @@ This is a full-stack web application designed to manage BigCommerce products and
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### January 26, 2025
+- Fixed React import errors in ProductDetailPanel component
+- Resolved TypeScript type issues across all components
+- Fixed BigCommerce API connection test endpoint from `/store` to `/catalog/products?limit=1`
+- Added proper type casting for query responses
+- All core functionality implemented and error-free
+
 ## System Architecture
 
 The application follows a modern full-stack architecture with a clear separation between frontend and backend:

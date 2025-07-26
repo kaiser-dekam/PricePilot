@@ -46,7 +46,7 @@ export class BigCommerceService {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.api.get('/store');
+      await this.api.get('/catalog/products?limit=1');
       return true;
     } catch (error) {
       console.error('BigCommerce connection test failed:', error);
