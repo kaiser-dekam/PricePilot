@@ -11,6 +11,12 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 26, 2025
+- **Fixed Work Order Scheduling System**: Resolved critical scheduling bug where scheduledAt was being set to null
+  - Fixed schema validation to properly handle ISO date strings from frontend
+  - Added date/time validation requiring both fields for scheduled work orders
+  - Implemented real-time status updates with 5-second polling interval
+  - Added manual refresh button for immediate status checking
+  - Verified end-to-end scheduling: create → schedule → execute → status update
 - **Enhanced Work Order Modal with Search & Filters**:
   - Added real-time search by product name or ID
   - Category filter dropdown for product filtering

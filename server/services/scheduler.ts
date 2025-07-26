@@ -7,10 +7,8 @@ class SchedulerService {
 
   async scheduleWorkOrder(workOrderId: string, scheduledAt: Date): Promise<void> {
     const cronExpression = this.dateToCron(scheduledAt);
-    console.log(`Scheduling work order ${workOrderId} for ${scheduledAt} with cron: ${cronExpression}`);
     
     const task = cron.schedule(cronExpression, async () => {
-      console.log(`Cron triggered for work order ${workOrderId}`);
       await this.executeWorkOrder(workOrderId);
       this.jobs.delete(workOrderId);
     });
@@ -18,7 +16,7 @@ class SchedulerService {
     this.jobs.set(workOrderId, task);
     task.start();
     
-    console.log(`Work order ${workOrderId} scheduled successfully. Current time: ${new Date()}`);
+    console.log(`Work order ${workOrderId} scheduled for ${scheduledAt}`);
   }
 
   async executeWorkOrder(workOrderId: string): Promise<void> {

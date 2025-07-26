@@ -141,26 +141,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/work-orders", async (req, res) => {
     try {
       const validatedData = insertWorkOrderSchema.parse(req.body);
-      console.log("Creating work order:", JSON.stringify(validatedData, null, 2));
-      
       const workOrder = await storage.createWorkOrder(validatedData);
-      console.log("Work order created:", JSON.stringify(workOrder, null, 2));
 
       if (workOrder.executeImmediately) {
-        console.log("Executing work order immediately");
         // Execute immediately in background
         scheduler.executeImmediately(workOrder.id).catch(console.error);
       } else if (workOrder.scheduledAt) {
-        console.log("Scheduling work order for:", workOrder.scheduledAt);
         // Schedule for later
         await scheduler.scheduleWorkOrder(workOrder.id, new Date(workOrder.scheduledAt));
-      } else {
-        console.log("Work order has no execution schedule");
       }
 
       res.json(workOrder);
     } catch (error: any) {
-      console.error("Error creating work order:", error);
       res.status(400).json({ message: error.message });
     }
   });

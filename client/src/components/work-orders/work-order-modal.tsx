@@ -172,19 +172,10 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
       executeImmediately: scheduleType === "immediate",
     };
 
-    console.log("Schedule type:", scheduleType);
-    console.log("Schedule date:", scheduleDate);
-    console.log("Schedule time:", scheduleTime);
-
     if (scheduleType === "scheduled" && scheduleDate && scheduleTime) {
       const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
       workOrderData.scheduledAt = scheduledAt.toISOString();
-      console.log("Setting scheduledAt to:", workOrderData.scheduledAt);
-    } else if (scheduleType === "scheduled") {
-      console.log("Schedule type is scheduled but missing date/time");
     }
-
-    console.log("Final work order data:", workOrderData);
     createMutation.mutate(workOrderData);
   };
 

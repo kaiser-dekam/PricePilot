@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Clock, Trash2 } from "lucide-react";
+import { Plus, Calendar, Clock, Trash2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,10 @@ import { format } from "date-fns";
 export default function WorkOrders() {
   const { toast } = useToast();
 
-  const { data: workOrders, isLoading } = useQuery({
+  const { data: workOrders, isLoading, refetch } = useQuery({
     queryKey: ["/api/work-orders"],
+    refetchInterval: 5000, // Poll every 5 seconds for status updates
+    refetchIntervalInBackground: true,
   });
 
   const deleteMutation = useMutation({
@@ -64,6 +66,15 @@ export default function WorkOrders() {
             <h2 className="text-2xl font-bold text-gray-900">Work Orders</h2>
             <p className="text-sm text-gray-500 mt-1">Manage batch product updates and schedules</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
       </div>
 
