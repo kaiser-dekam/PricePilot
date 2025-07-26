@@ -95,18 +95,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store products in database
       for (const product of bigCommerceProducts) {
-        await storage.createProduct(userId, {
-          id: product.id.toString(),
-          name: product.name,
-          sku: product.sku,
-          description: product.description,
-          category: product.primary_category?.name || null,
-          regularPrice: product.price.toString(),
-          salePrice: product.sale_price ? product.sale_price.toString() : null,
-          stock: product.inventory_level || 0,
-          weight: product.weight ? product.weight.toString() : null,
-          status: product.is_visible ? "published" : "draft",
-        });
+        console.log(`Processing product:`, JSON.stringify(product, null, 2));
+        try {
+          await storage.createProduct(userId, {
+            id: product.id,
+            name: product.name,
+            sku: product.sku || '',
+            description: product.description || '',
+            category: product.category || null,
+            regularPrice: product.regularPrice || '0',
+            salePrice: product.salePrice || null,
+            stock: product.stock || 0,
+            weight: product.weight || '0',
+            status: product.status || 'draft',
+          });
+        } catch (productError) {
+          console.error(`Error storing product ${product.id}:`, productError);
+        }
       }
 
       res.json({ 
