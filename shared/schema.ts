@@ -65,6 +65,8 @@ export const insertWorkOrderSchema = createInsertSchema(workOrders).pick({
   productUpdates: true,
   scheduledAt: true,
   executeImmediately: true,
+}).extend({
+  scheduledAt: z.string().datetime().optional().nullable().transform(val => val ? new Date(val) : null),
 });
 
 export type ApiSettings = typeof apiSettings.$inferSelect;
