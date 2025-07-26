@@ -11,6 +11,12 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 26, 2025
+- **Implemented PostgreSQL Database**: Migrated from in-memory storage to persistent database
+  - Set up Neon serverless PostgreSQL with Drizzle ORM
+  - Created database storage implementation with full CRUD operations
+  - Added proper schema validation and type safety
+  - Data now persists across server restarts (API settings, products, work orders)
+  - Automatic restoration of scheduled work orders on server startup
 - **Fixed Work Order Scheduling System**: Resolved critical scheduling bug where scheduledAt was being set to null
   - Fixed schema validation to properly handle ISO date strings from frontend
   - Added date/time validation requiring both fields for scheduled work orders

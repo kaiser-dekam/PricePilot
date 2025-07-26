@@ -1,5 +1,8 @@
-import { type ApiSettings, type InsertApiSettings, type Product, type InsertProduct, type WorkOrder, type InsertWorkOrder } from "@shared/schema";
+import { type ApiSettings, type InsertApiSettings, type Product, type InsertProduct, type WorkOrder, type InsertWorkOrder, apiSettings, products, workOrders } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { eq, ilike, and, desc, count } from "drizzle-orm";
 
 export interface IStorage {
   // API Settings
@@ -159,4 +162,158 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DbStorage implements IStorage {
+  private db;
+
+  constructor() {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL environment variable is required");
+    }
+    const sql = neon(process.env.DATABASE_URL);
+    this.db = drizzle(sql);
+  }
+
+  // API Settings
+  async getApiSettings(): Promise<ApiSettings | undefined> {
+    const result = await this.db.select().from(apiSettings).limit(1);
+    return result[0];
+  }
+
+  async saveApiSettings(settings: InsertApiSettings): Promise<ApiSettings> {
+    // Delete existing settings and insert new ones
+    await this.db.delete(apiSettings);
+    const result = await this.db.insert(apiSettings).values(settings).returning();
+    return result[0];
+  }
+
+  // Products
+  async getProducts(filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 50;
+    const offset = (page - 1) * limit;
+
+    // Build where conditions
+    const conditions = [];
+    if (filters?.category && filters.category !== "all") {
+      conditions.push(eq(products.category, filters.category));
+    }
+    if (filters?.search) {
+      conditions.push(
+        ilike(products.name, `%${filters.search}%`)
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const totalResult = await this.db
+      .select({ count: count() })
+      .from(products)
+      .where(whereClause);
+    const total = totalResult[0].count;
+
+    // Get products
+    const result = await this.db
+      .select()
+      .from(products)
+      .where(whereClause)
+      .orderBy(desc(products.lastUpdated))
+      .limit(limit)
+      .offset(offset);
+
+    return { products: result, total };
+  }
+
+  async getProduct(id: string): Promise<Product | undefined> {
+    const result = await this.db.select().from(products).where(eq(products.id, id));
+    return result[0];
+  }
+
+  async createProduct(product: InsertProduct & { id: string }): Promise<Product> {
+    const result = await this.db
+      .insert(products)
+      .values({
+        ...product,
+        lastUpdated: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: products.id,
+        set: {
+          name: product.name,
+          sku: product.sku,
+          description: product.description,
+          category: product.category,
+          regularPrice: product.regularPrice,
+          salePrice: product.salePrice,
+          stock: product.stock,
+          weight: product.weight,
+          status: product.status,
+          lastUpdated: new Date(),
+        },
+      })
+      .returning();
+    return result[0];
+  }
+
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product | undefined> {
+    const result = await this.db
+      .update(products)
+      .set({
+        ...updates,
+        lastUpdated: new Date(),
+      })
+      .where(eq(products.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteProduct(id: string): Promise<boolean> {
+    const result = await this.db.delete(products).where(eq(products.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Work Orders
+  async getWorkOrders(): Promise<WorkOrder[]> {
+    const result = await this.db
+      .select()
+      .from(workOrders)
+      .orderBy(desc(workOrders.createdAt));
+    return result;
+  }
+
+  async getWorkOrder(id: string): Promise<WorkOrder | undefined> {
+    const result = await this.db.select().from(workOrders).where(eq(workOrders.id, id));
+    return result[0];
+  }
+
+  async createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder> {
+    const result = await this.db.insert(workOrders).values(workOrder).returning();
+    return result[0];
+  }
+
+  async updateWorkOrder(id: string, updates: Partial<WorkOrder>): Promise<WorkOrder | undefined> {
+    const result = await this.db
+      .update(workOrders)
+      .set(updates)
+      .where(eq(workOrders.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteWorkOrder(id: string): Promise<boolean> {
+    const result = await this.db.delete(workOrders).where(eq(workOrders.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getPendingWorkOrders(): Promise<WorkOrder[]> {
+    const result = await this.db
+      .select()
+      .from(workOrders)
+      .where(eq(workOrders.status, "pending"));
+    return result;
+  }
+}
+
+// Use database storage in production, memory storage for development/testing
+export const storage = process.env.DATABASE_URL ? new DbStorage() : new MemStorage();
