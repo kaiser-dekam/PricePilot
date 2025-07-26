@@ -19,6 +19,7 @@ export interface IStorage {
   createProduct(userId: string, product: InsertProduct & { id: string }): Promise<Product>;
   updateProduct(userId: string, id: string, updates: Partial<Product>): Promise<Product | undefined>;
   deleteProduct(userId: string, id: string): Promise<boolean>;
+  clearUserProducts(userId: string): Promise<void>;
   
   // Work Orders
   getWorkOrders(userId: string): Promise<WorkOrder[]>;
@@ -163,6 +164,10 @@ export class DbStorage implements IStorage {
   async deleteProduct(userId: string, id: string): Promise<boolean> {
     const result = await this.db.delete(products).where(and(eq(products.userId, userId), eq(products.id, id)));
     return result.rowCount > 0;
+  }
+
+  async clearUserProducts(userId: string): Promise<void> {
+    await this.db.delete(products).where(eq(products.userId, userId));
   }
 
   // Work Orders

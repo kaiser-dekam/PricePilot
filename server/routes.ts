@@ -109,9 +109,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Syncing ${allProducts.length} products for user ${userId}`);
 
+      // Clear existing products for this user before syncing new ones
+      // This ensures we don't have duplicates and handles deleted products
+      await storage.clearUserProducts(userId);
+
       // Store products in database
       for (const product of allProducts) {
-        console.log(`Processing product:`, JSON.stringify(product, null, 2));
         try {
           await storage.createProduct(userId, {
             id: product.id,

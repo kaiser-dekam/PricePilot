@@ -69,9 +69,6 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
-      console.log(`Raw BigCommerce products response:`, JSON.stringify(productsResponse.data, null, 2));
-      console.log(`Raw BigCommerce categories response:`, JSON.stringify(categoriesResponse.data, null, 2));
-
       const categories = new Map(
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat.name])
       );
@@ -81,7 +78,7 @@ export class BigCommerceService {
         name: bcProduct.name,
         sku: bcProduct.sku || '',
         description: bcProduct.description || '',
-        category: bcProduct.categories.map(catId => categories.get(catId)).filter(Boolean).join(' > '),
+        category: bcProduct.categories.map((catId: number) => categories.get(catId)).filter(Boolean).join(' > '),
         regularPrice: bcProduct.price || '0',
         salePrice: bcProduct.sale_price || null,
         stock: bcProduct.inventory_level || 0,
@@ -118,7 +115,7 @@ export class BigCommerceService {
         name: bcProduct.name,
         sku: bcProduct.sku || '',
         description: bcProduct.description || '',
-        category: bcProduct.categories.map(catId => categories.get(catId)).filter(Boolean).join(' > '),
+        category: bcProduct.categories.map((catId: number) => categories.get(catId)).filter(Boolean).join(' > '),
         regularPrice: bcProduct.price || '0',
         salePrice: bcProduct.sale_price || null,
         stock: bcProduct.inventory_level || 0,
