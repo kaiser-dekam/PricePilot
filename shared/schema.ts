@@ -31,6 +31,7 @@ export const apiSettings = pgTable("api_settings", {
   storeHash: text("store_hash").notNull(),
   accessToken: text("access_token").notNull(),
   clientId: text("client_id").notNull(),
+  lastSyncAt: timestamp("last_sync_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

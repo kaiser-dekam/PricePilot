@@ -153,9 +153,16 @@ export default function Products() {
                 </Button>
               </div>
               
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <span>{total}</span>
-                <span>products found</span>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center space-x-2">
+                  <span>{total}</span>
+                  <span>products found</span>
+                </div>
+                {(apiSettings as any)?.lastSyncAt && (
+                  <div className="text-xs text-gray-500">
+                    Last Sync'd: {new Date((apiSettings as any).lastSyncAt).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </div>

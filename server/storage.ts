@@ -79,6 +79,13 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async updateApiSettingsLastSync(userId: string, lastSyncAt: Date): Promise<void> {
+    await this.db
+      .update(apiSettings)
+      .set({ lastSyncAt })
+      .where(eq(apiSettings.userId, userId));
+  }
+
   // Products
   async getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }> {
     const page = filters?.page || 1;
@@ -189,7 +196,7 @@ export class DbStorage implements IStorage {
     const result = await this.db.insert(workOrders).values({
       ...workOrder,
       userId,
-    }).returning();
+    } as any).returning();
     return result[0];
   }
 

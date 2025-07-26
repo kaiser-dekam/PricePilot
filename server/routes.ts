@@ -133,6 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Update lastSyncAt in API settings
+      await storage.updateApiSettingsLastSync(userId, new Date());
+
       res.json({ 
         message: `Successfully synced ${allProducts.length} products`,
         count: allProducts.length 
