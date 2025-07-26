@@ -27,6 +27,7 @@ export default function Products() {
       limit: 20 
     }],
     enabled: true,
+    staleTime: 0, // Always refetch when query changes
   });
 
   const syncMutation = useMutation({
@@ -63,6 +64,17 @@ export default function Products() {
     syncMutation.mutate();
   };
 
+  // Reset to page 1 when search or category changes
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setCategory(value);
+    setPage(1);
+  };
+
   return (
     <>
       {/* Header Bar */}
@@ -80,7 +92,7 @@ export default function Products() {
                 type="text"
                 placeholder="Search products..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-64 pl-10"
               />
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -110,7 +122,7 @@ export default function Products() {
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={category} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
@@ -198,7 +210,12 @@ export default function Products() {
                     </Button>
                     
                     {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                      const pageNum = i + 1;
+                      // Show 5 pages centered around current page
+                      const startPage = Math.max(1, Math.min(page - 2, totalPages - 4));
+                      const pageNum = startPage + i;
+                      
+                      if (pageNum > totalPages) return null;
+                      
                       return (
                         <Button
                           key={pageNum}
