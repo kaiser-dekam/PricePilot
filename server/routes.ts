@@ -87,14 +87,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const bigcommerce = new BigCommerceService(apiSettings);
-      const productsResponse = await bigcommerce.getProducts();
-      const bigCommerceProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
+      
+      // Fetch all products by paginating through all pages
+      let allProducts: any[] = [];
+      let page = 1;
+      let hasMorePages = true;
+      
+      while (hasMorePages) {
+        console.log(`Fetching page ${page} of products...`);
+        const productsResponse = await bigcommerce.getProducts(page, 50);
+        const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
+        
+        allProducts.push(...pageProducts);
+        
+        // Check if there are more pages
+        const total = productsResponse.total || 0;
+        const currentCount = page * 50;
+        hasMorePages = currentCount < total;
+        page++;
+      }
 
-      console.log(`BigCommerce API response:`, JSON.stringify(productsResponse, null, 2));
-      console.log(`Syncing ${bigCommerceProducts.length} products for user ${userId}`);
+      console.log(`Syncing ${allProducts.length} products for user ${userId}`);
 
       // Store products in database
-      for (const product of bigCommerceProducts) {
+      for (const product of allProducts) {
         console.log(`Processing product:`, JSON.stringify(product, null, 2));
         try {
           await storage.createProduct(userId, {
@@ -115,8 +131,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ 
-        message: `Successfully synced ${bigCommerceProducts.length} products`,
-        count: bigCommerceProducts.length 
+        message: `Successfully synced ${allProducts.length} products`,
+        count: allProducts.length 
       });
     } catch (error: any) {
       console.error("Error in /api/sync:", error);
