@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Save, TestTube } from "lucide-react";
+import { Save, TestTube, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Settings() {
   const [storeHash, setStoreHash] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [clientId, setClientId] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
@@ -64,6 +66,10 @@ export default function Settings() {
     });
   };
 
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
   return (
     <>
       {/* Header Bar */}
@@ -73,6 +79,14 @@ export default function Settings() {
             <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
             <p className="text-sm text-gray-500 mt-1">Configure your BigCommerce API connection</p>
           </div>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="text-red-600 border-red-200 hover:bg-red-50"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
       </div>
 
@@ -142,6 +156,36 @@ export default function Settings() {
               </form>
             </CardContent>
           </Card>
+
+          {/* User Profile */}
+          {user && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Account Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    {user.profileImageUrl && (
+                      <img 
+                        src={user.profileImageUrl} 
+                        alt="Profile"
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.firstName && user.lastName 
+                          ? `${user.firstName} ${user.lastName}` 
+                          : user.email}
+                      </p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Instructions */}
           <Card className="mt-6">
