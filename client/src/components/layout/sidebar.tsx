@@ -77,31 +77,7 @@ export default function Sidebar() {
         </div>
       </nav>
       
-      {/* Connection Status */}
-      <div className="absolute bottom-6 left-6 right-6">
-        <div className={cn(
-          "border rounded-lg p-3",
-          isConnected 
-            ? "bg-accent/10 border-accent/20" 
-            : "bg-red-50 border-red-200"
-        )}>
-          <div className="flex items-center">
-            <div className={cn(
-              "w-2 h-2 rounded-full mr-2",
-              isConnected ? "bg-accent" : "bg-red-500"
-            )} />
-            <span className={cn(
-              "text-sm font-medium",
-              isConnected ? "text-accent" : "text-red-600"
-            )}>
-              {isConnected ? "Connected" : "Disconnected"}
-            </span>
-          </div>
-          <p className="text-xs text-gray-600 mt-1">
-            {isConnected ? "API ready" : "Configure in Settings"}
-          </p>
-        </div>
-      </div>
+
     </div>
   );
 }

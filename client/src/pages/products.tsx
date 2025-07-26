@@ -30,6 +30,12 @@ export default function Products() {
     staleTime: 0, // Always refetch when query changes
   });
 
+  const { data: apiSettings } = useQuery({
+    queryKey: ["/api/settings"],
+  });
+
+  const isApiConnected = !!apiSettings;
+
   const syncMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/sync"),
     onSuccess: () => {
@@ -101,7 +107,8 @@ export default function Products() {
             <Button
               onClick={handleSync}
               disabled={syncMutation.isPending}
-              variant="outline"
+              variant={isApiConnected ? "default" : "outline"}
+              className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
               Sync
