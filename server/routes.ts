@@ -4,20 +4,38 @@ import { storage } from "./storage";
 import { insertApiSettingsSchema, insertWorkOrderSchema } from "@shared/schema";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // API Settings routes
-  app.get("/api/settings", async (_req, res) => {
+  // Setup authentication
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const settings = await storage.getApiSettings();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // API Settings routes
+  app.get("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = await storage.getApiSettings(userId);
       res.json(settings || null);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/settings", async (req, res) => {
+  app.post("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertApiSettingsSchema.parse(req.body);
       
       // Test connection before saving
@@ -28,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Failed to connect to BigCommerce API. Please check your credentials." });
       }
 
-      const settings = await storage.saveApiSettings(validatedData);
+      const settings = await storage.saveApiSettings(userId, validatedData);
       res.json(settings);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -36,182 +54,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products routes
-  app.get("/api/products", async (req, res) => {
+  app.get("/api/products", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { category, search, page = "1", limit = "20", sync = "false" } = req.query;
       
       if (sync === "true") {
-        const apiSettings = await storage.getApiSettings();
+        const apiSettings = await storage.getApiSettings(userId);
         if (!apiSettings) {
-          return res.status(400).json({ message: "BigCommerce API not configured" });
+          return res.status(400).json({ message: "API settings not configured" });
         }
 
         const bigcommerce = new BigCommerceService(apiSettings);
-        const { products: bcProducts, total } = await bigcommerce.getProducts(
-          parseInt(page as string),
-          parseInt(limit as string)
-        );
+        const bigCommerceProducts = await bigcommerce.getProducts();
 
-        // Update local storage
-        for (const product of bcProducts) {
-          await storage.createProduct(product);
+        // Store products in database
+        for (const product of bigCommerceProducts) {
+          await storage.createProduct(userId, {
+            id: product.id.toString(),
+            name: product.name,
+            sku: product.sku,
+            description: product.description,
+            category: product.primary_category?.name || null,
+            regularPrice: product.price.toString(),
+            salePrice: product.sale_price ? product.sale_price.toString() : null,
+            stock: product.inventory_level || 0,
+            weight: product.weight ? product.weight.toString() : null,
+            status: product.is_visible ? "published" : "draft",
+          });
         }
-
-        return res.json({ products: bcProducts, total });
       }
 
-      const result = await storage.getProducts({
+      const filters = {
         category: category as string,
         search: search as string,
         page: parseInt(page as string),
         limit: parseInt(limit as string),
-      });
+      };
 
+      const result = await storage.getProducts(userId, filters);
       res.json(result);
     } catch (error: any) {
+      console.error("Error in /api/products:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/products/:id", async (req, res) => {
+  app.get("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const { id } = req.params;
-      const { sync = "false" } = req.query;
-
-      if (sync === "true") {
-        const apiSettings = await storage.getApiSettings();
-        if (!apiSettings) {
-          return res.status(400).json({ message: "BigCommerce API not configured" });
-        }
-
-        const bigcommerce = new BigCommerceService(apiSettings);
-        const product = await bigcommerce.getProduct(id);
-        
-        if (product) {
-          await storage.createProduct(product);
-          return res.json(product);
-        } else {
-          return res.status(404).json({ message: "Product not found" });
-        }
-      }
-
-      const product = await storage.getProduct(id);
+      const userId = req.user.claims.sub;
+      const product = await storage.getProduct(userId, req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-
       res.json(product);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.put("/api/products/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body;
-
-      const apiSettings = await storage.getApiSettings();
-      if (!apiSettings) {
-        return res.status(400).json({ message: "BigCommerce API not configured" });
-      }
-
-      const bigcommerce = new BigCommerceService(apiSettings);
-      const updatedProduct = await bigcommerce.updateProduct(id, updates);
-      
-      // Update local storage
-      await storage.updateProduct(id, updatedProduct);
-      
-      res.json(updatedProduct);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // Work Orders routes
-  app.get("/api/work-orders", async (_req, res) => {
+  app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
-      const workOrders = await storage.getWorkOrders();
+      const userId = req.user.claims.sub;
+      const workOrders = await storage.getWorkOrders(userId);
       res.json(workOrders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/work-orders", async (req, res) => {
+  app.post("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertWorkOrderSchema.parse(req.body);
-      const workOrder = await storage.createWorkOrder(validatedData);
-
-      if (workOrder.executeImmediately) {
-        // Execute immediately in background
-        scheduler.executeImmediately(workOrder.id).catch(console.error);
-      } else if (workOrder.scheduledAt) {
-        // Schedule for later
-        await scheduler.scheduleWorkOrder(workOrder.id, new Date(workOrder.scheduledAt));
+      
+      const workOrder = await storage.createWorkOrder(userId, validatedData);
+      
+      if (workOrder.executeImmediately || workOrder.scheduledAt) {
+        scheduler.scheduleWorkOrder(workOrder);
       }
-
+      
       res.json(workOrder);
     } catch (error: any) {
+      console.error("Error creating work order:", error);
       res.status(400).json({ message: error.message });
     }
   });
 
-  app.delete("/api/work-orders/:id", async (req, res) => {
+  app.patch("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const { id } = req.params;
-      
-      // Cancel scheduled job if exists
-      scheduler.cancelWorkOrder(id);
-      
-      const deleted = await storage.deleteWorkOrder(id);
-      if (!deleted) {
+      const userId = req.user.claims.sub;
+      const workOrder = await storage.updateWorkOrder(userId, req.params.id, req.body);
+      if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
-
-      res.json({ success: true });
+      res.json(workOrder);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Sync route for initial data load
-  app.post("/api/sync", async (_req, res) => {
+  app.delete("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const apiSettings = await storage.getApiSettings();
-      if (!apiSettings) {
-        return res.status(400).json({ message: "BigCommerce API not configured" });
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteWorkOrder(userId, req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Work order not found" });
       }
+      res.json({ message: "Work order deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
-      const bigcommerce = new BigCommerceService(apiSettings);
-      let page = 1;
-      let totalSynced = 0;
-
-      while (true) {
-        const { products, total } = await bigcommerce.getProducts(page, 50);
-        
-        for (const product of products) {
-          await storage.createProduct(product);
-        }
-
-        totalSynced += products.length;
-
-        if (products.length < 50) {
-          break;
-        }
-        page++;
-      }
-
-      res.json({ message: `Synced ${totalSynced} products successfully` });
+  // Categories route for work order modal
+  app.get("/api/categories", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const result = await storage.getProducts(userId, { limit: 1000 }); // Get all products to extract categories
+      const categories = Array.from(new Set(result.products.map(p => p.category).filter(Boolean)));
+      res.json(categories);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
   const httpServer = createServer(app);
-
-  // Initialize scheduled jobs
-  scheduler.initializeScheduledJobs().catch(console.error);
-
   return httpServer;
 }

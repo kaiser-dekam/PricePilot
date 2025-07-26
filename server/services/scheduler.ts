@@ -1,121 +1,157 @@
-import * as cron from 'node-cron';
-import { storage } from '../storage';
-import { BigCommerceService } from './bigcommerce';
+import { WorkOrder } from "@shared/schema";
+import { storage } from "../storage";
+import { BigCommerceService } from "./bigcommerce";
+import * as cron from "node-cron";
 
 class SchedulerService {
-  private jobs: Map<string, cron.ScheduledTask> = new Map();
+  private scheduledJobs = new Map<string, cron.ScheduledTask>();
 
-  async scheduleWorkOrder(workOrderId: string, scheduledAt: Date): Promise<void> {
-    const cronExpression = this.dateToCron(scheduledAt);
-    
-    const task = cron.schedule(cronExpression, async () => {
-      await this.executeWorkOrder(workOrderId);
-      this.jobs.delete(workOrderId);
-    });
-
-    this.jobs.set(workOrderId, task);
-    task.start();
-    
-    console.log(`Work order ${workOrderId} scheduled for ${scheduledAt}`);
+  async init() {
+    // Restore scheduled work orders on startup
+    const pendingWorkOrders = await storage.getPendingWorkOrders();
+    for (const workOrder of pendingWorkOrders) {
+      if (workOrder.scheduledAt && new Date(workOrder.scheduledAt) > new Date()) {
+        this.scheduleWorkOrder(workOrder);
+      } else if (workOrder.executeImmediately) {
+        this.executeWorkOrder(workOrder.id);
+      }
+    }
   }
 
-  async executeWorkOrder(workOrderId: string): Promise<void> {
+  scheduleWorkOrder(workOrder: WorkOrder) {
+    if (workOrder.executeImmediately) {
+      // Execute immediately
+      setImmediate(() => this.executeWorkOrder(workOrder.id));
+      return;
+    }
+
+    if (!workOrder.scheduledAt) {
+      return;
+    }
+
+    const scheduledTime = new Date(workOrder.scheduledAt);
+    if (scheduledTime <= new Date()) {
+      // If scheduled time is in the past, execute immediately
+      setImmediate(() => this.executeWorkOrder(workOrder.id));
+      return;
+    }
+
+    // Cancel existing job if it exists
+    if (this.scheduledJobs.has(workOrder.id)) {
+      this.scheduledJobs.get(workOrder.id)?.stop();
+      this.scheduledJobs.delete(workOrder.id);
+    }
+
+    // Calculate cron expression
+    const cronExpression = this.dateToCron(scheduledTime);
+    
+    const task = cron.schedule(cronExpression, async () => {
+      await this.executeWorkOrder(workOrder.id);
+      this.scheduledJobs.delete(workOrder.id);
+    });
+
+    this.scheduledJobs.set(workOrder.id, task);
+    task.start();
+
+    console.log(`Work order ${workOrder.id} scheduled for ${scheduledTime.toISOString()}`);
+  }
+
+  async executeWorkOrder(workOrderId: string) {
     try {
       console.log(`Executing work order ${workOrderId}`);
       
-      const workOrder = await storage.getWorkOrder(workOrderId);
+      // Get all work orders to find the specific one (we need userId)
+      const allWorkOrders = await storage.getPendingWorkOrders();
+      const workOrder = allWorkOrders.find(wo => wo.id === workOrderId);
+      
       if (!workOrder) {
-        throw new Error('Work order not found');
-      }
-
-      if (workOrder.status !== 'pending') {
-        console.log(`Work order ${workOrderId} is not pending, skipping execution`);
+        console.error(`Work order ${workOrderId} not found`);
         return;
       }
 
-      await storage.updateWorkOrder(workOrderId, { status: 'executing' });
-
-      const apiSettings = await storage.getApiSettings();
-      if (!apiSettings) {
-        throw new Error('BigCommerce API settings not configured');
+      if (workOrder.status !== "pending") {
+        console.log(`Work order ${workOrderId} is not pending, skipping`);
+        return;
       }
 
-      const bigcommerce = new BigCommerceService({
-        storeHash: apiSettings.storeHash,
-        accessToken: apiSettings.accessToken,
-        clientId: apiSettings.clientId,
+      // Update status to executing
+      await storage.updateWorkOrder(workOrder.userId, workOrderId, { 
+        status: "executing" 
       });
 
-      const updates = workOrder.productUpdates.map(update => ({
-        id: update.productId,
-        regularPrice: update.newRegularPrice || undefined,
-        salePrice: update.newSalePrice || undefined,
-      }));
-
-      await bigcommerce.updateMultipleProducts(updates);
-
-      // Update local product cache
-      for (const update of workOrder.productUpdates) {
-        const updateData: any = {};
-        if (update.newRegularPrice) updateData.regularPrice = update.newRegularPrice;
-        if (update.newSalePrice) updateData.salePrice = update.newSalePrice;
-        
-        await storage.updateProduct(update.productId, updateData);
+      // Get API settings for this user
+      const apiSettings = await storage.getApiSettings(workOrder.userId);
+      if (!apiSettings) {
+        throw new Error("API settings not configured for this user");
       }
 
-      await storage.updateWorkOrder(workOrderId, {
-        status: 'completed',
+      const bigcommerce = new BigCommerceService(apiSettings);
+
+      // Process each product update
+      for (const update of workOrder.productUpdates) {
+        try {
+          const updateData: any = {};
+          if (update.newRegularPrice) {
+            updateData.price = parseFloat(update.newRegularPrice);
+          }
+          if (update.newSalePrice) {
+            updateData.sale_price = parseFloat(update.newSalePrice);
+          }
+
+          await bigcommerce.updateProduct(update.productId, updateData);
+          
+          // Update product in our database
+          await storage.updateProduct(workOrder.userId, update.productId, {
+            regularPrice: update.newRegularPrice || undefined,
+            salePrice: update.newSalePrice || undefined,
+          });
+
+          console.log(`Updated product ${update.productId}`);
+        } catch (error) {
+          console.error(`Failed to update product ${update.productId}:`, error);
+        }
+      }
+
+      // Mark as completed
+      await storage.updateWorkOrder(workOrder.userId, workOrderId, {
+        status: "completed",
         executedAt: new Date(),
       });
 
       console.log(`Work order ${workOrderId} completed successfully`);
     } catch (error: any) {
-      console.error(`Error executing work order ${workOrderId}:`, error);
+      console.error(`Work order ${workOrderId} failed:`, error);
       
-      await storage.updateWorkOrder(workOrderId, {
-        status: 'failed',
-        error: error.message,
-        executedAt: new Date(),
-      });
-    }
-  }
-
-  async executeImmediately(workOrderId: string): Promise<void> {
-    await this.executeWorkOrder(workOrderId);
-  }
-
-  cancelWorkOrder(workOrderId: string): void {
-    const task = this.jobs.get(workOrderId);
-    if (task) {
-      task.destroy();
-      this.jobs.delete(workOrderId);
-      console.log(`Work order ${workOrderId} cancelled`);
+      // Try to update status to failed
+      try {
+        const allWorkOrders = await storage.getPendingWorkOrders();
+        const workOrder = allWorkOrders.find(wo => wo.id === workOrderId);
+        if (workOrder) {
+          await storage.updateWorkOrder(workOrder.userId, workOrderId, {
+            status: "failed",
+            error: error.message,
+            executedAt: new Date(),
+          });
+        }
+      } catch (updateError) {
+        console.error(`Failed to update work order status:`, updateError);
+      }
     }
   }
 
   private dateToCron(date: Date): string {
-    const minutes = date.getMinutes();
-    const hours = date.getHours();
+    const minute = date.getMinutes();
+    const hour = date.getHours();
     const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    
-    return `${minutes} ${hours} ${day} ${month} *`;
+    const month = date.getMonth() + 1; // months are 0-indexed
+    return `${minute} ${hour} ${day} ${month} *`;
   }
 
-  async initializeScheduledJobs(): Promise<void> {
-    const pendingWorkOrders = await storage.getPendingWorkOrders();
-    
-    for (const workOrder of pendingWorkOrders) {
-      if (workOrder.scheduledAt && !workOrder.executeImmediately) {
-        const scheduledDate = new Date(workOrder.scheduledAt);
-        if (scheduledDate > new Date()) {
-          await this.scheduleWorkOrder(workOrder.id, scheduledDate);
-        } else {
-          // Execute overdue work orders immediately
-          await this.executeWorkOrder(workOrder.id);
-        }
-      }
+  cancelWorkOrder(workOrderId: string) {
+    if (this.scheduledJobs.has(workOrderId)) {
+      this.scheduledJobs.get(workOrderId)?.stop();
+      this.scheduledJobs.delete(workOrderId);
+      console.log(`Cancelled work order ${workOrderId}`);
     }
   }
 }
