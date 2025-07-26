@@ -151,6 +151,16 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
       return;
     }
 
+    // Validate scheduling if scheduled type is selected
+    if (scheduleType === "scheduled" && (!scheduleDate || !scheduleTime)) {
+      toast({
+        title: "Validation Error",
+        description: "Please select both date and time for scheduled execution",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const workOrderData: any = {
       title: title.trim(),
       productUpdates: productUpdates.map(update => ({
@@ -162,11 +172,19 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
       executeImmediately: scheduleType === "immediate",
     };
 
+    console.log("Schedule type:", scheduleType);
+    console.log("Schedule date:", scheduleDate);
+    console.log("Schedule time:", scheduleTime);
+
     if (scheduleType === "scheduled" && scheduleDate && scheduleTime) {
       const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
       workOrderData.scheduledAt = scheduledAt.toISOString();
+      console.log("Setting scheduledAt to:", workOrderData.scheduledAt);
+    } else if (scheduleType === "scheduled") {
+      console.log("Schedule type is scheduled but missing date/time");
     }
 
+    console.log("Final work order data:", workOrderData);
     createMutation.mutate(workOrderData);
   };
 
