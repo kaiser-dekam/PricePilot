@@ -11,6 +11,12 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 26, 2025
+- **Enhanced Work Order Modal with Search & Filters**:
+  - Added real-time search by product name or ID
+  - Category filter dropdown for product filtering
+  - Bulk selection actions (Select All Visible, Deselect All Visible, Clear All)
+  - Improved product display with expanded product details
+  - Selection counters and filtered results display
 - **Per-Product Pricing System**: Redesigned work order schema to support individual product pricing instead of bulk pricing
   - Changed `productIds`, `newRegularPrice`, `newSalePrice` fields to `productUpdates` array
   - Each product can now have different regular and sale price updates

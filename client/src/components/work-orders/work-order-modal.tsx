@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Product } from "@shared/schema";
@@ -31,6 +33,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [scheduleType, setScheduleType] = useState("immediate");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -52,6 +56,26 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     },
   });
 
+  // Get unique categories for filter dropdown
+  const categories = useMemo(() => {
+    const cats = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+    return cats.sort();
+  }, [products]);
+
+  // Filter products based on search and category
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = searchTerm === "" || 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = categoryFilter === "all" || 
+        product.category === categoryFilter;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, categoryFilter]);
+
   const handleClose = () => {
     setTitle("");
     setSelectedProducts([]);
@@ -59,6 +83,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setScheduleType("immediate");
     setScheduleDate("");
     setScheduleTime("");
+    setSearchTerm("");
+    setCategoryFilter("all");
     onClose();
   };
 
@@ -167,30 +193,141 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
           {/* Product Selection */}
           <div>
             <Label>Select Products</Label>
-            <ScrollArea className="border border-gray-300 rounded-lg p-4 max-h-40 mt-1">
+            
+            {/* Search and Filter Controls */}
+            <div className="flex gap-3 mt-2 mb-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search products by name or ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 h-9"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-48 h-9">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category || ""}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Selection Actions */}
+            <div className="flex gap-2 mb-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const visibleProductIds = filteredProducts.map(p => p.id);
+                  const newSelected = Array.from(new Set([...selectedProducts, ...visibleProductIds]));
+                  setSelectedProducts(newSelected);
+                  
+                  const newUpdates = [...productUpdates];
+                  filteredProducts.forEach(product => {
+                    if (!productUpdates.find(u => u.productId === product.id)) {
+                      newUpdates.push({
+                        productId: product.id,
+                        productName: product.name,
+                        newRegularPrice: product.regularPrice || "",
+                        newSalePrice: product.salePrice || "",
+                      });
+                    }
+                  });
+                  setProductUpdates(newUpdates);
+                }}
+              >
+                Select All Visible ({filteredProducts.length})
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const visibleProductIds = filteredProducts.map(p => p.id);
+                  setSelectedProducts(prev => prev.filter(id => !visibleProductIds.includes(id)));
+                  setProductUpdates(prev => prev.filter(update => !visibleProductIds.includes(update.productId)));
+                }}
+                disabled={filteredProducts.length === 0}
+              >
+                Deselect All Visible
+              </Button>
+              
+              {selectedProducts.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedProducts([]);
+                    setProductUpdates([]);
+                  }}
+                >
+                  Clear All ({selectedProducts.length})
+                </Button>
+              )}
+            </div>
+
+            <ScrollArea className="border border-gray-300 rounded-lg p-4 max-h-64">
               <div className="space-y-2">
-                {products.length === 0 ? (
-                  <p className="text-sm text-gray-500">No products available</p>
+                {filteredProducts.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    {searchTerm || categoryFilter !== "all" ? "No products match your filters" : "No products available"}
+                  </p>
                 ) : (
-                  products.map((product) => (
-                    <div key={product.id} className="flex items-center space-x-2">
+                  filteredProducts.map((product) => (
+                    <div key={product.id} className="flex items-start space-x-2 py-1">
                       <Checkbox
                         id={product.id}
                         checked={selectedProducts.includes(product.id)}
                         onCheckedChange={(checked) => 
                           handleProductToggle(product.id, checked as boolean)
                         }
+                        className="mt-1"
                       />
-                      <Label htmlFor={product.id} className="text-sm">
-                        {product.name} (Regular: ${product.regularPrice || "N/A"}, Sale: ${product.salePrice || "N/A"})
-                      </Label>
+                      <div className="flex-1 min-w-0">
+                        <Label htmlFor={product.id} className="text-sm font-medium cursor-pointer">
+                          {product.name}
+                        </Label>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <div>ID: {product.id}</div>
+                          <div>Regular: ${product.regularPrice || "N/A"} | Sale: ${product.salePrice || "N/A"}</div>
+                          {product.category && <div>Category: {product.category}</div>}
+                        </div>
+                      </div>
                     </div>
                   ))
                 )}
               </div>
             </ScrollArea>
-            <p className="text-xs text-gray-500 mt-1">
-              Select products to include in this work order
+            
+            <p className="text-xs text-gray-500 mt-2">
+              {filteredProducts.length !== products.length && (
+                <span>Showing {filteredProducts.length} of {products.length} products. </span>
+              )}
+              {selectedProducts.length > 0 && (
+                <span>{selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected.</span>
+              )}
             </p>
           </div>
           
