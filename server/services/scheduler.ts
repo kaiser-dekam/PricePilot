@@ -46,21 +46,21 @@ class SchedulerService {
         clientId: apiSettings.clientId,
       });
 
-      const updates = workOrder.productIds.map(productId => ({
-        id: productId,
-        regularPrice: workOrder.newRegularPrice || undefined,
-        salePrice: workOrder.newSalePrice || undefined,
+      const updates = workOrder.productUpdates.map(update => ({
+        id: update.productId,
+        regularPrice: update.newRegularPrice || undefined,
+        salePrice: update.newSalePrice || undefined,
       }));
 
       await bigcommerce.updateMultipleProducts(updates);
 
       // Update local product cache
-      for (const productId of workOrder.productIds) {
+      for (const update of workOrder.productUpdates) {
         const updateData: any = {};
-        if (workOrder.newRegularPrice) updateData.regularPrice = workOrder.newRegularPrice;
-        if (workOrder.newSalePrice) updateData.salePrice = workOrder.newSalePrice;
+        if (update.newRegularPrice) updateData.regularPrice = update.newRegularPrice;
+        if (update.newSalePrice) updateData.salePrice = update.newSalePrice;
         
-        await storage.updateProduct(productId, updateData);
+        await storage.updateProduct(update.productId, updateData);
       }
 
       await storage.updateWorkOrder(workOrderId, {

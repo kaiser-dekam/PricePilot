@@ -17,11 +17,17 @@ interface WorkOrderModalProps {
   products: Product[];
 }
 
+interface ProductPriceUpdate {
+  productId: string;
+  productName: string;
+  newRegularPrice: string;
+  newSalePrice: string;
+}
+
 export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderModalProps) {
   const [title, setTitle] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [regularPrice, setRegularPrice] = useState("");
-  const [salePrice, setSalePrice] = useState("");
+  const [productUpdates, setProductUpdates] = useState<ProductPriceUpdate[]>([]);
   const [scheduleType, setScheduleType] = useState("immediate");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
@@ -49,8 +55,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const handleClose = () => {
     setTitle("");
     setSelectedProducts([]);
-    setRegularPrice("");
-    setSalePrice("");
+    setProductUpdates([]);
     setScheduleType("immediate");
     setScheduleDate("");
     setScheduleTime("");
@@ -60,9 +65,29 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const handleProductToggle = (productId: string, checked: boolean) => {
     if (checked) {
       setSelectedProducts(prev => [...prev, productId]);
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        setProductUpdates(prev => [...prev, {
+          productId,
+          productName: product.name,
+          newRegularPrice: product.regularPrice || "",
+          newSalePrice: product.salePrice || "",
+        }]);
+      }
     } else {
       setSelectedProducts(prev => prev.filter(id => id !== productId));
+      setProductUpdates(prev => prev.filter(update => update.productId !== productId));
     }
+  };
+
+  const updateProductPrice = (productId: string, field: 'newRegularPrice' | 'newSalePrice', value: string) => {
+    setProductUpdates(prev => 
+      prev.map(update => 
+        update.productId === productId 
+          ? { ...update, [field]: value }
+          : update
+      )
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -86,7 +111,12 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
       return;
     }
 
-    if (!regularPrice && !salePrice) {
+    // Check if at least one product has a price change
+    const hasChanges = productUpdates.some(update => 
+      update.newRegularPrice.trim() !== "" || update.newSalePrice.trim() !== ""
+    );
+
+    if (!hasChanges) {
       toast({
         title: "Validation Error",
         description: "Please enter at least one price change",
@@ -97,17 +127,14 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
 
     const workOrderData: any = {
       title: title.trim(),
-      productIds: selectedProducts,
+      productUpdates: productUpdates.map(update => ({
+        productId: update.productId,
+        productName: update.productName,
+        newRegularPrice: update.newRegularPrice.trim() || undefined,
+        newSalePrice: update.newSalePrice.trim() || undefined,
+      })),
       executeImmediately: scheduleType === "immediate",
     };
-
-    if (regularPrice) {
-      workOrderData.newRegularPrice = regularPrice;
-    }
-
-    if (salePrice) {
-      workOrderData.newSalePrice = salePrice;
-    }
 
     if (scheduleType === "scheduled" && scheduleDate && scheduleTime) {
       const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`);
@@ -119,7 +146,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Work Order</DialogTitle>
         </DialogHeader>
@@ -155,7 +182,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                         }
                       />
                       <Label htmlFor={product.id} className="text-sm">
-                        {product.name}
+                        {product.name} (Regular: ${product.regularPrice || "N/A"}, Sale: ${product.salePrice || "N/A"})
                       </Label>
                     </div>
                   ))
@@ -167,40 +194,60 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
             </p>
           </div>
           
-          {/* Price Changes */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Per-Product Price Updates */}
+          {selectedProducts.length > 0 && (
             <div>
-              <Label htmlFor="regularPrice">New Regular Price</Label>
-              <div className="flex items-center mt-1">
-                <span className="text-sm text-gray-500 mr-2">$</span>
-                <Input
-                  id="regularPrice"
-                  type="number"
-                  step="0.01"
-                  value={regularPrice}
-                  onChange={(e) => setRegularPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="flex-1"
-                />
+              <Label>Set New Prices for Each Product</Label>
+              <div className="border rounded-lg overflow-hidden mt-2">
+                <div className="bg-gray-50 px-4 py-3 border-b">
+                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
+                    <div>Product</div>
+                    <div>New Regular Price</div>
+                    <div>New Sale Price</div>
+                  </div>
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {productUpdates.map((update) => (
+                    <div key={update.productId} className="grid grid-cols-3 gap-4 p-4 border-b last:border-b-0">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium truncate">{update.productName}</span>
+                        <span className="text-xs text-gray-500">ID: {update.productId}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-500 mr-2">$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={update.newRegularPrice}
+                            onChange={(e) => updateProductPrice(update.productId, 'newRegularPrice', e.target.value)}
+                            className="h-8"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-500 mr-2">$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={update.newSalePrice}
+                            onChange={(e) => updateProductPrice(update.productId, 'newSalePrice', e.target.value)}
+                            className="h-8"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Enter new prices for each product. Leave blank to keep current price.
+              </p>
             </div>
-            
-            <div>
-              <Label htmlFor="salePrice">New Sale Price</Label>
-              <div className="flex items-center mt-1">
-                <span className="text-sm text-gray-500 mr-2">$</span>
-                <Input
-                  id="salePrice"
-                  type="number"
-                  step="0.01"
-                  value={salePrice}
-                  onChange={(e) => setSalePrice(e.target.value)}
-                  placeholder="0.00"
-                  className="flex-1"
-                />
-              </div>
-            </div>
-          </div>
+          )}
           
           {/* Scheduling */}
           <div>

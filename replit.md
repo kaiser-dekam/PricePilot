@@ -11,11 +11,16 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 26, 2025
+- **Per-Product Pricing System**: Redesigned work order schema to support individual product pricing instead of bulk pricing
+  - Changed `productIds`, `newRegularPrice`, `newSalePrice` fields to `productUpdates` array
+  - Each product can now have different regular and sale price updates
+  - Updated work order modal with tabular interface for per-product price input
+  - Enhanced work order display to show individual product price changes
+- Fixed query parameter handling in React Query client for proper product loading
 - Fixed React import errors in ProductDetailPanel component
 - Resolved TypeScript type issues across all components
 - Fixed BigCommerce API connection test endpoint from `/store` to `/catalog/products?limit=1`
 - Added proper type casting for query responses
-- All core functionality implemented and error-free
 
 ## System Architecture
 

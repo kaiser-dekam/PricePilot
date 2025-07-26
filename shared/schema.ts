@@ -28,9 +28,12 @@ export const products = pgTable("products", {
 export const workOrders = pgTable("work_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
-  productIds: json("product_ids").$type<string[]>().notNull(),
-  newRegularPrice: decimal("new_regular_price", { precision: 10, scale: 2 }),
-  newSalePrice: decimal("new_sale_price", { precision: 10, scale: 2 }),
+  productUpdates: json("product_updates").$type<Array<{
+    productId: string;
+    productName: string;
+    newRegularPrice?: string;
+    newSalePrice?: string;
+  }>>().notNull(),
   scheduledAt: timestamp("scheduled_at"),
   executeImmediately: boolean("execute_immediately").default(false),
   status: text("status").default("pending"), // pending, executing, completed, failed
@@ -59,9 +62,7 @@ export const insertProductSchema = createInsertSchema(products).pick({
 
 export const insertWorkOrderSchema = createInsertSchema(workOrders).pick({
   title: true,
-  productIds: true,
-  newRegularPrice: true,
-  newSalePrice: true,
+  productUpdates: true,
   scheduledAt: true,
   executeImmediately: true,
 });

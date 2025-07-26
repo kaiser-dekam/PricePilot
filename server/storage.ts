@@ -131,8 +131,6 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       executedAt: null,
       error: null,
-      newRegularPrice: workOrder.newRegularPrice || null,
-      newSalePrice: workOrder.newSalePrice || null,
       scheduledAt: workOrder.scheduledAt || null,
       executeImmediately: workOrder.executeImmediately || false,
     };

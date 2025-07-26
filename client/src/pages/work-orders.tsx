@@ -121,18 +121,39 @@ export default function WorkOrders() {
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Products</h4>
                         <p className="text-sm text-gray-600">
-                          {workOrder.productIds.length} product(s) selected
+                          {workOrder.productUpdates?.length || 0} product(s) with price updates
                         </p>
+                        {workOrder.productUpdates && workOrder.productUpdates.length > 0 && (
+                          <div className="mt-2 max-h-32 overflow-y-auto">
+                            <div className="text-xs text-gray-500 space-y-1">
+                              {workOrder.productUpdates.map((update: any, index: number) => (
+                                <div key={index} className="bg-gray-50 p-2 rounded text-xs">
+                                  <div className="font-medium truncate">{update.productName}</div>
+                                  {update.newRegularPrice && (
+                                    <div>Regular: ${update.newRegularPrice}</div>
+                                  )}
+                                  {update.newSalePrice && (
+                                    <div>Sale: ${update.newSalePrice}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Price Changes</h4>
+                        <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
                         <div className="text-sm text-gray-600 space-y-1">
-                          {workOrder.newRegularPrice && (
-                            <p>Regular Price: ${workOrder.newRegularPrice}</p>
-                          )}
-                          {workOrder.newSalePrice && (
-                            <p>Sale Price: ${workOrder.newSalePrice}</p>
+                          {workOrder.productUpdates && (
+                            <>
+                              <p>
+                                Regular Price Updates: {workOrder.productUpdates.filter((u: any) => u.newRegularPrice).length}
+                              </p>
+                              <p>
+                                Sale Price Updates: {workOrder.productUpdates.filter((u: any) => u.newSalePrice).length}
+                              </p>
+                            </>
                           )}
                         </div>
                       </div>
