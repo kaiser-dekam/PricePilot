@@ -10,6 +10,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### January 27, 2025
+- **Added Stock Visibility Setting**: Implemented user preference for showing/hiding stock status badges
+  - Added `showStock` boolean field to API settings database schema with default value true
+  - Created toggle switch in Settings page under "Display Preferences" section
+  - Updated ProductCard component to conditionally show/hide stock badges based on user preference
+  - Connected Products page to respect the setting from saved user preferences
+  - Stock badges (In Stock, Low Stock, Out of Stock) can now be toggled on/off per user
+- **Implemented Work Order Archive System**: Added comprehensive archive feature to organize completed work orders
+  - Added `archived` boolean field to work orders database schema with default value false
+  - Created archive/unarchive API endpoints with proper user authentication
+  - Updated storage layer with filtering capabilities for archived vs active work orders
+  - Added dropdown filter in Work Orders page to switch between "Active" and "Archived" views
+  - Implemented Archive button (folder icon) for active work orders and Unarchive button for archived ones
+  - Updated empty states to show contextual messages for active vs archived views
+  - Archived work orders are hidden from main view but preserved in database for organization
+
 ### January 26, 2025
 - **Implemented User Authentication System**: Added multi-user support with Replit Auth
   - Created landing page for non-authenticated users with feature overview
