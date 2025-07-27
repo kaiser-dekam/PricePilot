@@ -32,10 +32,15 @@ export default function ProductVariantsDisplay({
   const [isExpanded, setIsExpanded] = useState(false);
   const [variantPrices, setVariantPrices] = useState<Record<string, { regular?: string; sale?: string }>>({});
 
-  const { data: variants, isLoading } = useQuery<ProductVariant[]>({
+  const { data: variants, isLoading, error } = useQuery<ProductVariant[]>({
     queryKey: [`/api/products/${productId}/variants`],
     enabled: isExpanded, // Only load when expanded
   });
+
+  // Debug logging
+  if (isExpanded) {
+    console.log(`Product ${productId} variants:`, { variants, isLoading, error });
+  }
 
   const handleVariantPriceChange = (variantId: string, field: 'regular' | 'sale', value: string) => {
     const newPrices = {
@@ -69,9 +74,8 @@ export default function ProductVariantsDisplay({
     return optionValues?.map(opt => `${opt.option_display_name}: ${opt.label}`).join(', ') || 'No options';
   };
 
-  if (!variants || variants.length === 0) {
-    return null; // Don't show anything if no variants
-  }
+  // Always show the component first to check if product has variants
+  // Only hide after we've actually checked for variants
 
   return (
     <div className="border rounded-lg p-3 bg-gray-50">
@@ -83,13 +87,21 @@ export default function ProductVariantsDisplay({
       >
         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         <Package className="w-4 h-4" />
-        <span>{variants.length} Variant{variants.length !== 1 ? 's' : ''}</span>
+        <span>
+          {isLoading ? 'Loading variants...' : 
+           variants ? `${variants.length} Variant${variants.length !== 1 ? 's' : ''}` : 
+           'Check for variants'}
+        </span>
       </Button>
 
       {isExpanded && (
         <div className="space-y-3">
           {isLoading ? (
             <div className="text-sm text-gray-500">Loading variants...</div>
+          ) : error ? (
+            <div className="text-sm text-red-500">Error loading variants: {error.message}</div>
+          ) : !variants || variants.length === 0 ? (
+            <div className="text-sm text-gray-500">No variants found for this product</div>
           ) : (
             variants.map((variant) => (
               <div key={variant.id} className="border rounded p-3 bg-white">

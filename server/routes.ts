@@ -551,6 +551,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product variants route
+  app.get("/api/products/:productId/variants", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const variants = await storage.getProductVariants(user.id, req.params.productId);
+      res.json(variants);
+    } catch (error: any) {
+      console.error("Error fetching product variants:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
