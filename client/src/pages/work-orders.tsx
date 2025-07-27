@@ -23,7 +23,7 @@ export default function WorkOrders() {
   });
 
   const { data: productsData } = useQuery({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products", { limit: 1000 }], // Get all products for work order creation
   });
 
   const deleteMutation = useMutation({
@@ -325,7 +325,7 @@ export default function WorkOrders() {
       <WorkOrderModal
         isOpen={showWorkOrderModal}
         onClose={() => setShowWorkOrderModal(false)}
-        products={productsData?.products || []}
+        products={(productsData as any)?.products || []}
       />
     </>
   );

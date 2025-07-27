@@ -34,6 +34,12 @@ export default function Products() {
     queryKey: ["/api/settings"],
   });
 
+  // Separate query for all products for work order modal
+  const { data: allProductsData } = useQuery({
+    queryKey: ["/api/products", { limit: 1000 }], // Get all products for work order creation
+    enabled: showWorkOrderModal, // Only fetch when modal is opened
+  });
+
   const isApiConnected = !!apiSettings;
   const showStock = (apiSettings as any)?.showStock ?? true;
 
@@ -269,7 +275,7 @@ export default function Products() {
       <WorkOrderModal
         isOpen={showWorkOrderModal}
         onClose={() => setShowWorkOrderModal(false)}
-        products={products}
+        products={(allProductsData as any)?.products || []}
       />
     </>
   );
