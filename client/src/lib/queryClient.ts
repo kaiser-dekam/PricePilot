@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { auth } from "./firebase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,14 +8,31 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+async function getAuthHeaders() {
+  const user = auth.currentUser;
+  if (user) {
+    return {
+      'x-user-id': user.uid,
+      'x-user-email': user.email || '',
+    };
+  }
+  return {};
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  const headers = {
+    ...(data ? { "Content-Type": "application/json" } : {}),
+    ...authHeaders,
+  };
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -46,8 +64,11 @@ export const getQueryFn: <T>(options: {
       }
     }
 
+    const authHeaders = await getAuthHeaders();
+
     const res = await fetch(url, {
       credentials: "include",
+      headers: authHeaders,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
