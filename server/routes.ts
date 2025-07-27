@@ -51,7 +51,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Ensure user exists in database before saving settings
       let user = await storage.getUser(userId);
+      console.log(`Looking for user with ID: ${userId}, found:`, user);
+      
       if (!user) {
+        console.log(`Creating user with ID: ${userId}, email: ${req.user.email}`);
         try {
           user = await storage.upsertUser({
             id: userId,
@@ -60,18 +63,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: null,
             profileImageUrl: null,
           });
+          console.log(`User created successfully:`, user);
         } catch (error: any) {
+          console.log(`User creation failed with error:`, error);
           // If user creation fails due to duplicate email, try to find existing user by email
           if (error.code === '23505' && error.constraint === 'users_email_unique') {
+            console.log(`Duplicate email constraint, looking for existing user with email: ${req.user.email}`);
             user = await storage.getUserByEmail(req.user.email);
             if (!user) {
               throw new Error("User creation failed and existing user not found");
             }
+            console.log(`Found existing user by email:`, user);
           } else {
             throw error;
           }
         }
       }
+      
+      console.log(`Final user before saving settings:`, user);
       
       // Test connection before saving
       const bigcommerce = new BigCommerceService(validatedData);
