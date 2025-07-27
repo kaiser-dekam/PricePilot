@@ -21,7 +21,7 @@ interface ProductVariantsDisplayProps {
     newSalePrice?: string;
   }>) => void;
   isEditing?: boolean;
-  presetTrigger?: { type: 'removeSalePrices' | 'applyDiscount'; discountPercentage?: string };
+  presetTrigger?: { type: 'removeSalePrices' | 'applyDiscount'; discountPercentage?: string } | null;
 }
 
 export default function ProductVariantsDisplay({ 

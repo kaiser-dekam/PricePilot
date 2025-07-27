@@ -283,6 +283,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
         productName: update.productName,
         newRegularPrice: update.newRegularPrice.trim() || undefined,
         newSalePrice: update.newSalePrice.trim() || undefined,
+        variantUpdates: variantUpdates[update.productId] || [],
       })),
       executeImmediately: scheduleType === "immediate",
     };

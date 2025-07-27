@@ -277,16 +277,40 @@ export default function WorkOrders() {
                           {workOrder.productUpdates?.length || 0} product(s) with price updates
                         </p>
                         {workOrder.productUpdates && workOrder.productUpdates.length > 0 && (
-                          <div className="mt-2 max-h-32 overflow-y-auto">
-                            <div className="text-xs text-gray-500 space-y-1">
+                          <div className="mt-2 max-h-48 overflow-y-auto">
+                            <div className="text-xs text-gray-500 space-y-2">
                               {workOrder.productUpdates.map((update: any, index: number) => (
                                 <div key={index} className="bg-gray-50 p-2 rounded text-xs">
                                   <div className="font-medium truncate">{update.productName}</div>
-                                  {update.newRegularPrice && (
-                                    <div>Regular: ${update.newRegularPrice}</div>
-                                  )}
-                                  {update.newSalePrice && (
-                                    <div>Sale: ${update.newSalePrice}</div>
+                                  <div className="mt-1">
+                                    {update.newRegularPrice && (
+                                      <div>Regular: ${update.newRegularPrice}</div>
+                                    )}
+                                    {update.newSalePrice && (
+                                      <div>Sale: ${update.newSalePrice}</div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Show variant updates if they exist */}
+                                  {update.variantUpdates && update.variantUpdates.length > 0 && (
+                                    <div className="mt-2 ml-2 space-y-1 border-l-2 border-gray-300 pl-2">
+                                      <div className="font-medium text-gray-700">Variants:</div>
+                                      {update.variantUpdates.map((variant: any, vIndex: number) => (
+                                        <div key={vIndex} className="text-xs">
+                                          <div className="text-gray-600 truncate">
+                                            {variant.optionValues?.map((opt: any) => `${opt.option_display_name}: ${opt.label}`).join(', ') || variant.variantSku}
+                                          </div>
+                                          <div className="ml-2">
+                                            {variant.newRegularPrice && (
+                                              <div>Regular: ${variant.newRegularPrice}</div>
+                                            )}
+                                            {variant.newSalePrice && (
+                                              <div>Sale: ${variant.newSalePrice}</div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
                                   )}
                                 </div>
                               ))}
@@ -306,6 +330,15 @@ export default function WorkOrders() {
                               <p>
                                 Sale Price Updates: {workOrder.productUpdates.filter((u: any) => u.newSalePrice).length}
                               </p>
+                              {(() => {
+                                const totalVariants = workOrder.productUpdates.reduce((sum: number, update: any) => 
+                                  sum + (update.variantUpdates?.length || 0), 0);
+                                return totalVariants > 0 && (
+                                  <p>
+                                    Variant Updates: {totalVariants}
+                                  </p>
+                                );
+                              })()}
                             </>
                           )}
                         </div>
