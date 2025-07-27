@@ -49,6 +49,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.uid;
       const validatedData = insertApiSettingsSchema.parse(req.body);
       
+      // Ensure user exists in database before saving settings
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.upsertUser({
+          id: userId,
+          email: req.user.email,
+          firstName: null,
+          lastName: null,
+          profileImageUrl: null,
+        });
+      }
+      
       // Test connection before saving
       const bigcommerce = new BigCommerceService(validatedData);
       const isConnected = await bigcommerce.testConnection();
@@ -60,6 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settings = await storage.saveApiSettings(userId, validatedData);
       res.json(settings);
     } catch (error: any) {
+      console.error("Error saving API settings:", error);
       res.status(400).json({ message: error.message });
     }
   });
