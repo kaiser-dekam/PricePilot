@@ -146,7 +146,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
         if (!product) return update;
 
         if (presetType === 'removeSalePrices') {
-          return { ...update, newSalePrice: "" };
+          return { ...update, newSalePrice: "0.00" };
         } else if (presetType === 'applyDiscount') {
           const regularPrice = parseFloat(product.regularPrice || "0");
           const percentage = parseFloat(discountPercentage);
@@ -162,7 +162,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     toast({
       title: "Preset Applied",
       description: presetType === 'removeSalePrices' 
-        ? "Sale prices removed from selected products"
+        ? "Sale prices set to 0.00 for selected products"
         : `${discountPercentage}% discount applied to selected products`,
     });
   };

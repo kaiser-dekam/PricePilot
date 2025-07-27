@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 
 ### January 27, 2025
 - **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios
-  - Added "Remove Sale Prices" preset button to instantly clear all sale prices from selected products
+  - Added "Remove Sale Prices" preset button to set sale prices to "0.00" for BigCommerce API compatibility
   - Added "Apply Discount" preset with percentage input (1-99%) to create sale prices based on regular prices
   - Presets include proper validation, error handling, and success notifications
   - Enhanced user workflow for bulk pricing changes with one-click actions
