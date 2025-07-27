@@ -297,8 +297,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
               )}
             </div>
 
-            <ScrollArea className="border border-gray-300 rounded-lg p-4 max-h-64">
-              <div className="space-y-2">
+            <div className="border border-gray-300 rounded-lg max-h-64 overflow-y-auto">
+              <div className="p-4 space-y-2">
                 {filteredProducts.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     {searchTerm || categoryFilter !== "all" ? "No products match your filters" : "No products available"}
@@ -328,7 +328,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                   ))
                 )}
               </div>
-            </ScrollArea>
+            </div>
             
             <p className="text-xs text-gray-500 mt-2">
               {filteredProducts.length !== products.length && (

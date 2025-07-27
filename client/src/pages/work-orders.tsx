@@ -9,15 +9,21 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { WorkOrder } from "@shared/schema";
 import { format } from "date-fns";
+import WorkOrderModal from "@/components/work-orders/work-order-modal";
 
 export default function WorkOrders() {
   const { toast } = useToast();
   const [showArchived, setShowArchived] = useState(false);
+  const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
 
   const { data: workOrders, isLoading, refetch } = useQuery({
     queryKey: ["/api/work-orders", { includeArchived: true }],
     refetchInterval: 5000, // Poll every 5 seconds for status updates
     refetchIntervalInBackground: true,
+  });
+
+  const { data: productsData } = useQuery({
+    queryKey: ["/api/products"],
   });
 
   const deleteMutation = useMutation({
@@ -138,7 +144,7 @@ export default function WorkOrders() {
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <Button size="sm" onClick={() => {}}>
+            <Button size="sm" onClick={() => setShowWorkOrderModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Create Work Order
             </Button>
@@ -314,6 +320,13 @@ export default function WorkOrders() {
           )}
         </div>
       </div>
+
+      {/* Work Order Modal */}
+      <WorkOrderModal
+        isOpen={showWorkOrderModal}
+        onClose={() => setShowWorkOrderModal(false)}
+        products={productsData?.products || []}
+      />
     </>
   );
 }
