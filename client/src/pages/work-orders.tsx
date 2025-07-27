@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Clock, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, ArchiveX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { WorkOrder } from "@shared/schema";
@@ -11,9 +12,10 @@ import { format } from "date-fns";
 
 export default function WorkOrders() {
   const { toast } = useToast();
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: workOrders, isLoading, refetch } = useQuery({
-    queryKey: ["/api/work-orders"],
+    queryKey: ["/api/work-orders", { includeArchived: true }],
     refetchInterval: 5000, // Poll every 5 seconds for status updates
     refetchIntervalInBackground: true,
   });
@@ -31,6 +33,42 @@ export default function WorkOrders() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete work order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/work-orders/${id}/archive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+      toast({
+        title: "Success",
+        description: "Work order archived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive work order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unarchiveMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/work-orders/${id}/unarchive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+      toast({
+        title: "Success",
+        description: "Work order unarchived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to unarchive work order",
         variant: "destructive",
       });
     },
@@ -57,24 +95,54 @@ export default function WorkOrders() {
     }
   };
 
+  const handleArchive = (id: string) => {
+    archiveMutation.mutate(id);
+  };
+
+  const handleUnarchive = (id: string) => {
+    unarchiveMutation.mutate(id);
+  };
+
+  // Filter work orders based on archive status
+  const filteredWorkOrders = workOrders?.filter((order: WorkOrder) => 
+    showArchived ? (order as any).archived : !(order as any).archived
+  ) || [];
+
   return (
     <>
       {/* Header Bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Work Orders</h2>
-            <p className="text-sm text-gray-500 mt-1">Manage batch product updates and schedules</p>
+          <div className="flex items-center space-x-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Work Orders</h2>
+              <p className="text-sm text-gray-500 mt-1">Manage batch product updates and schedules</p>
+            </div>
+            <Select value={showArchived ? "archived" : "active"} onValueChange={(value) => setShowArchived(value === "archived")}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active Work Orders</SelectItem>
+                <SelectItem value="archived">Archived Work Orders</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button size="sm" onClick={() => {}}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Work Order
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -97,32 +165,61 @@ export default function WorkOrders() {
                 </Card>
               ))}
             </div>
-          ) : !workOrders || (workOrders as any[]).length === 0 ? (
+          ) : !filteredWorkOrders || filteredWorkOrders.length === 0 ? (
             <div className="text-center py-12">
               <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No work orders</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {showArchived ? "No archived work orders" : "No active work orders"}
+              </h3>
               <p className="text-gray-500 mb-4">
-                Create your first work order to batch update product prices
+                {showArchived 
+                  ? "Work orders will appear here after being archived" 
+                  : "Create your first work order to batch update product prices"
+                }
               </p>
             </div>
           ) : (
             <div className="space-y-6">
-              {(workOrders as WorkOrder[]).map((workOrder: WorkOrder) => (
+              {filteredWorkOrders.map((workOrder: WorkOrder) => (
                 <Card key={workOrder.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{workOrder.title}</CardTitle>
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(workOrder.status || "pending")}
-                        {workOrder.status === "pending" && (
+                        {(workOrder as any).archived ? (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(workOrder.id!)}
-                            disabled={deleteMutation.isPending}
+                            onClick={() => handleUnarchive(workOrder.id!)}
+                            disabled={unarchiveMutation.isPending}
+                            title="Unarchive work order"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <ArchiveX className="w-4 h-4" />
                           </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleArchive(workOrder.id!)}
+                              disabled={archiveMutation.isPending}
+                              title="Archive work order"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </Button>
+                            {workOrder.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(workOrder.id!)}
+                                disabled={deleteMutation.isPending}
+                                title="Delete work order"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

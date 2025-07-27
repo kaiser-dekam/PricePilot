@@ -240,6 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
+      const includeArchived = req.query.includeArchived === 'true';
       
       // Find user by Firebase ID first, then by email if not found
       let user = await storage.getUser(userId);
@@ -251,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      const workOrders = await storage.getWorkOrders(user.id);
+      const workOrders = await storage.getWorkOrders(user.id, includeArchived);
       res.json(workOrders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -330,6 +331,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Work order not found" });
       }
       res.json({ message: "Work order deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/work-orders/:id/archive", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const archived = await storage.archiveWorkOrder(user.id, req.params.id);
+      if (!archived) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      res.json({ message: "Work order archived" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/work-orders/:id/unarchive", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const unarchived = await storage.unarchiveWorkOrder(user.id, req.params.id);
+      if (!unarchived) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      res.json({ message: "Work order unarchived" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

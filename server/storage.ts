@@ -184,11 +184,16 @@ export class DbStorage implements IStorage {
   }
 
   // Work Orders
-  async getWorkOrders(userId: string): Promise<WorkOrder[]> {
+  async getWorkOrders(userId: string, includeArchived: boolean = false): Promise<WorkOrder[]> {
+    const conditions = [eq(workOrders.userId, userId)];
+    if (!includeArchived) {
+      conditions.push(eq(workOrders.archived, false));
+    }
+    
     const result = await this.db
       .select()
       .from(workOrders)
-      .where(eq(workOrders.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(workOrders.createdAt));
     return result;
   }
@@ -218,6 +223,24 @@ export class DbStorage implements IStorage {
   async deleteWorkOrder(userId: string, id: string): Promise<boolean> {
     const result = await this.db.delete(workOrders).where(and(eq(workOrders.userId, userId), eq(workOrders.id, id)));
     return result.rowCount > 0;
+  }
+
+  async archiveWorkOrder(userId: string, id: string): Promise<boolean> {
+    const result = await this.db
+      .update(workOrders)
+      .set({ archived: true })
+      .where(and(eq(workOrders.userId, userId), eq(workOrders.id, id)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async unarchiveWorkOrder(userId: string, id: string): Promise<boolean> {
+    const result = await this.db
+      .update(workOrders)
+      .set({ archived: false })
+      .where(and(eq(workOrders.userId, userId), eq(workOrders.id, id)))
+      .returning();
+    return result.length > 0;
   }
 
   async getPendingWorkOrders(): Promise<WorkOrder[]> {
