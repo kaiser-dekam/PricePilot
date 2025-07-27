@@ -240,7 +240,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const workOrders = await storage.getWorkOrders(userId);
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const workOrders = await storage.getWorkOrders(user.id);
       res.json(workOrders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -250,9 +261,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const validatedData = insertWorkOrderSchema.parse(req.body);
       
-      const workOrder = await storage.createWorkOrder(userId, validatedData);
+      const workOrder = await storage.createWorkOrder(user.id, validatedData);
       
       if (workOrder.executeImmediately || workOrder.scheduledAt) {
         scheduler.scheduleWorkOrder(workOrder);
@@ -268,7 +290,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const workOrder = await storage.updateWorkOrder(userId, req.params.id, req.body);
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const workOrder = await storage.updateWorkOrder(user.id, req.params.id, req.body);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -281,7 +314,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const deleted = await storage.deleteWorkOrder(userId, req.params.id);
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const deleted = await storage.deleteWorkOrder(user.id, req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -295,7 +339,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const result = await storage.getProducts(userId, { limit: 1000 }); // Get all products to extract categories
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const result = await storage.getProducts(user.id, { limit: 1000 }); // Get all products to extract categories
       const categories = Array.from(new Set(result.products.map(p => p.category).filter(Boolean)));
       res.json(categories);
     } catch (error: any) {
