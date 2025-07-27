@@ -52,13 +52,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure user exists in database before saving settings
       let user = await storage.getUser(userId);
       if (!user) {
-        user = await storage.upsertUser({
-          id: userId,
-          email: req.user.email,
-          firstName: null,
-          lastName: null,
-          profileImageUrl: null,
-        });
+        try {
+          user = await storage.upsertUser({
+            id: userId,
+            email: req.user.email,
+            firstName: null,
+            lastName: null,
+            profileImageUrl: null,
+          });
+        } catch (error: any) {
+          // If user creation fails due to duplicate email, try to find existing user by email
+          if (error.code === '23505' && error.constraint === 'users_email_unique') {
+            user = await storage.getUserByEmail(req.user.email);
+            if (!user) {
+              throw new Error("User creation failed and existing user not found");
+            }
+          } else {
+            throw error;
+          }
+        }
       }
       
       // Test connection before saving
