@@ -11,6 +11,20 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 27, 2025
+- **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios
+  - Added "Remove Sale Prices" preset button to instantly clear all sale prices from selected products
+  - Added "Apply Discount" preset with percentage input (1-99%) to create sale prices based on regular prices
+  - Presets include proper validation, error handling, and success notifications
+  - Enhanced user workflow for bulk pricing changes with one-click actions
+- **Enhanced Product Selection**: Added comprehensive selection options in Create Work Order modal
+  - Added "Select All Products" button to select all available products regardless of current filters
+  - Maintained existing "Select All Visible" for filtered product selection
+  - Improved button layout with flex-wrap for better responsive design
+  - Product counts displayed in button labels for clarity
+- **Fixed Create Work Order Modal Scrolling**: Resolved scrolling issues in product selection area
+  - Replaced ScrollArea component with standard div using overflow-y-auto
+  - Applied proper height constraints and scrolling functionality
+  - Connected Create Work Order button functionality across the application
 - **Added Stock Visibility Setting**: Implemented user preference for showing/hiding stock status badges
   - Added `showStock` boolean field to API settings database schema with default value true
   - Created toggle switch in Settings page under "Display Preferences" section

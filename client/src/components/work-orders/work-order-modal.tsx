@@ -292,7 +292,28 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
             </div>
 
             {/* Selection Actions */}
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const allProductIds = products.map(p => p.id);
+                  setSelectedProducts(allProductIds);
+                  
+                  const newUpdates = products.map(product => ({
+                    productId: product.id,
+                    productName: product.name,
+                    newRegularPrice: product.regularPrice || "",
+                    newSalePrice: product.salePrice || "",
+                  }));
+                  setProductUpdates(newUpdates);
+                }}
+                disabled={products.length === 0}
+              >
+                Select All Products ({products.length})
+              </Button>
+              
               <Button
                 type="button"
                 variant="outline"
