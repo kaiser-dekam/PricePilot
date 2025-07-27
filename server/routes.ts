@@ -37,7 +37,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const settings = await storage.getApiSettings(userId);
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const settings = await storage.getApiSettings(user.id);
       res.json(settings || null);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -90,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Failed to connect to BigCommerce API. Please check your credentials." });
       }
 
-      const settings = await storage.saveApiSettings(userId, validatedData);
+      const settings = await storage.saveApiSettings(user.id, validatedData);
       res.json(settings);
     } catch (error: any) {
       console.error("Error saving API settings:", error);
@@ -102,6 +113,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const { category, search, page = "1", limit = "20", sync = "false" } = req.query;
       
       // Note: Sync functionality moved to dedicated POST /api/sync endpoint
@@ -113,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: parseInt(limit as string),
       };
 
-      const result = await storage.getProducts(userId, filters);
+      const result = await storage.getProducts(user.id, filters);
       res.json(result);
     } catch (error: any) {
       console.error("Error in /api/products:", error);
@@ -126,7 +148,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.uid;
       
-      const apiSettings = await storage.getApiSettings(userId);
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const apiSettings = await storage.getApiSettings(user.id);
       if (!apiSettings) {
         return res.status(400).json({ message: "API settings not configured" });
       }
@@ -152,16 +184,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page++;
       }
 
-      console.log(`Syncing ${allProducts.length} products for user ${userId}`);
+      console.log(`Syncing ${allProducts.length} products for user ${user.id}`);
 
       // Clear existing products for this user before syncing new ones
       // This ensures we don't have duplicates and handles deleted products
-      await storage.clearUserProducts(userId);
+      await storage.clearUserProducts(user.id);
 
       // Store products in database
       for (const product of allProducts) {
         try {
-          await storage.createProduct(userId, {
+          await storage.createProduct(user.id, {
             id: product.id,
             name: product.name,
             sku: product.sku || '',
@@ -179,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update lastSyncAt in API settings
-      await storage.updateApiSettingsLastSync(userId, new Date());
+      await storage.updateApiSettingsLastSync(user.id, new Date());
 
       res.json({ 
         message: `Successfully synced ${allProducts.length} products`,
