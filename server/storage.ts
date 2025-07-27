@@ -234,6 +234,18 @@ export class DbStorage implements IStorage {
     return result.length > 0;
   }
 
+  async undoWorkOrder(userId: string, id: string): Promise<boolean> {
+    const result = await this.db
+      .update(workOrders)
+      .set({ 
+        status: 'undone',
+        undoneAt: new Date()
+      })
+      .where(and(eq(workOrders.userId, userId), eq(workOrders.id, id)))
+      .returning();
+    return result.length > 0;
+  }
+
   async unarchiveWorkOrder(userId: string, id: string): Promise<boolean> {
     const result = await this.db
       .update(workOrders)

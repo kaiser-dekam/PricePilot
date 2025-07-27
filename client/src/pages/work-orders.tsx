@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, ArchiveX } from "lucide-react";
+import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, ArchiveX, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +80,25 @@ export default function WorkOrders() {
     },
   });
 
+  const undoMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/work-orders/${id}/undo`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Work order undone successfully - prices restored to original values",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to undo work order",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -90,6 +109,8 @@ export default function WorkOrders() {
         return <Badge variant="default">Completed</Badge>;
       case "failed":
         return <Badge variant="destructive">Failed</Badge>;
+      case "undone":
+        return <Badge className="bg-orange-500">Undone</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -109,10 +130,16 @@ export default function WorkOrders() {
     unarchiveMutation.mutate(id);
   };
 
+  const handleUndo = (id: string) => {
+    if (confirm("Are you sure you want to undo this work order? This will restore the original prices for all products.")) {
+      undoMutation.mutate(id);
+    }
+  };
+
   // Filter work orders based on archive status
-  const filteredWorkOrders = workOrders?.filter((order: WorkOrder) => 
+  const filteredWorkOrders = (workOrders || []).filter((order: WorkOrder) => 
     showArchived ? (order as any).archived : !(order as any).archived
-  ) || [];
+  );
 
   return (
     <>
@@ -205,6 +232,18 @@ export default function WorkOrders() {
                           </Button>
                         ) : (
                           <>
+                            {workOrder.status === "completed" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUndo(workOrder.id!)}
+                                disabled={undoMutation.isPending}
+                                title="Undo work order - restore original prices"
+                                className="text-orange-600 hover:text-orange-700"
+                              >
+                                <Undo2 className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"

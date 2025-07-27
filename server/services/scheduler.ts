@@ -87,6 +87,23 @@ class SchedulerService {
 
       const bigcommerce = new BigCommerceService(apiSettings);
 
+      // Capture original prices before making changes
+      const originalPrices = [];
+      for (const update of workOrder.productUpdates) {
+        try {
+          const product = await storage.getProduct(workOrder.userId, update.productId);
+          if (product) {
+            originalPrices.push({
+              productId: update.productId,
+              originalRegularPrice: product.regularPrice || "0",
+              originalSalePrice: product.salePrice || "0"
+            });
+          }
+        } catch (error) {
+          console.error(`Failed to get original price for product ${update.productId}:`, error);
+        }
+      }
+
       // Process each product update
       for (const update of workOrder.productUpdates) {
         try {
@@ -112,10 +129,11 @@ class SchedulerService {
         }
       }
 
-      // Mark as completed
+      // Mark as completed and save original prices for undo
       await storage.updateWorkOrder(workOrder.userId, workOrderId, {
         status: "completed",
         executedAt: new Date(),
+        originalPrices: originalPrices,
       });
 
       console.log(`Work order ${workOrderId} completed successfully`);

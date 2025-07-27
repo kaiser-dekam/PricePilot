@@ -61,12 +61,18 @@ export const workOrders = pgTable("work_orders", {
     newRegularPrice?: string;
     newSalePrice?: string;
   }>>().notNull(),
+  originalPrices: json("original_prices").$type<Array<{
+    productId: string;
+    originalRegularPrice: string;
+    originalSalePrice: string;
+  }>>(),
   scheduledAt: timestamp("scheduled_at"),
   executeImmediately: boolean("execute_immediately").default(false),
-  status: text("status").default("pending"), // pending, executing, completed, failed
+  status: text("status").default("pending"), // pending, executing, completed, failed, undone
   archived: boolean("archived").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   executedAt: timestamp("executed_at"),
+  undoneAt: timestamp("undone_at"),
   error: text("error"),
 });
 

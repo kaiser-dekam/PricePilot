@@ -21,6 +21,12 @@ Preferred communication style: Simple, everyday language.
   - Maintained existing "Select All Visible" for filtered product selection
   - Improved button layout with flex-wrap for better responsive design
   - Product counts displayed in button labels for clarity
+- **Added Work Order Undo Functionality**: Implemented ability to reverse completed work orders
+  - Added "Undo" button that appears only for completed work orders
+  - Captures original prices before executing work order changes
+  - Restores original regular and sale prices for all affected products in BigCommerce
+  - Updates work order status to "undone" and adds timestamp
+  - Includes confirmation dialog and comprehensive error handling
 - **Fixed Create Work Order Modal Scrolling**: Resolved scrolling issues in product selection area
   - Replaced ScrollArea component with standard div using overflow-y-auto
   - Applied proper height constraints and scrolling functionality

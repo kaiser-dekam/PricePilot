@@ -384,6 +384,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/work-orders/:id/undo", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get the work order to access original prices
+      const workOrder = await storage.getWorkOrder(user.id, req.params.id);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      
+      if (workOrder.status !== 'completed') {
+        return res.status(400).json({ message: "Can only undo completed work orders" });
+      }
+      
+      if (!workOrder.originalPrices) {
+        return res.status(400).json({ message: "No original prices found for this work order" });
+      }
+      
+      // Get API settings for BigCommerce update
+      const apiSettings = await storage.getApiSettings(user.id);
+      if (!apiSettings) {
+        return res.status(400).json({ message: "BigCommerce API not configured" });
+      }
+      
+      const bigcommerce = new BigCommerceService(apiSettings);
+      
+      // Restore original prices
+      for (const originalPrice of workOrder.originalPrices) {
+        try {
+          await bigcommerce.updateProduct(originalPrice.productId, {
+            regularPrice: originalPrice.originalRegularPrice,
+            salePrice: originalPrice.originalSalePrice || undefined
+          });
+          
+          // Update local product
+          await storage.updateProduct(user.id, originalPrice.productId, {
+            regularPrice: originalPrice.originalRegularPrice,
+            salePrice: originalPrice.originalSalePrice || undefined
+          });
+        } catch (error) {
+          console.error(`Error undoing product ${originalPrice.productId}:`, error);
+        }
+      }
+      
+      // Mark work order as undone
+      await storage.undoWorkOrder(user.id, req.params.id);
+      
+      res.json({ message: "Work order undone successfully" });
+    } catch (error: any) {
+      console.error("Error undoing work order:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Categories route for work order modal
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
