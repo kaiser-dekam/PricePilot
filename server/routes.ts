@@ -4,17 +4,28 @@ import { storage } from "./storage";
 import { insertApiSettingsSchema, insertWorkOrderSchema } from "@shared/schema";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { isAuthenticated } from "./firebaseAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
-  await setupAuth(app);
+  // No auth setup needed for Firebase
 
-  // Auth routes
+  // Auth routes - simplified for Firebase
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const userId = req.user.uid; 
+      let user = await storage.getUser(userId);
+      
+      // Create user if doesn't exist
+      if (!user) {
+        user = await storage.upsertUser({
+          id: userId,
+          email: req.user.email,
+          firstName: null,
+          lastName: null,
+          profileImageUrl: null,
+        });
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -25,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Settings routes
   app.get("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const settings = await storage.getApiSettings(userId);
       res.json(settings || null);
     } catch (error: any) {
@@ -35,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const validatedData = insertApiSettingsSchema.parse(req.body);
       
       // Test connection before saving
@@ -56,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Products routes
   app.get("/api/products", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const { category, search, page = "1", limit = "20", sync = "false" } = req.query;
       
       // Note: Sync functionality moved to dedicated POST /api/sync endpoint
@@ -79,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dedicated sync endpoint for frontend
   app.post("/api/sync", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       
       const apiSettings = await storage.getApiSettings(userId);
       if (!apiSettings) {
@@ -148,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const product = await storage.getProduct(userId, req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
@@ -162,7 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Work Orders routes
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const workOrders = await storage.getWorkOrders(userId);
       res.json(workOrders);
     } catch (error: any) {
@@ -172,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const validatedData = insertWorkOrderSchema.parse(req.body);
       
       const workOrder = await storage.createWorkOrder(userId, validatedData);
@@ -190,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const workOrder = await storage.updateWorkOrder(userId, req.params.id, req.body);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
@@ -203,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const deleted = await storage.deleteWorkOrder(userId, req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Work order not found" });
@@ -217,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Categories route for work order modal
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.uid;
       const result = await storage.getProducts(userId, { limit: 1000 }); // Get all products to extract categories
       const categories = Array.from(new Set(result.products.map(p => p.category).filter(Boolean)));
       res.json(categories);
