@@ -1,7 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, BarChart3, Clock, Shield } from "lucide-react";
+import { signInWithGoogle } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
+  const { toast } = useToast();
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      toast({
+        title: "Success",
+        description: "Successfully signed in with Google",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sign in",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
@@ -15,11 +35,11 @@ export default function Landing() {
             bulk price updates, and automated work orders. Manage your inventory like a pro.
           </p>
           <Button 
-            onClick={() => window.location.href = '/api/login'}
+            onClick={handleSignIn}
             size="lg"
             className="text-lg px-8 py-3"
           >
-            Sign In to Get Started
+            Sign In with Google
           </Button>
         </div>
 

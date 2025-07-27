@@ -66,8 +66,21 @@ export default function Settings() {
     });
   };
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      const { signOutUser } = await import("@/lib/firebase");
+      await signOutUser();
+      toast({
+        title: "Success",
+        description: "Successfully signed out",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sign out",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

@@ -10,6 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### January 27, 2025
+- **Migrated to Firebase Auth**: Replaced Replit Auth with Firebase Google Sign-In
+  - Implemented Firebase app configuration with provided project credentials
+  - Set up Google authentication with popup-based sign-in flow
+  - Updated useAuth hook to use Firebase auth state management
+  - Modified API client to send Firebase user credentials in headers
+  - Simplified backend auth middleware for Firebase user verification
+  - Updated landing page and settings page with Firebase auth integration
+  - Automatic user creation in database for new Firebase users
+
 ### January 26, 2025
 - **Implemented User Authentication System**: Added multi-user support with Replit Auth
   - Created landing page for non-authenticated users with feature overview
