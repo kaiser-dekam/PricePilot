@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Package, ClipboardList, Settings, Wifi } from "lucide-react";
+import { Package, ClipboardList, Settings, Users, Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,12 @@ export default function Sidebar() {
       icon: ClipboardList,
       current: location === "/work-orders",
       badge: pendingWorkOrders.length > 0 ? pendingWorkOrders.length : undefined,
+    },
+    {
+      name: "Team",
+      href: "/team",
+      icon: Users,
+      current: location === "/team",
     },
     {
       name: "Settings",

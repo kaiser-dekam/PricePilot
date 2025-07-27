@@ -14,20 +14,44 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for authentication
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
+// Companies table
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User storage table for authentication
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey(),
+  companyId: varchar("company_id").references(() => companies.id),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: text("role").default("member"), // owner, admin, member
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Company invitations table
+export const companyInvitations = pgTable("company_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  email: varchar("email").notNull(),
+  role: text("role").default("member"), // admin, member
+  invitedBy: varchar("invited_by").notNull().references(() => users.id),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const apiSettings = pgTable("api_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
   storeHash: text("store_hash").notNull(),
   accessToken: text("access_token").notNull(),
   clientId: text("client_id").notNull(),
@@ -38,7 +62,7 @@ export const apiSettings = pgTable("api_settings", {
 
 export const products = pgTable("products", {
   id: varchar("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
   name: text("name").notNull(),
   sku: text("sku"),
   description: text("description"),
@@ -53,7 +77,7 @@ export const products = pgTable("products", {
 
 export const productVariants = pgTable("product_variants", {
   id: varchar("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
   productId: varchar("product_id").notNull().references(() => products.id),
   variantSku: text("variant_sku"),
   optionValues: json("option_values").$type<Array<{
@@ -71,7 +95,8 @@ export const productVariants = pgTable("product_variants", {
 
 export const workOrders = pgTable("work_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
   title: text("title").notNull(),
   productUpdates: json("product_updates").$type<Array<{
     productId: string;
@@ -109,6 +134,10 @@ export const workOrders = pgTable("work_orders", {
   error: text("error"),
 });
 
+export const insertCompanySchema = createInsertSchema(companies).pick({
+  name: true,
+});
+
 export const insertApiSettingsSchema = createInsertSchema(apiSettings).pick({
   storeHash: true,
   accessToken: true,
@@ -118,10 +147,22 @@ export const insertApiSettingsSchema = createInsertSchema(apiSettings).pick({
 
 export const insertUserSchema = createInsertSchema(users).pick({
   id: true,
+  companyId: true,
   email: true,
   firstName: true,
   lastName: true,
   profileImageUrl: true,
+  role: true,
+  isActive: true,
+});
+
+export const insertCompanyInvitationSchema = createInsertSchema(companyInvitations).pick({
+  companyId: true,
+  email: true,
+  role: true,
+  invitedBy: true,
+  token: true,
+  expiresAt: true,
 });
 
 export const insertProductSchema = createInsertSchema(products).pick({
@@ -154,8 +195,12 @@ export const insertWorkOrderSchema = createInsertSchema(workOrders).pick({
   scheduledAt: z.string().datetime().optional().nullable().transform(val => val ? new Date(val) : null),
 });
 
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof insertUserSchema>;
+export type CompanyInvitation = typeof companyInvitations.$inferSelect;
+export type InsertCompanyInvitation = z.infer<typeof insertCompanyInvitationSchema>;
 export type ApiSettings = typeof apiSettings.$inferSelect;
 export type InsertApiSettings = z.infer<typeof insertApiSettingsSchema>;
 export type Product = typeof products.$inferSelect;

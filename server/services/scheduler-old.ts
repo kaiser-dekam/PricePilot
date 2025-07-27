@@ -1,121 +1,236 @@
-import * as cron from 'node-cron';
-import { storage } from '../storage';
-import { BigCommerceService } from './bigcommerce';
+import { WorkOrder } from "@shared/schema";
+import { storage } from "../storage";
+import { BigCommerceService } from "./bigcommerce";
+import * as cron from "node-cron";
 
 class SchedulerService {
-  private jobs: Map<string, cron.ScheduledTask> = new Map();
+  private scheduledJobs = new Map<string, cron.ScheduledTask>();
 
-  async scheduleWorkOrder(workOrderId: string, scheduledAt: Date): Promise<void> {
-    const cronExpression = this.dateToCron(scheduledAt);
-    
-    const task = cron.schedule(cronExpression, async () => {
-      await this.executeWorkOrder(workOrderId);
-      this.jobs.delete(workOrderId);
-    });
-
-    this.jobs.set(workOrderId, task);
-    task.start();
-    
-    console.log(`Work order ${workOrderId} scheduled for ${scheduledAt}`);
+  async init() {
+    // Restore scheduled work orders on startup
+    const pendingWorkOrders = await storage.getPendingWorkOrders();
+    for (const workOrder of pendingWorkOrders) {
+      if (workOrder.scheduledAt && new Date(workOrder.scheduledAt) > new Date()) {
+        this.scheduleWorkOrder(workOrder);
+      } else if (workOrder.executeImmediately) {
+        this.executeWorkOrder(workOrder.id);
+      }
+    }
   }
 
-  async executeWorkOrder(workOrderId: string): Promise<void> {
+  scheduleWorkOrder(workOrder: WorkOrder) {
+    if (workOrder.executeImmediately) {
+      // Execute immediately
+      setImmediate(() => this.executeWorkOrder(workOrder.id));
+      return;
+    }
+
+    if (!workOrder.scheduledAt) {
+      return;
+    }
+
+    const scheduledTime = new Date(workOrder.scheduledAt);
+    if (scheduledTime <= new Date()) {
+      // If scheduled time is in the past, execute immediately
+      setImmediate(() => this.executeWorkOrder(workOrder.id));
+      return;
+    }
+
+    // Cancel existing job if it exists
+    if (this.scheduledJobs.has(workOrder.id)) {
+      this.scheduledJobs.get(workOrder.id)?.stop();
+      this.scheduledJobs.delete(workOrder.id);
+    }
+
+    // Calculate cron expression
+    const cronExpression = this.dateToCron(scheduledTime);
+    
+    const task = cron.schedule(cronExpression, async () => {
+      await this.executeWorkOrder(workOrder.id);
+      this.scheduledJobs.delete(workOrder.id);
+    });
+
+    this.scheduledJobs.set(workOrder.id, task);
+    task.start();
+
+    console.log(`Work order ${workOrder.id} scheduled for ${scheduledTime.toISOString()}`);
+  }
+
+  async executeWorkOrder(workOrderId: string) {
     try {
       console.log(`Executing work order ${workOrderId}`);
       
-      const workOrder = await storage.getWorkOrder(workOrderId);
+      // Get all work orders to find the specific one (we need userId)
+      const allWorkOrders = await storage.getPendingWorkOrders();
+      const workOrder = allWorkOrders.find(wo => wo.id === workOrderId);
+      
       if (!workOrder) {
-        throw new Error('Work order not found');
-      }
-
-      if (workOrder.status !== 'pending') {
-        console.log(`Work order ${workOrderId} is not pending, skipping execution`);
+        console.error(`Work order ${workOrderId} not found`);
         return;
       }
 
-      await storage.updateWorkOrder(workOrderId, { status: 'executing' });
-
-      const apiSettings = await storage.getApiSettings();
-      if (!apiSettings) {
-        throw new Error('BigCommerce API settings not configured');
+      if (workOrder.status !== "pending") {
+        console.log(`Work order ${workOrderId} is not pending, skipping`);
+        return;
       }
 
-      const bigcommerce = new BigCommerceService({
-        storeHash: apiSettings.storeHash,
-        accessToken: apiSettings.accessToken,
-        clientId: apiSettings.clientId,
+      // Update status to executing
+      await storage.updateWorkOrder(workOrder.userId, workOrderId, { 
+        status: "executing" 
       });
 
-      const updates = workOrder.productUpdates.map(update => ({
-        id: update.productId,
-        regularPrice: update.newRegularPrice || undefined,
-        salePrice: update.newSalePrice || undefined,
-      }));
-
-      await bigcommerce.updateMultipleProducts(updates);
-
-      // Update local product cache
-      for (const update of workOrder.productUpdates) {
-        const updateData: any = {};
-        if (update.newRegularPrice) updateData.regularPrice = update.newRegularPrice;
-        if (update.newSalePrice) updateData.salePrice = update.newSalePrice;
-        
-        await storage.updateProduct(update.productId, updateData);
+      // Get API settings for this user
+      const apiSettings = await storage.getApiSettings(workOrder.userId);
+      if (!apiSettings) {
+        throw new Error("API settings not configured for this user");
       }
 
-      await storage.updateWorkOrder(workOrderId, {
-        status: 'completed',
+      const bigcommerce = new BigCommerceService(apiSettings);
+
+      // Capture original prices before making changes
+      const originalPrices = [];
+      for (const update of workOrder.productUpdates) {
+        try {
+          const product = await storage.getProduct(workOrder.userId, update.productId);
+          if (product) {
+            const originalPrice = {
+              productId: update.productId,
+              originalRegularPrice: product.regularPrice || "0",
+              originalSalePrice: product.salePrice || "0",
+              variantPrices: [] as Array<{
+                variantId: string;
+                originalRegularPrice: string;
+                originalSalePrice: string;
+              }>
+            };
+
+            // Capture original variant prices if variants are being updated
+            if (update.variantUpdates && update.variantUpdates.length > 0) {
+              for (const variantUpdate of update.variantUpdates) {
+                try {
+                  const variant = await storage.getProductVariants(workOrder.userId, update.productId);
+                  const existingVariant = variant.find(v => v.id === variantUpdate.variantId);
+                  if (existingVariant) {
+                    originalPrice.variantPrices.push({
+                      variantId: variantUpdate.variantId,
+                      originalRegularPrice: existingVariant.regularPrice || "0",
+                      originalSalePrice: existingVariant.salePrice || "0"
+                    });
+                  }
+                } catch (error) {
+                  console.error(`Failed to get original variant price for ${variantUpdate.variantId}:`, error);
+                }
+              }
+            }
+
+            originalPrices.push(originalPrice);
+          }
+        } catch (error) {
+          console.error(`Failed to get original price for product ${update.productId}:`, error);
+        }
+      }
+
+      // Process each product update
+      for (const update of workOrder.productUpdates) {
+        try {
+          console.log(`Processing product update:`, JSON.stringify(update, null, 2));
+          
+          // Update main product pricing if specified
+          if (update.newRegularPrice || update.newSalePrice) {
+            const updateData = {
+              regularPrice: update.newRegularPrice,
+              salePrice: update.newSalePrice
+            };
+
+            console.log(`Calling BigCommerce updateProduct with:`, updateData);
+            await bigcommerce.updateProduct(update.productId, updateData);
+            
+            // Update product in our database
+            await storage.updateProduct(workOrder.userId, update.productId, {
+              regularPrice: update.newRegularPrice || undefined,
+              salePrice: update.newSalePrice || undefined,
+            });
+          }
+
+          // Process variant updates if any
+          if (update.variantUpdates && update.variantUpdates.length > 0) {
+            console.log(`Processing ${update.variantUpdates.length} variant updates for product ${update.productId}`);
+            
+            for (const variantUpdate of update.variantUpdates) {
+              try {
+                if (variantUpdate.newRegularPrice || variantUpdate.newSalePrice) {
+                  const variantUpdateData: any = {};
+                  
+                  if (variantUpdate.newRegularPrice) {
+                    variantUpdateData.price = parseFloat(variantUpdate.newRegularPrice);
+                  }
+                  
+                  if (variantUpdate.newSalePrice) {
+                    variantUpdateData.sale_price = variantUpdate.newSalePrice ? parseFloat(variantUpdate.newSalePrice) : '';
+                  }
+
+                  console.log(`Updating variant ${variantUpdate.variantId} with:`, variantUpdateData);
+                  await bigcommerce.updateProductVariant(update.productId, variantUpdate.variantId, variantUpdateData);
+                  
+                  // Update variant in our database
+                  await storage.updateProductVariant(workOrder.userId, variantUpdate.variantId, {
+                    regularPrice: variantUpdate.newRegularPrice || undefined,
+                    salePrice: variantUpdate.newSalePrice || undefined,
+                  });
+                }
+              } catch (variantError) {
+                console.error(`Failed to update variant ${variantUpdate.variantId}:`, variantError);
+              }
+            }
+          }
+
+          console.log(`Updated product ${update.productId}`);
+        } catch (error) {
+          console.error(`Failed to update product ${update.productId}:`, error);
+        }
+      }
+
+      // Mark as completed and save original prices for undo
+      await storage.updateWorkOrder(workOrder.userId, workOrderId, {
+        status: "completed",
         executedAt: new Date(),
+        originalPrices: originalPrices,
       });
 
       console.log(`Work order ${workOrderId} completed successfully`);
     } catch (error: any) {
-      console.error(`Error executing work order ${workOrderId}:`, error);
+      console.error(`Work order ${workOrderId} failed:`, error);
       
-      await storage.updateWorkOrder(workOrderId, {
-        status: 'failed',
-        error: error.message,
-        executedAt: new Date(),
-      });
-    }
-  }
-
-  async executeImmediately(workOrderId: string): Promise<void> {
-    await this.executeWorkOrder(workOrderId);
-  }
-
-  cancelWorkOrder(workOrderId: string): void {
-    const task = this.jobs.get(workOrderId);
-    if (task) {
-      task.destroy();
-      this.jobs.delete(workOrderId);
-      console.log(`Work order ${workOrderId} cancelled`);
+      // Try to update status to failed
+      try {
+        const allWorkOrders = await storage.getPendingWorkOrders();
+        const workOrder = allWorkOrders.find(wo => wo.id === workOrderId);
+        if (workOrder) {
+          await storage.updateWorkOrder(workOrder.userId, workOrderId, {
+            status: "failed",
+            error: error.message,
+            executedAt: new Date(),
+          });
+        }
+      } catch (updateError) {
+        console.error(`Failed to update work order status:`, updateError);
+      }
     }
   }
 
   private dateToCron(date: Date): string {
-    const minutes = date.getMinutes();
-    const hours = date.getHours();
+    const minute = date.getMinutes();
+    const hour = date.getHours();
     const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    
-    return `${minutes} ${hours} ${day} ${month} *`;
+    const month = date.getMonth() + 1; // months are 0-indexed
+    return `${minute} ${hour} ${day} ${month} *`;
   }
 
-  async initializeScheduledJobs(): Promise<void> {
-    const pendingWorkOrders = await storage.getPendingWorkOrders();
-    
-    for (const workOrder of pendingWorkOrders) {
-      if (workOrder.scheduledAt && !workOrder.executeImmediately) {
-        const scheduledDate = new Date(workOrder.scheduledAt);
-        if (scheduledDate > new Date()) {
-          await this.scheduleWorkOrder(workOrder.id, scheduledDate);
-        } else {
-          // Execute overdue work orders immediately
-          await this.executeWorkOrder(workOrder.id);
-        }
-      }
+  cancelWorkOrder(workOrderId: string) {
+    if (this.scheduledJobs.has(workOrderId)) {
+      this.scheduledJobs.get(workOrderId)?.stop();
+      this.scheduledJobs.delete(workOrderId);
+      console.log(`Cancelled work order ${workOrderId}`);
     }
   }
 }

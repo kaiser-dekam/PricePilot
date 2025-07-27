@@ -1,31 +1,22 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertApiSettingsSchema, insertWorkOrderSchema } from "@shared/schema";
+import { insertApiSettingsSchema, insertWorkOrderSchema, insertCompanySchema, insertCompanyInvitationSchema } from "@shared/schema";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
-import { isAuthenticated } from "./firebaseAuth";
+import { setupAuth, isAuthenticated, requireCompany } from "./replitAuth";
+import { randomUUID } from "crypto";
+import { addDays } from "date-fns";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // No auth setup needed for Firebase
+  // Auth middleware
+  await setupAuth(app);
 
-  // Auth routes - simplified for Firebase
+  // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.uid; 
-      let user = await storage.getUser(userId);
-      
-      // Create user if doesn't exist
-      if (!user) {
-        user = await storage.upsertUser({
-          id: userId,
-          email: req.user.email,
-          firstName: null,
-          lastName: null,
-          profileImageUrl: null,
-        });
-      }
-      
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -33,543 +24,434 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API Settings routes
-  app.get("/api/settings", isAuthenticated, async (req: any, res) => {
+  // Company setup routes (for users without a company)
+  app.post('/api/company/create', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
-      
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
-      const settings = await storage.getApiSettings(user.id);
-      res.json(settings || null);
+
+      if (user.companyId) {
+        return res.status(400).json({ message: "User already has a company" });
+      }
+
+      const validatedData = insertCompanySchema.parse(req.body);
+      const company = await storage.createCompany(validatedData);
+
+      // Update user to be owner of the new company
+      await storage.upsertUser({
+        ...user,
+        companyId: company.id,
+        role: "owner",
+      });
+
+      res.json({ company, user: { ...user, companyId: company.id, role: "owner" } });
     } catch (error: any) {
+      console.error("Error creating company:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/settings", isAuthenticated, async (req: any, res) => {
+  app.post('/api/invitations/accept/:token', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
-      const validatedData = insertApiSettingsSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      const { token } = req.params;
       
-      // Ensure user exists in database before saving settings
-      let user = await storage.getUser(userId);
-      console.log(`Looking for user with ID: ${userId}, found:`, user);
-      
-      if (!user) {
-        console.log(`Creating user with ID: ${userId}, email: ${req.user.email}`);
-        try {
-          user = await storage.upsertUser({
-            id: userId,
-            email: req.user.email,
-            firstName: null,
-            lastName: null,
-            profileImageUrl: null,
-          });
-          console.log(`User created successfully:`, user);
-        } catch (error: any) {
-          console.log(`User creation failed with error:`, error);
-          // If user creation fails due to duplicate email, try to find existing user by email
-          if (error.code === '23505' && error.constraint === 'users_email_unique') {
-            console.log(`Duplicate email constraint, looking for existing user with email: ${req.user.email}`);
-            user = await storage.getUserByEmail(req.user.email);
-            if (!user) {
-              throw new Error("User creation failed and existing user not found");
-            }
-            console.log(`Found existing user by email:`, user);
-          } else {
-            throw error;
-          }
-        }
-      }
-      
-      console.log(`Final user before saving settings:`, user);
-      
-      // Test connection before saving
-      const bigcommerce = new BigCommerceService(validatedData);
-      const isConnected = await bigcommerce.testConnection();
-      
-      if (!isConnected) {
-        return res.status(400).json({ message: "Failed to connect to BigCommerce API. Please check your credentials." });
+      const success = await storage.acceptInvitation(token, userId);
+      if (!success) {
+        return res.status(400).json({ message: "Invalid or expired invitation" });
       }
 
-      const settings = await storage.saveApiSettings(user.id, validatedData);
+      const user = await storage.getUser(userId);
+      res.json({ user });
+    } catch (error: any) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Company-based routes (require user to be part of a company)
+  app.get('/api/company', requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const company = await storage.getCompany(companyId);
+      res.json(company);
+    } catch (error: any) {
+      console.error("Error fetching company:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/company/users', requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const users = await storage.getCompanyUsers(companyId);
+      res.json(users);
+    } catch (error: any) {
+      console.error("Error fetching company users:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/company/invite', requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const currentUser = req.currentUser;
+      
+      // Only owners and admins can invite
+      if (!['owner', 'admin'].includes(currentUser.role)) {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const validatedData = insertCompanyInvitationSchema.parse({
+        ...req.body,
+        companyId,
+        invitedBy: currentUser.id,
+        token: randomUUID(),
+        expiresAt: addDays(new Date(), 7).toISOString(),
+      });
+
+      const invitation = await storage.createInvitation(validatedData);
+      res.json(invitation);
+    } catch (error: any) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/company/invitations', requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const invitations = await storage.getCompanyInvitations(companyId);
+      res.json(invitations);
+    } catch (error: any) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // API Settings routes
+  app.get("/api/settings", requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const settings = await storage.getApiSettings(companyId);
+      res.json(settings || null);
+    } catch (error: any) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings", requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const validatedData = insertApiSettingsSchema.parse(req.body);
+      
+      const settings = await storage.saveApiSettings(companyId, validatedData);
       res.json(settings);
     } catch (error: any) {
-      console.error("Error saving API settings:", error);
-      res.status(400).json({ message: error.message });
+      console.error("Error saving settings:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/test", requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const settings = await storage.getApiSettings(companyId);
+      
+      if (!settings) {
+        return res.status(400).json({ message: "No API settings found" });
+      }
+
+      const bcService = new BigCommerceService(settings);
+      await bcService.testConnection();
+      
+      res.json({ success: true, message: "Connection successful" });
+    } catch (error: any) {
+      console.error("Connection test failed:", error);
+      res.status(400).json({ success: false, message: error.message });
     }
   });
 
   // Products routes
-  app.get("/api/products", isAuthenticated, async (req: any, res) => {
+  app.get("/api/products", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { category, search, page, limit } = req.query;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const { category, search, page = "1", limit = "20", sync = "false" } = req.query;
-      
-      // Note: Sync functionality moved to dedicated POST /api/sync endpoint
-
       const filters = {
         category: category as string,
         search: search as string,
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
       };
 
-      const result = await storage.getProducts(user.id, filters);
+      const result = await storage.getProducts(companyId, filters);
       res.json(result);
     } catch (error: any) {
-      console.error("Error in /api/products:", error);
+      console.error("Error fetching products:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  // Dedicated sync endpoint for frontend
-  app.post("/api/sync", isAuthenticated, async (req: any, res) => {
+  app.get("/api/products/:id", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { id } = req.params;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const apiSettings = await storage.getApiSettings(user.id);
-      if (!apiSettings) {
-        return res.status(400).json({ message: "API settings not configured" });
-      }
-
-      const bigcommerce = new BigCommerceService(apiSettings);
-      
-      // Fetch all products by paginating through all pages
-      let allProducts: any[] = [];
-      let page = 1;
-      let hasMorePages = true;
-      
-      while (hasMorePages) {
-        console.log(`Fetching page ${page} of products...`);
-        const productsResponse = await bigcommerce.getProducts(page, 50);
-        const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
-        
-        allProducts.push(...pageProducts);
-        
-        // Check if there are more pages
-        const total = productsResponse.total || 0;
-        const currentCount = page * 50;
-        hasMorePages = currentCount < total;
-        page++;
-      }
-
-      console.log(`Syncing ${allProducts.length} products for user ${user.id}`);
-
-      // Clear existing products for this user before syncing new ones
-      // This ensures we don't have duplicates and handles deleted products
-      await storage.clearUserProducts(user.id);
-
-      // Store products in database
-      for (const product of allProducts) {
-        try {
-          await storage.createProduct(user.id, {
-            id: product.id,
-            name: product.name,
-            sku: product.sku || '',
-            description: product.description || '',
-            category: product.category || null,
-            regularPrice: product.regularPrice || '0',
-            salePrice: product.salePrice || null,
-            stock: product.stock || 0,
-            weight: product.weight || '0',
-            status: product.status || 'draft',
-          });
-
-          // Fetch and store variants for this product if it has any
-          try {
-            const variants = await bigcommerce.getProductVariants(product.id);
-            if (variants && variants.length > 0) {
-              console.log(`Found ${variants.length} variants for product ${product.id}`);
-              
-              // Clear existing variants for this product
-              await storage.clearProductVariants(user.id, product.id);
-              
-              // Store each variant
-              for (const variant of variants) {
-                await storage.createProductVariant(user.id, {
-                  id: variant.id.toString(),
-                  productId: product.id,
-                  variantSku: variant.sku || '',
-                  optionValues: variant.option_values || [],
-                  regularPrice: variant.price || variant.calculated_price || '0',
-                  salePrice: variant.sale_price || null,
-                  calculatedPrice: variant.calculated_price || '0',
-                  stock: variant.inventory_level || 0,
-                });
-              }
-            }
-          } catch (variantError) {
-            console.error(`Error storing variants for product ${product.id}:`, variantError);
-          }
-        } catch (productError) {
-          console.error(`Error storing product ${product.id}:`, productError);
-        }
-      }
-
-      // Update lastSyncAt in API settings
-      await storage.updateApiSettingsLastSync(user.id, new Date());
-
-      res.json({ 
-        message: `Successfully synced ${allProducts.length} products`,
-        count: allProducts.length 
-      });
-    } catch (error: any) {
-      console.error("Error in /api/sync:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/products/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.uid;
-      
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const product = await storage.getProduct(user.id, req.params.id);
+      const product = await storage.getProduct(companyId, id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
+      
       res.json(product);
     } catch (error: any) {
+      console.error("Error fetching product:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/products/:id/variants", isAuthenticated, async (req: any, res) => {
+  app.get("/api/products/:id/variants", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { id } = req.params;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const variants = await storage.getProductVariants(user.id, req.params.id);
+      const variants = await storage.getProductVariants(companyId, id);
       res.json(variants);
     } catch (error: any) {
+      console.error("Error fetching product variants:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/products/sync", requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const settings = await storage.getApiSettings(companyId);
+      
+      if (!settings) {
+        return res.status(400).json({ message: "No API settings found. Please configure BigCommerce API first." });
+      }
+
+      const bcService = new BigCommerceService(settings);
+      
+      // Clear existing products and variants
+      await storage.clearCompanyProducts(companyId);
+      
+      // Fetch products from BigCommerce
+      const result = await bcService.getProducts();
+      const bcProducts = result.products;
+      const bcCategories = await bcService.getCategories();
+      
+      const categoryMap = new Map(bcCategories.map(cat => [cat.id, cat.name]));
+      
+      // Save products to database
+      let syncedCount = 0;
+      for (const bcProduct of bcProducts) {
+        const product = {
+          id: bcProduct.id.toString(),
+          name: bcProduct.name,
+          sku: bcProduct.sku || undefined,
+          description: bcProduct.description || undefined,
+          category: bcProduct.categories && bcProduct.categories.length > 0 
+            ? categoryMap.get(bcProduct.categories[0]) || "Uncategorized"
+            : "Uncategorized",
+          regularPrice: bcProduct.price ? bcProduct.price.toString() : undefined,
+          salePrice: bcProduct.sale_price && parseFloat(bcProduct.sale_price) > 0 ? bcProduct.sale_price.toString() : undefined,
+          stock: bcProduct.inventory_level || 0,
+          weight: bcProduct.weight ? bcProduct.weight.toString() : undefined,
+          status: bcProduct.is_visible ? "published" : "draft"
+        };
+        
+        await storage.createProduct(companyId, product);
+        
+        // Fetch and save variants for this product
+        try {
+          const bcVariants = await bcService.getProductVariants(bcProduct.id);
+          for (const bcVariant of bcVariants) {
+            const variant = {
+              id: bcVariant.id.toString(),
+              productId: bcProduct.id.toString(),
+              variantSku: bcVariant.sku || undefined,
+              optionValues: bcVariant.option_values || [],
+              regularPrice: bcVariant.price ? bcVariant.price.toString() : undefined,
+              salePrice: bcVariant.sale_price && parseFloat(bcVariant.sale_price) > 0 ? bcVariant.sale_price.toString() : undefined,
+              calculatedPrice: bcVariant.calculated_price ? bcVariant.calculated_price.toString() : undefined,
+              stock: bcVariant.inventory_level || 0
+            };
+            
+            await storage.createProductVariant(companyId, variant);
+          }
+        } catch (variantError) {
+          console.warn(`Failed to fetch variants for product ${bcProduct.id}:`, variantError);
+        }
+
+        syncedCount++;
+      }
+      
+      // Update last sync time
+      await storage.updateApiSettingsLastSync(companyId, new Date());
+      
+      res.json({ 
+        message: "Products synced successfully", 
+        count: syncedCount 
+      });
+      
+    } catch (error: any) {
+      console.error("Sync error:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
   // Work Orders routes
-  app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
+  app.get("/api/work-orders", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
-      const includeArchived = req.query.includeArchived === 'true';
+      const companyId = req.companyId;
+      const { archived } = req.query;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const workOrders = await storage.getWorkOrders(user.id, includeArchived);
+      const filters = archived !== undefined ? { archived: archived === 'true' } : undefined;
+      const workOrders = await storage.getWorkOrders(companyId, filters);
       res.json(workOrders);
     } catch (error: any) {
+      console.error("Error fetching work orders:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/work-orders", isAuthenticated, async (req: any, res) => {
+  app.get("/api/work-orders/:id", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { id } = req.params;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
+      const workOrder = await storage.getWorkOrder(companyId, id);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
       }
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
+      res.json(workOrder);
+    } catch (error: any) {
+      console.error("Error fetching work order:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/work-orders", requireCompany, async (req: any, res) => {
+    try {
+      const companyId = req.companyId;
+      const createdBy = req.currentUser.id;
       const validatedData = insertWorkOrderSchema.parse(req.body);
       
-      const workOrder = await storage.createWorkOrder(user.id, validatedData);
+      const workOrder = await storage.createWorkOrder(companyId, createdBy, validatedData);
       
-      if (workOrder.executeImmediately || workOrder.scheduledAt) {
+      // Schedule work order if needed
+      if (workOrder.executeImmediately) {
+        scheduler.scheduleImmediateExecution(workOrder);
+      } else if (workOrder.scheduledAt) {
         scheduler.scheduleWorkOrder(workOrder);
       }
       
       res.json(workOrder);
     } catch (error: any) {
       console.error("Error creating work order:", error);
-      res.status(400).json({ message: error.message });
+      res.status(500).json({ message: error.message });
     }
   });
 
-  app.patch("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/work-orders/:id", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { id } = req.params;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const workOrder = await storage.updateWorkOrder(user.id, req.params.id, req.body);
+      const workOrder = await storage.updateWorkOrder(companyId, id, req.body);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
+      
       res.json(workOrder);
     } catch (error: any) {
+      console.error("Error updating work order:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.delete("/api/work-orders/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/work-orders/:id", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { id } = req.params;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const deleted = await storage.deleteWorkOrder(user.id, req.params.id);
-      if (!deleted) {
+      const success = await storage.deleteWorkOrder(companyId, id);
+      if (!success) {
         return res.status(404).json({ message: "Work order not found" });
       }
-      res.json({ message: "Work order deleted" });
+      
+      res.json({ success: true });
     } catch (error: any) {
+      console.error("Error deleting work order:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.patch("/api/work-orders/:id/archive", isAuthenticated, async (req: any, res) => {
+  app.post("/api/work-orders/:id/undo", requireCompany, async (req: any, res) => {
     try {
-      const userId = req.user.uid;
+      const companyId = req.companyId;
+      const { id } = req.params;
       
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const archived = await storage.archiveWorkOrder(user.id, req.params.id);
-      if (!archived) {
-        return res.status(404).json({ message: "Work order not found" });
-      }
-      res.json({ message: "Work order archived" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.patch("/api/work-orders/:id/unarchive", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.uid;
-      
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const unarchived = await storage.unarchiveWorkOrder(user.id, req.params.id);
-      if (!unarchived) {
-        return res.status(404).json({ message: "Work order not found" });
-      }
-      res.json({ message: "Work order unarchived" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.patch("/api/work-orders/:id/undo", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.uid;
-      
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Get the work order to access original prices
-      const workOrder = await storage.getWorkOrder(user.id, req.params.id);
+      const workOrder = await storage.getWorkOrder(companyId, id);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
-      
-      if (workOrder.status !== 'completed') {
+
+      if (workOrder.status !== "completed") {
         return res.status(400).json({ message: "Can only undo completed work orders" });
       }
-      
-      if (!workOrder.originalPrices) {
-        return res.status(400).json({ message: "No original prices found for this work order" });
+
+      if (!workOrder.originalPrices || workOrder.originalPrices.length === 0) {
+        return res.status(400).json({ message: "No original prices available for undo" });
       }
-      
-      // Get API settings for BigCommerce update
-      const apiSettings = await storage.getApiSettings(user.id);
-      if (!apiSettings) {
-        return res.status(400).json({ message: "BigCommerce API not configured" });
+
+      const settings = await storage.getApiSettings(companyId);
+      if (!settings) {
+        return res.status(400).json({ message: "No API settings found" });
       }
-      
-      const bigcommerce = new BigCommerceService(apiSettings);
-      
+
+      const bcService = new BigCommerceService(settings);
+
       // Restore original prices
       for (const originalPrice of workOrder.originalPrices) {
         try {
-          // Restore main product prices
-          await bigcommerce.updateProduct(originalPrice.productId, {
-            regularPrice: originalPrice.originalRegularPrice,
-            salePrice: originalPrice.originalSalePrice || undefined
-          });
-          
-          // Update local product
-          await storage.updateProduct(user.id, originalPrice.productId, {
-            regularPrice: originalPrice.originalRegularPrice,
-            salePrice: originalPrice.originalSalePrice || undefined
+          // Update product pricing
+          await bcService.updateProduct(originalPrice.productId, {
+            price: parseFloat(originalPrice.originalRegularPrice),
+            sale_price: originalPrice.originalSalePrice !== "0" ? parseFloat(originalPrice.originalSalePrice) : 0
           });
 
-          // Restore variant prices if any
-          if (originalPrice.variantPrices && originalPrice.variantPrices.length > 0) {
+          // Update variants if they exist
+          if (originalPrice.variantPrices) {
             for (const variantPrice of originalPrice.variantPrices) {
-              try {
-                await bigcommerce.updateProductVariant(originalPrice.productId, variantPrice.variantId, {
-                  price: variantPrice.originalRegularPrice,
-                  sale_price: variantPrice.originalSalePrice || undefined
-                });
-                
-                // Update local variant
-                await storage.updateProductVariant(user.id, variantPrice.variantId, {
-                  regularPrice: variantPrice.originalRegularPrice,
-                  salePrice: variantPrice.originalSalePrice || undefined
-                });
-              } catch (variantError) {
-                console.error(`Error undoing variant ${variantPrice.variantId}:`, variantError);
-              }
+              await bcService.updateProductVariant(originalPrice.productId, variantPrice.variantId, {
+                price: parseFloat(variantPrice.originalRegularPrice),
+                sale_price: variantPrice.originalSalePrice !== "0" ? parseFloat(variantPrice.originalSalePrice) : 0
+              });
             }
           }
         } catch (error) {
-          console.error(`Error undoing product ${originalPrice.productId}:`, error);
+          console.error(`Failed to restore prices for product ${originalPrice.productId}:`, error);
         }
       }
-      
-      // Mark work order as undone
-      await storage.undoWorkOrder(user.id, req.params.id);
-      
-      res.json({ message: "Work order undone successfully" });
+
+      // Update work order status
+      await storage.updateWorkOrder(companyId, id, {
+        status: "undone",
+        undoneAt: new Date(),
+      });
+
+      res.json({ success: true, message: "Work order undone successfully" });
     } catch (error: any) {
       console.error("Error undoing work order:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Categories route for work order modal
-  app.get("/api/categories", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.uid;
-      
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const result = await storage.getProducts(user.id, { limit: 1000 }); // Get all products to extract categories
-      const categories = Array.from(new Set(result.products.map(p => p.category).filter(Boolean)));
-      res.json(categories);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Product variants route
-  app.get("/api/products/:productId/variants", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.uid;
-      
-      // Find user by Firebase ID first, then by email if not found
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.getUserByEmail(req.user.email);
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const variants = await storage.getProductVariants(user.id, req.params.productId);
-      res.json(variants);
-    } catch (error: any) {
-      console.error("Error fetching product variants:", error);
       res.status(500).json({ message: error.message });
     }
   });

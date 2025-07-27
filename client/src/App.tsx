@@ -11,10 +11,13 @@ import NotFound from "@/pages/not-found";
 import Products from "@/pages/products";
 import WorkOrders from "@/pages/work-orders";
 import Settings from "@/pages/settings";
+import CompanySetup from "@/pages/company-setup";
+import Team from "@/pages/team";
+import InvitationAccept from "@/pages/invitation-accept";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -27,16 +30,29 @@ function Router() {
     );
   }
 
+  // Handle non-authenticated users
   if (!isAuthenticated) {
     return (
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/signin" component={SignIn} />
+        <Route path="/invite/:token" component={InvitationAccept} />
         <Route component={Landing} />
       </Switch>
     );
   }
 
+  // Handle users without a company
+  if (isAuthenticated && user && !user.companyId) {
+    return (
+      <Switch>
+        <Route path="/invite/:token" component={InvitationAccept} />
+        <Route component={CompanySetup} />
+      </Switch>
+    );
+  }
+
+  // Authenticated users with a company
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
@@ -46,6 +62,8 @@ function Router() {
           <Route path="/products" component={Products} />
           <Route path="/work-orders" component={WorkOrders} />
           <Route path="/settings" component={Settings} />
+          <Route path="/team" component={Team} />
+          <Route path="/invite/:token" component={InvitationAccept} />
           <Route component={NotFound} />
         </Switch>
       </div>

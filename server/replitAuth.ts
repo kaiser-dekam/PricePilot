@@ -54,16 +54,36 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(
-  claims: any,
-) {
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  });
+async function upsertUser(claims: any) {
+  // Check if user already exists
+  const existingUser = await storage.getUser(claims["sub"]);
+  
+  if (existingUser) {
+    // Update existing user
+    return await storage.upsertUser({
+      id: claims["sub"],
+      companyId: existingUser.companyId,
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      role: existingUser.role,
+      isActive: existingUser.isActive,
+    });
+  } else {
+    // New user - create a company for them or they'll need to accept an invitation
+    const user = await storage.upsertUser({
+      id: claims["sub"],
+      companyId: null, // Will be set when they create/join a company
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      role: "member",
+      isActive: true,
+    });
+    return user;
+  }
 }
 
 export async function setupAuth(app: Express) {
@@ -153,5 +173,41 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   } catch (error) {
     res.status(401).json({ message: "Unauthorized" });
     return;
+  }
+};
+
+// Company-based authentication middleware
+export const requireCompany: RequestHandler = async (req, res, next) => {
+  const sessionUser = req.user as any;
+  
+  if (!sessionUser?.claims?.sub) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const user = await storage.getUser(sessionUser.claims.sub);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    if (!user.companyId) {
+      return res.status(403).json({ 
+        message: "No company associated", 
+        requiresCompany: true 
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ message: "User account is inactive" });
+    }
+
+    // Attach user and company info to request
+    (req as any).currentUser = user;
+    (req as any).companyId = user.companyId;
+    
+    return next();
+  } catch (error) {
+    console.error("Error in requireCompany middleware:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
