@@ -57,6 +57,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     newRegularPrice?: string;
     newSalePrice?: string;
   }>>>({});
+  const [presetTrigger, setPresetTrigger] = useState<{ type: 'removeSalePrices' | 'applyDiscount'; discountPercentage?: string } | null>(null);
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -192,25 +193,39 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
         const product = products.find(p => p.id === update.productId);
         if (!product) return update;
 
+        // Apply to main product
+        let updatedProduct = { ...update };
         if (presetType === 'removeSalePrices') {
-          return { ...update, newSalePrice: "0.00" };
+          updatedProduct.newSalePrice = "0.00";
         } else if (presetType === 'applyDiscount') {
           const regularPrice = parseFloat(product.regularPrice || "0");
           const percentage = parseFloat(discountPercentage);
           if (regularPrice > 0 && percentage > 0) {
             const salePrice = regularPrice * (1 - percentage / 100);
-            return { ...update, newSalePrice: salePrice.toFixed(2) };
+            updatedProduct.newSalePrice = salePrice.toFixed(2);
           }
         }
-        return update;
+
+        // Variants will be handled by the ProductVariantsDisplay component via presetTrigger
+
+        return updatedProduct;
       })
     );
+
+    // Trigger preset application for variants
+    setPresetTrigger({
+      type: presetType,
+      discountPercentage: presetType === 'applyDiscount' ? discountPercentage : undefined
+    });
+    
+    // Clear the trigger after a short delay
+    setTimeout(() => setPresetTrigger(null), 100);
 
     toast({
       title: "Preset Applied",
       description: presetType === 'removeSalePrices' 
-        ? "Sale prices set to 0.00 for selected products"
-        : `${discountPercentage}% discount applied to selected products`,
+        ? "Sale prices set to 0.00 for products and variants"
+        : `${discountPercentage}% discount applied to products and variants`,
     });
   };
 
@@ -235,9 +250,11 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
       return;
     }
 
-    // Check if at least one product has a price change
+    // Check if at least one product has a price change (including variants)
     const hasChanges = productUpdates.some(update => 
-      update.newRegularPrice.trim() !== "" || update.newSalePrice.trim() !== ""
+      update.newRegularPrice.trim() !== "" || 
+      update.newSalePrice.trim() !== "" ||
+      (update.variantUpdates && update.variantUpdates.length > 0)
     );
 
     if (!hasChanges) {
@@ -546,6 +563,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                         productName={update.productName}
                         onVariantUpdate={handleVariantUpdate}
                         isEditing={true}
+                        presetTrigger={presetTrigger}
                       />
                     </div>
                   ))}

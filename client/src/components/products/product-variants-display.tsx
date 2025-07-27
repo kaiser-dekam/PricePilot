@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,15 @@ interface ProductVariantsDisplayProps {
     newSalePrice?: string;
   }>) => void;
   isEditing?: boolean;
+  presetTrigger?: { type: 'removeSalePrices' | 'applyDiscount'; discountPercentage?: string };
 }
 
 export default function ProductVariantsDisplay({ 
   productId, 
   productName, 
   onVariantUpdate, 
-  isEditing = false 
+  isEditing = false,
+  presetTrigger
 }: ProductVariantsDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [variantPrices, setVariantPrices] = useState<Record<string, { regular?: string; sale?: string }>>({});
@@ -41,6 +43,56 @@ export default function ProductVariantsDisplay({
   if (isExpanded) {
     console.log(`Product ${productId} variants:`, { variants, isLoading, error });
   }
+
+  // Handle preset applications
+  useEffect(() => {
+    if (presetTrigger && variants && variants.length > 0) {
+      const updatedPrices = { ...variantPrices };
+      let hasChanges = false;
+
+      variants.forEach(variant => {
+        if (presetTrigger.type === 'removeSalePrices') {
+          updatedPrices[variant.id] = {
+            ...updatedPrices[variant.id],
+            sale: "0.00"
+          };
+          hasChanges = true;
+        } else if (presetTrigger.type === 'applyDiscount' && presetTrigger.discountPercentage) {
+          const percentage = parseFloat(presetTrigger.discountPercentage);
+          const regularPrice = parseFloat(variant.regularPrice || "0");
+          if (percentage > 0 && regularPrice > 0) {
+            const salePrice = regularPrice * (1 - percentage / 100);
+            updatedPrices[variant.id] = {
+              ...updatedPrices[variant.id],
+              sale: salePrice.toFixed(2)
+            };
+            hasChanges = true;
+          }
+        }
+      });
+
+      if (hasChanges) {
+        setVariantPrices(updatedPrices);
+        
+        // Trigger the update callback
+        const variantUpdates = variants
+          .filter(variant => updatedPrices[variant.id])
+          .map(variant => ({
+            variantId: variant.id,
+            variantSku: variant.variantSku || '',
+            optionValues: (variant.optionValues || []).map(opt => ({
+              option_display_name: opt.option_display_name,
+              label: opt.label
+            })),
+            newRegularPrice: updatedPrices[variant.id]?.regular,
+            newSalePrice: updatedPrices[variant.id]?.sale,
+          }))
+          .filter(update => update.newRegularPrice || update.newSalePrice);
+
+        onVariantUpdate?.(productId, variantUpdates);
+      }
+    }
+  }, [presetTrigger, variants, productId, onVariantUpdate]);
 
   const handleVariantPriceChange = (variantId: string, field: 'regular' | 'sale', value: string) => {
     const newPrices = {
