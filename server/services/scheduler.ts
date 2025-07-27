@@ -90,14 +90,14 @@ class SchedulerService {
       // Process each product update
       for (const update of workOrder.productUpdates) {
         try {
-          const updateData: any = {};
-          if (update.newRegularPrice) {
-            updateData.price = parseFloat(update.newRegularPrice);
-          }
-          if (update.newSalePrice) {
-            updateData.sale_price = parseFloat(update.newSalePrice);
-          }
+          console.log(`Processing product update:`, JSON.stringify(update, null, 2));
+          
+          const updateData = {
+            regularPrice: update.newRegularPrice,
+            salePrice: update.newSalePrice
+          };
 
+          console.log(`Calling BigCommerce updateProduct with:`, updateData);
           await bigcommerce.updateProduct(update.productId, updateData);
           
           // Update product in our database

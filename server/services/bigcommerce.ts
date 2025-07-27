@@ -144,7 +144,10 @@ export class BigCommerceService {
         updateData.sale_price = updates.salePrice ? parseFloat(updates.salePrice) : '';
       }
 
-      await this.api.put(`/catalog/products/${id}`, updateData);
+      console.log(`Updating BigCommerce product ${id} with data:`, JSON.stringify(updateData, null, 2));
+      
+      const response = await this.api.put(`/catalog/products/${id}`, updateData);
+      console.log(`BigCommerce API response:`, response.status, response.statusText);
       
       const updatedProduct = await this.getProduct(id);
       if (!updatedProduct) {
