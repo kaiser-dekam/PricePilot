@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +14,7 @@ export default function Settings() {
   const [storeHash, setStoreHash] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [clientId, setClientId] = useState("");
+  const [showStock, setShowStock] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -44,6 +46,7 @@ export default function Settings() {
       setStoreHash((settings as any).storeHash || "");
       setAccessToken((settings as any).accessToken || "");
       setClientId((settings as any).clientId || "");
+      setShowStock((settings as any).showStock ?? true);
     }
   }, [settings]);
 
@@ -63,6 +66,7 @@ export default function Settings() {
       storeHash: storeHash.trim(),
       accessToken: accessToken.trim(),
       clientId: clientId.trim(),
+      showStock,
     });
   };
 
@@ -144,6 +148,22 @@ export default function Settings() {
                   </p>
                 </div>
                 
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="showStock">Show Stock Status</Label>
+                      <p className="text-xs text-gray-500">
+                        Display stock quantities on the Products page
+                      </p>
+                    </div>
+                    <Switch
+                      id="showStock"
+                      checked={showStock}
+                      onCheckedChange={setShowStock}
+                    />
+                  </div>
+                </div>
+                
                 <div className="flex items-center justify-end space-x-3 pt-4">
                   <Button
                     type="submit"
@@ -166,20 +186,11 @@ export default function Settings() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    {user.profileImageUrl && (
-                      <img 
-                        src={user.profileImageUrl} 
-                        alt="Profile"
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    )}
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user.email}
+                        {(user as any).email}
                       </p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <p className="text-xs text-gray-500">Authenticated User</p>
                     </div>
                   </div>
                 </div>

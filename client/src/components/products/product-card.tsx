@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 interface ProductCardProps {
   product: Product;
   onClick: () => void;
+  showStock?: boolean;
 }
 
-export default function ProductCard({ product, onClick }: ProductCardProps) {
+export default function ProductCard({ product, onClick, showStock = true }: ProductCardProps) {
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { label: "Out of Stock", variant: "destructive" as const };
     if (stock < 10) return { label: "Low Stock", variant: "secondary" as const };
@@ -57,9 +58,11 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
               <span className="text-gray-500">
                 SKU: <span className="font-medium">{product.sku || 'N/A'}</span>
               </span>
-              <Badge variant={stockStatus.variant} className="text-xs">
-                {stockStatus.label}
-              </Badge>
+              {showStock && (
+                <Badge variant={stockStatus.variant} className="text-xs">
+                  {stockStatus.label}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
