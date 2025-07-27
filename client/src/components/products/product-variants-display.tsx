@@ -80,6 +80,7 @@ export default function ProductVariantsDisplay({
   return (
     <div className="border rounded-lg p-3 bg-gray-50">
       <Button
+        type="button"
         variant="ghost"
         size="sm"
         onClick={() => setIsExpanded(!isExpanded)}
