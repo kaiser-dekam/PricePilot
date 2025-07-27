@@ -7,6 +7,22 @@ export interface BigCommerceConfig {
   clientId: string;
 }
 
+export interface BigCommerceVariant {
+  id: number;
+  product_id: number;
+  sku: string;
+  price: string | null;
+  sale_price: string | null;
+  calculated_price: string;
+  option_values: Array<{
+    id: number;
+    option_id: number;
+    option_display_name: string;
+    label: string;
+  }>;
+  inventory_level: number;
+}
+
 export interface BigCommerceProduct {
   id: number;
   name: string;
@@ -18,6 +34,7 @@ export interface BigCommerceProduct {
   inventory_level: number;
   weight: string;
   is_visible: boolean;
+  variants?: BigCommerceVariant[];
 }
 
 export interface BigCommerceCategory {
@@ -94,6 +111,32 @@ export class BigCommerceService {
     } catch (error: any) {
       console.error('Error fetching products from BigCommerce:', error);
       throw new Error(`Failed to fetch products: ${error.response?.data?.title || error.message}`);
+    }
+  }
+
+  async getProductVariants(productId: string): Promise<any[]> {
+    try {
+      console.log(`Fetching variants for product ${productId} from BigCommerce`);
+      
+      const response = await this.api.get(`/catalog/products/${productId}/variants`);
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error(`Error fetching variants for product ${productId}:`, error);
+      if (error.response?.status === 404) {
+        return []; // Product has no variants
+      }
+      throw new Error(`Failed to fetch variants: ${error.response?.data?.title || error.message}`);
+    }
+  }
+
+  async updateProductVariant(productId: string, variantId: string, updates: { price?: string; sale_price?: string }): Promise<void> {
+    try {
+      console.log(`Updating variant ${variantId} for product ${productId} in BigCommerce`, updates);
+      
+      await this.api.put(`/catalog/products/${productId}/variants/${variantId}`, updates);
+    } catch (error: any) {
+      console.error(`Error updating variant ${variantId}:`, error);
+      throw new Error(`Failed to update variant: ${error.response?.data?.title || error.message}`);
     }
   }
 
@@ -179,6 +222,39 @@ export class BigCommerceService {
       if (i + batchSize < updates.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
+    }
+  }
+
+  async getProductVariants(productId: string): Promise<BigCommerceVariant[]> {
+    try {
+      const response = await this.api.get(`/catalog/products/${productId}/variants`);
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error('Error fetching product variants from BigCommerce:', error);
+      throw new Error(`Failed to fetch variants: ${error.response?.data?.title || error.message}`);
+    }
+  }
+
+  async updateVariant(productId: string, variantId: string, updates: { regularPrice?: string; salePrice?: string }): Promise<void> {
+    try {
+      const updateData: any = {};
+      
+      if (updates.regularPrice !== undefined) {
+        updateData.price = parseFloat(updates.regularPrice);
+      }
+      
+      if (updates.salePrice !== undefined) {
+        updateData.sale_price = updates.salePrice ? parseFloat(updates.salePrice) : '';
+      }
+
+      console.log(`Updating BigCommerce variant ${variantId} for product ${productId} with data:`, JSON.stringify(updateData, null, 2));
+      
+      const response = await this.api.put(`/catalog/products/${productId}/variants/${variantId}`, updateData);
+      console.log(`BigCommerce API response:`, response.status, response.statusText);
+      
+    } catch (error: any) {
+      console.error('Error updating variant in BigCommerce:', error);
+      throw new Error(`Failed to update variant: ${error.response?.data?.title || error.message}`);
     }
   }
 }

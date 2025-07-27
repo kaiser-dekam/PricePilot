@@ -1,4 +1,4 @@
-import { type ApiSettings, type InsertApiSettings, type Product, type InsertProduct, type WorkOrder, type InsertWorkOrder, type User, type UpsertUser, apiSettings, products, workOrders, users } from "@shared/schema";
+import { type ApiSettings, type InsertApiSettings, type Product, type InsertProduct, type ProductVariant, type InsertProductVariant, type WorkOrder, type InsertWorkOrder, type User, type UpsertUser, apiSettings, products, productVariants, workOrders, users } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -21,6 +21,13 @@ export interface IStorage {
   updateProduct(userId: string, id: string, updates: Partial<Product>): Promise<Product | undefined>;
   deleteProduct(userId: string, id: string): Promise<boolean>;
   clearUserProducts(userId: string): Promise<void>;
+  
+  // Product Variants
+  getProductVariants(userId: string, productId: string): Promise<ProductVariant[]>;
+  createProductVariant(userId: string, variant: InsertProductVariant & { id: string; productId: string }): Promise<ProductVariant>;
+  updateProductVariant(userId: string, id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | undefined>;
+  deleteProductVariant(userId: string, id: string): Promise<boolean>;
+  clearProductVariants(userId: string, productId: string): Promise<void>;
   
   // Work Orders
   getWorkOrders(userId: string): Promise<WorkOrder[]>;
@@ -181,6 +188,67 @@ export class DbStorage implements IStorage {
 
   async clearUserProducts(userId: string): Promise<void> {
     await this.db.delete(products).where(eq(products.userId, userId));
+  }
+
+  // Product Variants
+  async getProductVariants(userId: string, productId: string): Promise<ProductVariant[]> {
+    const result = await this.db
+      .select()
+      .from(productVariants)
+      .where(and(eq(productVariants.userId, userId), eq(productVariants.productId, productId)));
+    return result;
+  }
+
+  async createProductVariant(userId: string, variant: InsertProductVariant & { id: string; productId: string }): Promise<ProductVariant> {
+    const result = await this.db
+      .insert(productVariants)
+      .values({
+        id: variant.id,
+        userId,
+        productId: variant.productId,
+        variantSku: variant.variantSku,
+        optionValues: variant.optionValues as any,
+        regularPrice: variant.regularPrice,
+        salePrice: variant.salePrice,
+        calculatedPrice: variant.calculatedPrice,
+        stock: variant.stock,
+        lastUpdated: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: productVariants.id,
+        set: {
+          variantSku: variant.variantSku,
+          optionValues: variant.optionValues as any,
+          regularPrice: variant.regularPrice,
+          salePrice: variant.salePrice,
+          calculatedPrice: variant.calculatedPrice,
+          stock: variant.stock,
+          lastUpdated: new Date(),
+        },
+      })
+      .returning();
+    return result[0];
+  }
+
+  async updateProductVariant(userId: string, id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | undefined> {
+    const result = await this.db
+      .update(productVariants)
+      .set({
+        ...updates,
+        lastUpdated: new Date(),
+      })
+      .where(and(eq(productVariants.userId, userId), eq(productVariants.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteProductVariant(userId: string, id: string): Promise<boolean> {
+    const result = await this.db.delete(productVariants).where(and(eq(productVariants.userId, userId), eq(productVariants.id, id)));
+    return result.rowCount > 0;
+  }
+
+  async clearProductVariants(userId: string, productId: string): Promise<void> {
+    await this.db.delete(productVariants).where(and(eq(productVariants.userId, userId), eq(productVariants.productId, productId)));
   }
 
   // Work Orders

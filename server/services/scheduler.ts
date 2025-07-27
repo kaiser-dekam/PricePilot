@@ -93,11 +93,37 @@ class SchedulerService {
         try {
           const product = await storage.getProduct(workOrder.userId, update.productId);
           if (product) {
-            originalPrices.push({
+            const originalPrice = {
               productId: update.productId,
               originalRegularPrice: product.regularPrice || "0",
-              originalSalePrice: product.salePrice || "0"
-            });
+              originalSalePrice: product.salePrice || "0",
+              variantPrices: [] as Array<{
+                variantId: string;
+                originalRegularPrice: string;
+                originalSalePrice: string;
+              }>
+            };
+
+            // Capture original variant prices if variants are being updated
+            if (update.variantUpdates && update.variantUpdates.length > 0) {
+              for (const variantUpdate of update.variantUpdates) {
+                try {
+                  const variant = await storage.getProductVariants(workOrder.userId, update.productId);
+                  const existingVariant = variant.find(v => v.id === variantUpdate.variantId);
+                  if (existingVariant) {
+                    originalPrice.variantPrices.push({
+                      variantId: variantUpdate.variantId,
+                      originalRegularPrice: existingVariant.regularPrice || "0",
+                      originalSalePrice: existingVariant.salePrice || "0"
+                    });
+                  }
+                } catch (error) {
+                  console.error(`Failed to get original variant price for ${variantUpdate.variantId}:`, error);
+                }
+              }
+            }
+
+            originalPrices.push(originalPrice);
           }
         } catch (error) {
           console.error(`Failed to get original price for product ${update.productId}:`, error);
@@ -109,19 +135,54 @@ class SchedulerService {
         try {
           console.log(`Processing product update:`, JSON.stringify(update, null, 2));
           
-          const updateData = {
-            regularPrice: update.newRegularPrice,
-            salePrice: update.newSalePrice
-          };
+          // Update main product pricing if specified
+          if (update.newRegularPrice || update.newSalePrice) {
+            const updateData = {
+              regularPrice: update.newRegularPrice,
+              salePrice: update.newSalePrice
+            };
 
-          console.log(`Calling BigCommerce updateProduct with:`, updateData);
-          await bigcommerce.updateProduct(update.productId, updateData);
-          
-          // Update product in our database
-          await storage.updateProduct(workOrder.userId, update.productId, {
-            regularPrice: update.newRegularPrice || undefined,
-            salePrice: update.newSalePrice || undefined,
-          });
+            console.log(`Calling BigCommerce updateProduct with:`, updateData);
+            await bigcommerce.updateProduct(update.productId, updateData);
+            
+            // Update product in our database
+            await storage.updateProduct(workOrder.userId, update.productId, {
+              regularPrice: update.newRegularPrice || undefined,
+              salePrice: update.newSalePrice || undefined,
+            });
+          }
+
+          // Process variant updates if any
+          if (update.variantUpdates && update.variantUpdates.length > 0) {
+            console.log(`Processing ${update.variantUpdates.length} variant updates for product ${update.productId}`);
+            
+            for (const variantUpdate of update.variantUpdates) {
+              try {
+                if (variantUpdate.newRegularPrice || variantUpdate.newSalePrice) {
+                  const variantUpdateData: any = {};
+                  
+                  if (variantUpdate.newRegularPrice) {
+                    variantUpdateData.price = parseFloat(variantUpdate.newRegularPrice);
+                  }
+                  
+                  if (variantUpdate.newSalePrice) {
+                    variantUpdateData.sale_price = variantUpdate.newSalePrice ? parseFloat(variantUpdate.newSalePrice) : '';
+                  }
+
+                  console.log(`Updating variant ${variantUpdate.variantId} with:`, variantUpdateData);
+                  await bigcommerce.updateProductVariant(update.productId, variantUpdate.variantId, variantUpdateData);
+                  
+                  // Update variant in our database
+                  await storage.updateProductVariant(workOrder.userId, variantUpdate.variantId, {
+                    regularPrice: variantUpdate.newRegularPrice || undefined,
+                    salePrice: variantUpdate.newSalePrice || undefined,
+                  });
+                }
+              } catch (variantError) {
+                console.error(`Failed to update variant ${variantUpdate.variantId}:`, variantError);
+              }
+            }
+          }
 
           console.log(`Updated product ${update.productId}`);
         } catch (error) {

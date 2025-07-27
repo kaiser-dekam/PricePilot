@@ -51,6 +51,24 @@ export const products = pgTable("products", {
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
+export const productVariants = pgTable("product_variants", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  variantSku: text("variant_sku"),
+  optionValues: json("option_values").$type<Array<{
+    id: number;
+    option_id: number;
+    option_display_name: string;
+    label: string;
+  }>>(),
+  regularPrice: decimal("regular_price", { precision: 10, scale: 2 }),
+  salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
+  calculatedPrice: decimal("calculated_price", { precision: 10, scale: 2 }),
+  stock: integer("stock").default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
 export const workOrders = pgTable("work_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -60,11 +78,26 @@ export const workOrders = pgTable("work_orders", {
     productName: string;
     newRegularPrice?: string;
     newSalePrice?: string;
+    variantUpdates?: Array<{
+      variantId: string;
+      variantSku: string;
+      optionValues: Array<{
+        option_display_name: string;
+        label: string;
+      }>;
+      newRegularPrice?: string;
+      newSalePrice?: string;
+    }>;
   }>>().notNull(),
   originalPrices: json("original_prices").$type<Array<{
     productId: string;
     originalRegularPrice: string;
     originalSalePrice: string;
+    variantPrices?: Array<{
+      variantId: string;
+      originalRegularPrice: string;
+      originalSalePrice: string;
+    }>;
   }>>(),
   scheduledAt: timestamp("scheduled_at"),
   executeImmediately: boolean("execute_immediately").default(false),
@@ -103,6 +136,15 @@ export const insertProductSchema = createInsertSchema(products).pick({
   status: true,
 });
 
+export const insertProductVariantSchema = createInsertSchema(productVariants).pick({
+  variantSku: true,
+  optionValues: true,
+  regularPrice: true,
+  salePrice: true,
+  calculatedPrice: true,
+  stock: true,
+});
+
 export const insertWorkOrderSchema = createInsertSchema(workOrders).pick({
   title: true,
   productUpdates: true,
@@ -118,5 +160,7 @@ export type ApiSettings = typeof apiSettings.$inferSelect;
 export type InsertApiSettings = z.infer<typeof insertApiSettingsSchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type InsertProductVariant = z.infer<typeof insertProductVariantSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;

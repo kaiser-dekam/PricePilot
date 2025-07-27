@@ -205,6 +205,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             weight: product.weight || '0',
             status: product.status || 'draft',
           });
+
+          // Fetch and store variants for this product if it has any
+          try {
+            const variants = await bigcommerce.getProductVariants(product.id);
+            if (variants && variants.length > 0) {
+              console.log(`Found ${variants.length} variants for product ${product.id}`);
+              
+              // Clear existing variants for this product
+              await storage.clearProductVariants(user.id, product.id);
+              
+              // Store each variant
+              for (const variant of variants) {
+                await storage.createProductVariant(user.id, {
+                  id: variant.id.toString(),
+                  productId: product.id,
+                  variantSku: variant.sku || '',
+                  optionValues: variant.option_values || [],
+                  regularPrice: variant.price || variant.calculated_price || '0',
+                  salePrice: variant.sale_price || null,
+                  calculatedPrice: variant.calculated_price || '0',
+                  stock: variant.inventory_level || 0,
+                });
+              }
+            }
+          } catch (variantError) {
+            console.error(`Error storing variants for product ${product.id}:`, variantError);
+          }
         } catch (productError) {
           console.error(`Error storing product ${product.id}:`, productError);
         }
@@ -226,11 +253,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const product = await storage.getProduct(userId, req.params.id);
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const product = await storage.getProduct(user.id, req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
       res.json(product);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/products/:id/variants", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      // Find user by Firebase ID first, then by email if not found
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.getUserByEmail(req.user.email);
+      }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const variants = await storage.getProductVariants(user.id, req.params.id);
+      res.json(variants);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -423,6 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Restore original prices
       for (const originalPrice of workOrder.originalPrices) {
         try {
+          // Restore main product prices
           await bigcommerce.updateProduct(originalPrice.productId, {
             regularPrice: originalPrice.originalRegularPrice,
             salePrice: originalPrice.originalSalePrice || undefined
@@ -433,6 +493,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             regularPrice: originalPrice.originalRegularPrice,
             salePrice: originalPrice.originalSalePrice || undefined
           });
+
+          // Restore variant prices if any
+          if (originalPrice.variantPrices && originalPrice.variantPrices.length > 0) {
+            for (const variantPrice of originalPrice.variantPrices) {
+              try {
+                await bigcommerce.updateProductVariant(originalPrice.productId, variantPrice.variantId, {
+                  price: variantPrice.originalRegularPrice,
+                  sale_price: variantPrice.originalSalePrice || undefined
+                });
+                
+                // Update local variant
+                await storage.updateProductVariant(user.id, variantPrice.variantId, {
+                  regularPrice: variantPrice.originalRegularPrice,
+                  salePrice: variantPrice.originalSalePrice || undefined
+                });
+              } catch (variantError) {
+                console.error(`Error undoing variant ${variantPrice.variantId}:`, variantError);
+              }
+            }
+          }
         } catch (error) {
           console.error(`Error undoing product ${originalPrice.productId}:`, error);
         }

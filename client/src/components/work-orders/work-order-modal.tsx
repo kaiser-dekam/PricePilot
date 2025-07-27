@@ -12,6 +12,7 @@ import { Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Product } from "@shared/schema";
+import ProductVariantsDisplay from "@/components/products/product-variants-display";
 
 interface WorkOrderModalProps {
   isOpen: boolean;
@@ -24,6 +25,16 @@ interface ProductPriceUpdate {
   productName: string;
   newRegularPrice: string;
   newSalePrice: string;
+  variantUpdates?: Array<{
+    variantId: string;
+    variantSku: string;
+    optionValues: Array<{
+      option_display_name: string;
+      label: string;
+    }>;
+    newRegularPrice?: string;
+    newSalePrice?: string;
+  }>;
 }
 
 export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderModalProps) {
@@ -36,6 +47,16 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [discountPercentage, setDiscountPercentage] = useState("");
+  const [variantUpdates, setVariantUpdates] = useState<Record<string, Array<{
+    variantId: string;
+    variantSku: string;
+    optionValues: Array<{
+      option_display_name: string;
+      label: string;
+    }>;
+    newRegularPrice?: string;
+    newSalePrice?: string;
+  }>>>({});
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -81,6 +102,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setTitle("");
     setSelectedProducts([]);
     setProductUpdates([]);
+    setVariantUpdates({});
     setScheduleType("immediate");
     setScheduleDate("");
     setScheduleTime("");
@@ -88,6 +110,31 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setCategoryFilter("all");
     setDiscountPercentage("");
     onClose();
+  };
+
+  const handleVariantUpdate = (productId: string, variants: Array<{
+    variantId: string;
+    variantSku: string;
+    optionValues: Array<{
+      option_display_name: string;
+      label: string;
+    }>;
+    newRegularPrice?: string;
+    newSalePrice?: string;
+  }>) => {
+    setVariantUpdates(prev => ({
+      ...prev,
+      [productId]: variants
+    }));
+
+    // Update the product updates to include variant updates
+    setProductUpdates(prev => 
+      prev.map(update => 
+        update.productId === productId 
+          ? { ...update, variantUpdates: variants }
+          : update
+      )
+    );
   };
 
   const handleProductToggle = (productId: string, checked: boolean) => {
@@ -458,37 +505,48 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                 </div>
                 <div className="max-h-60 overflow-y-auto">
                   {productUpdates.map((update) => (
-                    <div key={update.productId} className="grid grid-cols-3 gap-4 p-4 border-b last:border-b-0">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium truncate">{update.productName}</span>
-                        <span className="text-xs text-gray-500">ID: {update.productId}</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-500 mr-2">$</span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={update.newRegularPrice}
-                            onChange={(e) => updateProductPrice(update.productId, 'newRegularPrice', e.target.value)}
-                            className="h-8"
-                          />
+                    <div key={update.productId} className="border-b last:border-b-0 p-4">
+                      {/* Main Product Pricing */}
+                      <div className="grid grid-cols-3 gap-4 mb-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium truncate">{update.productName}</span>
+                          <span className="text-xs text-gray-500">ID: {update.productId}</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-2">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={update.newRegularPrice}
+                              onChange={(e) => updateProductPrice(update.productId, 'newRegularPrice', e.target.value)}
+                              className="h-8"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-2">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={update.newSalePrice}
+                              onChange={(e) => updateProductPrice(update.productId, 'newSalePrice', e.target.value)}
+                              className="h-8"
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-500 mr-2">$</span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={update.newSalePrice}
-                            onChange={(e) => updateProductPrice(update.productId, 'newSalePrice', e.target.value)}
-                            className="h-8"
-                          />
-                        </div>
-                      </div>
+                      
+                      {/* Product Variants */}
+                      <ProductVariantsDisplay
+                        productId={update.productId}
+                        productName={update.productName}
+                        onVariantUpdate={handleVariantUpdate}
+                        isEditing={true}
+                      />
                     </div>
                   ))}
                 </div>
