@@ -35,6 +35,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [scheduleTime, setScheduleTime] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [discountPercentage, setDiscountPercentage] = useState("");
   const { toast } = useToast();
 
   const createMutation = useMutation({
@@ -85,6 +86,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setScheduleTime("");
     setSearchTerm("");
     setCategoryFilter("all");
+    setDiscountPercentage("");
     onClose();
   };
 
@@ -114,6 +116,55 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
           : update
       )
     );
+  };
+
+  const applyPreset = (presetType: 'removeSalePrices' | 'applyDiscount') => {
+    if (selectedProducts.length === 0) {
+      toast({
+        title: "No Products Selected",
+        description: "Please select products before applying a preset",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (presetType === 'applyDiscount') {
+      const percentage = parseFloat(discountPercentage);
+      if (!percentage || percentage <= 0 || percentage >= 100) {
+        toast({
+          title: "Invalid Percentage",
+          description: "Please enter a valid discount percentage (1-99)",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setProductUpdates(prev => 
+      prev.map(update => {
+        const product = products.find(p => p.id === update.productId);
+        if (!product) return update;
+
+        if (presetType === 'removeSalePrices') {
+          return { ...update, newSalePrice: "" };
+        } else if (presetType === 'applyDiscount') {
+          const regularPrice = parseFloat(product.regularPrice || "0");
+          const percentage = parseFloat(discountPercentage);
+          if (regularPrice > 0 && percentage > 0) {
+            const salePrice = regularPrice * (1 - percentage / 100);
+            return { ...update, newSalePrice: salePrice.toFixed(2) };
+          }
+        }
+        return update;
+      })
+    );
+
+    toast({
+      title: "Preset Applied",
+      description: presetType === 'removeSalePrices' 
+        ? "Sale prices removed from selected products"
+        : `${discountPercentage}% discount applied to selected products`,
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -343,8 +394,40 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
           {/* Per-Product Price Updates */}
           {selectedProducts.length > 0 && (
             <div>
-              <Label>Set New Prices for Each Product</Label>
-              <div className="border rounded-lg overflow-hidden mt-2">
+              <div className="flex items-center justify-between mb-3">
+                <Label>Set New Prices for Each Product</Label>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyPreset('removeSalePrices')}
+                  >
+                    Remove Sale Prices
+                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="20"
+                      value={discountPercentage}
+                      onChange={(e) => setDiscountPercentage(e.target.value)}
+                      className="w-16 h-8"
+                      min="1"
+                      max="99"
+                    />
+                    <span className="text-sm text-gray-500">% off</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => applyPreset('applyDiscount')}
+                    >
+                      Apply Discount
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="border rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-4 py-3 border-b">
                   <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
                     <div>Product</div>
@@ -390,7 +473,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Enter new prices for each product. Leave blank to keep current price.
+                Enter new prices for each product. Leave blank to keep current price. Use the preset buttons above for quick bulk updates.
               </p>
             </div>
           )}
