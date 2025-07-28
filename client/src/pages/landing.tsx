@@ -15,13 +15,14 @@ export default function Landing() {
             Streamline your BigCommerce store management with powerful tools for product sync, 
             bulk price updates, and automated work orders. Manage your inventory like a pro.
           </p>
-          <Button 
-            size="lg"
-            className="text-lg px-8 py-3"
-            onClick={() => window.location.href = "/api/login"}
-          >
-            Get Started
-          </Button>
+          <Link href="/signin">
+            <Button 
+              size="lg"
+              className="text-lg px-8 py-3"
+            >
+              Get Started
+            </Button>
+          </Link>
         </div>
 
         {/* Features Grid */}

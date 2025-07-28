@@ -1,143 +1,29 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertApiSettingsSchema, insertWorkOrderSchema, insertCompanySchema, insertCompanyInvitationSchema } from "@shared/schema";
+import { insertApiSettingsSchema, insertWorkOrderSchema } from "@shared/schema";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
-import { setupAuth, isAuthenticated, requireCompany } from "./replitAuth";
-import { randomUUID } from "crypto";
-import { addDays } from "date-fns";
+
+// Simple middleware to extract Firebase user info from headers
+const getFirebaseUser = (req: any, res: any, next: any) => {
+  const userId = req.headers['x-user-id'];
+  const userEmail = req.headers['x-user-email'];
+  
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  req.user = { uid: userId, email: userEmail };
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Company setup routes (for users without a company)
-  app.post('/api/company/create', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (user.companyId) {
-        return res.status(400).json({ message: "User already has a company" });
-      }
-
-      const validatedData = insertCompanySchema.parse(req.body);
-      const company = await storage.createCompany(validatedData);
-
-      // Update user to be owner of the new company
-      await storage.upsertUser({
-        ...user,
-        companyId: company.id,
-        role: "owner",
-      });
-
-      res.json({ company, user: { ...user, companyId: company.id, role: "owner" } });
-    } catch (error: any) {
-      console.error("Error creating company:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post('/api/invitations/accept/:token', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { token } = req.params;
-      
-      const success = await storage.acceptInvitation(token, userId);
-      if (!success) {
-        return res.status(400).json({ message: "Invalid or expired invitation" });
-      }
-
-      const user = await storage.getUser(userId);
-      res.json({ user });
-    } catch (error: any) {
-      console.error("Error accepting invitation:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Company-based routes (require user to be part of a company)
-  app.get('/api/company', requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const company = await storage.getCompany(companyId);
-      res.json(company);
-    } catch (error: any) {
-      console.error("Error fetching company:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get('/api/company/users', requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const users = await storage.getCompanyUsers(companyId);
-      res.json(users);
-    } catch (error: any) {
-      console.error("Error fetching company users:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post('/api/company/invite', requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const currentUser = req.currentUser;
-      
-      // Only owners and admins can invite
-      if (!['owner', 'admin'].includes(currentUser.role)) {
-        return res.status(403).json({ message: "Insufficient permissions" });
-      }
-
-      const validatedData = insertCompanyInvitationSchema.parse({
-        ...req.body,
-        companyId,
-        invitedBy: currentUser.id,
-        token: randomUUID(),
-        expiresAt: addDays(new Date(), 7).toISOString(),
-      });
-
-      const invitation = await storage.createInvitation(validatedData);
-      res.json(invitation);
-    } catch (error: any) {
-      console.error("Error creating invitation:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get('/api/company/invitations', requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const invitations = await storage.getCompanyInvitations(companyId);
-      res.json(invitations);
-    } catch (error: any) {
-      console.error("Error fetching invitations:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // API Settings routes
-  app.get("/api/settings", requireCompany, async (req: any, res) => {
+  app.get("/api/settings", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
-      const settings = await storage.getApiSettings(companyId);
+      const userId = req.user.uid;
+      const settings = await storage.getApiSettings(userId);
       res.json(settings || null);
     } catch (error: any) {
       console.error("Error fetching settings:", error);
@@ -145,12 +31,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/settings", requireCompany, async (req: any, res) => {
+  app.post("/api/settings", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
+      const userId = req.user.uid;
       const validatedData = insertApiSettingsSchema.parse(req.body);
-      
-      const settings = await storage.saveApiSettings(companyId, validatedData);
+      const settings = await storage.saveApiSettings(userId, validatedData);
       res.json(settings);
     } catch (error: any) {
       console.error("Error saving settings:", error);
@@ -158,39 +43,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/settings/test", requireCompany, async (req: any, res) => {
+  app.post("/api/settings/test", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
-      const settings = await storage.getApiSettings(companyId);
+      const userId = req.user.uid;
+      const settings = await storage.getApiSettings(userId);
       
       if (!settings) {
         return res.status(400).json({ message: "No API settings found" });
       }
 
       const bcService = new BigCommerceService(settings);
-      await bcService.testConnection();
+      const isConnected = await bcService.testConnection();
       
-      res.json({ success: true, message: "Connection successful" });
+      res.json({ connected: isConnected });
     } catch (error: any) {
-      console.error("Connection test failed:", error);
-      res.status(400).json({ success: false, message: error.message });
+      console.error("Connection test error:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 
   // Products routes
-  app.get("/api/products", requireCompany, async (req: any, res) => {
+  app.get("/api/products", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
+      const userId = req.user.uid;
       const { category, search, page, limit } = req.query;
       
       const filters = {
-        category: category as string,
-        search: search as string,
+        category: category || undefined,
+        search: search || undefined,
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
       };
-
-      const result = await storage.getProducts(companyId, filters);
+      
+      const result = await storage.getProducts(userId, filters);
       res.json(result);
     } catch (error: any) {
       console.error("Error fetching products:", error);
@@ -198,40 +83,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/:id", requireCompany, async (req: any, res) => {
+  app.post("/api/products/sync", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
-      const { id } = req.params;
-      
-      const product = await storage.getProduct(companyId, id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      
-      res.json(product);
-    } catch (error: any) {
-      console.error("Error fetching product:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/products/:id/variants", requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const { id } = req.params;
-      
-      const variants = await storage.getProductVariants(companyId, id);
-      res.json(variants);
-    } catch (error: any) {
-      console.error("Error fetching product variants:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/products/sync", requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const settings = await storage.getApiSettings(companyId);
+      const userId = req.user.uid;
+      const settings = await storage.getApiSettings(userId);
       
       if (!settings) {
         return res.status(400).json({ message: "No API settings found. Please configure BigCommerce API first." });
@@ -240,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bcService = new BigCommerceService(settings);
       
       // Clear existing products and variants
-      await storage.clearCompanyProducts(companyId);
+      await storage.clearUserProducts(userId);
       
       // Fetch products from BigCommerce
       const result = await bcService.getProducts();
@@ -267,34 +122,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: bcProduct.is_visible ? "published" : "draft"
         };
         
-        await storage.createProduct(companyId, product);
-        
-        // Fetch and save variants for this product
-        try {
-          const bcVariants = await bcService.getProductVariants(bcProduct.id);
-          for (const bcVariant of bcVariants) {
-            const variant = {
-              id: bcVariant.id.toString(),
-              productId: bcProduct.id.toString(),
-              variantSku: bcVariant.sku || undefined,
-              optionValues: bcVariant.option_values || [],
-              regularPrice: bcVariant.price ? bcVariant.price.toString() : undefined,
-              salePrice: bcVariant.sale_price && parseFloat(bcVariant.sale_price) > 0 ? bcVariant.sale_price.toString() : undefined,
-              calculatedPrice: bcVariant.calculated_price ? bcVariant.calculated_price.toString() : undefined,
-              stock: bcVariant.inventory_level || 0
-            };
-            
-            await storage.createProductVariant(companyId, variant);
-          }
-        } catch (variantError) {
-          console.warn(`Failed to fetch variants for product ${bcProduct.id}:`, variantError);
-        }
-
+        await storage.createProduct(userId, product);
         syncedCount++;
       }
       
       // Update last sync time
-      await storage.updateApiSettingsLastSync(companyId, new Date());
+      await storage.updateApiSettingsLastSync(userId, new Date());
       
       res.json({ 
         message: "Products synced successfully", 
@@ -308,13 +141,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Work Orders routes
-  app.get("/api/work-orders", requireCompany, async (req: any, res) => {
+  app.get("/api/work-orders", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
+      const userId = req.user.uid;
       const { archived } = req.query;
       
       const filters = archived !== undefined ? { archived: archived === 'true' } : undefined;
-      const workOrders = await storage.getWorkOrders(companyId, filters);
+      const workOrders = await storage.getWorkOrders(userId, filters);
       res.json(workOrders);
     } catch (error: any) {
       console.error("Error fetching work orders:", error);
@@ -322,136 +155,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/work-orders/:id", requireCompany, async (req: any, res) => {
+  app.post("/api/work-orders", getFirebaseUser, async (req: any, res) => {
     try {
-      const companyId = req.companyId;
-      const { id } = req.params;
-      
-      const workOrder = await storage.getWorkOrder(companyId, id);
-      if (!workOrder) {
-        return res.status(404).json({ message: "Work order not found" });
-      }
-      
-      res.json(workOrder);
-    } catch (error: any) {
-      console.error("Error fetching work order:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/work-orders", requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const createdBy = req.currentUser.id;
+      const userId = req.user.uid;
       const validatedData = insertWorkOrderSchema.parse(req.body);
       
-      const workOrder = await storage.createWorkOrder(companyId, createdBy, validatedData);
-      
-      // Schedule work order if needed
-      if (workOrder.executeImmediately) {
-        scheduler.scheduleImmediateExecution(workOrder);
-      } else if (workOrder.scheduledAt) {
-        scheduler.scheduleWorkOrder(workOrder);
-      }
-      
+      const workOrder = await storage.createWorkOrder(userId, validatedData);
       res.json(workOrder);
     } catch (error: any) {
       console.error("Error creating work order:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.patch("/api/work-orders/:id", requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const { id } = req.params;
-      
-      const workOrder = await storage.updateWorkOrder(companyId, id, req.body);
-      if (!workOrder) {
-        return res.status(404).json({ message: "Work order not found" });
-      }
-      
-      res.json(workOrder);
-    } catch (error: any) {
-      console.error("Error updating work order:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.delete("/api/work-orders/:id", requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const { id } = req.params;
-      
-      const success = await storage.deleteWorkOrder(companyId, id);
-      if (!success) {
-        return res.status(404).json({ message: "Work order not found" });
-      }
-      
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("Error deleting work order:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/work-orders/:id/undo", requireCompany, async (req: any, res) => {
-    try {
-      const companyId = req.companyId;
-      const { id } = req.params;
-      
-      const workOrder = await storage.getWorkOrder(companyId, id);
-      if (!workOrder) {
-        return res.status(404).json({ message: "Work order not found" });
-      }
-
-      if (workOrder.status !== "completed") {
-        return res.status(400).json({ message: "Can only undo completed work orders" });
-      }
-
-      if (!workOrder.originalPrices || workOrder.originalPrices.length === 0) {
-        return res.status(400).json({ message: "No original prices available for undo" });
-      }
-
-      const settings = await storage.getApiSettings(companyId);
-      if (!settings) {
-        return res.status(400).json({ message: "No API settings found" });
-      }
-
-      const bcService = new BigCommerceService(settings);
-
-      // Restore original prices
-      for (const originalPrice of workOrder.originalPrices) {
-        try {
-          // Update product pricing
-          await bcService.updateProduct(originalPrice.productId, {
-            price: parseFloat(originalPrice.originalRegularPrice),
-            sale_price: originalPrice.originalSalePrice !== "0" ? parseFloat(originalPrice.originalSalePrice) : 0
-          });
-
-          // Update variants if they exist
-          if (originalPrice.variantPrices) {
-            for (const variantPrice of originalPrice.variantPrices) {
-              await bcService.updateProductVariant(originalPrice.productId, variantPrice.variantId, {
-                price: parseFloat(variantPrice.originalRegularPrice),
-                sale_price: variantPrice.originalSalePrice !== "0" ? parseFloat(variantPrice.originalSalePrice) : 0
-              });
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to restore prices for product ${originalPrice.productId}:`, error);
-        }
-      }
-
-      // Update work order status
-      await storage.updateWorkOrder(companyId, id, {
-        status: "undone",
-        undoneAt: new Date(),
-      });
-
-      res.json({ success: true, message: "Work order undone successfully" });
-    } catch (error: any) {
-      console.error("Error undoing work order:", error);
       res.status(500).json({ message: error.message });
     }
   });
