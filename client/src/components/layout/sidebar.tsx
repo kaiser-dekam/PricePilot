@@ -1,11 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { Package, ClipboardList, Settings, Users, Wifi } from "lucide-react";
+import { Package, ClipboardList, Settings, Users, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const { data: workOrders } = useQuery({
     queryKey: ["/api/work-orders"],
@@ -47,47 +49,72 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-white shadow-lg border-r border-gray-200">
-      <div className="p-6 border-b border-gray-200">
-        <Link href="/">
-          <h1 className="text-xl font-bold text-gray-900 hover:text-primary cursor-pointer transition-colors">
-            Catalog Pilot
-          </h1>
-        </Link>
-        <p className="text-sm text-gray-500 mt-1">
-          {isConnected ? "Connected Store" : "Not Connected"}
-        </p>
-      </div>
-      
-      <nav className="mt-6">
-        <div className="px-3">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.name} href={item.href}>
-                <button
-                  className={cn(
-                    "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                    item.current
-                      ? "text-white bg-primary"
-                      : "text-gray-700 hover:bg-gray-100"
-                  )}
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                  {item.badge && (
-                    <Badge className="ml-auto bg-warning text-white">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </button>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-      
+    <>
+      {/* Mobile menu button */}
+      <button
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        {isMobileMenuOpen ? (
+          <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+        ) : (
+          <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+        )}
+      </button>
 
-    </div>
+      {/* Overlay for mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 shadow-lg border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 hover:text-primary cursor-pointer transition-colors">
+              Catalog Pilot
+            </h1>
+          </Link>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {isConnected ? "Connected Store" : "Not Connected"}
+          </p>
+        </div>
+        
+        <nav className="mt-6">
+          <div className="px-3">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.name} href={item.href}>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors mb-1",
+                      item.current
+                        ? "text-white bg-primary dark:bg-primary"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    )}
+                  >
+                    <Icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                    {item.badge && (
+                      <Badge className="ml-auto bg-warning text-white">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </button>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </>
   );
 }

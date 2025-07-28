@@ -77,82 +77,82 @@ export default function Settings() {
   return (
     <>
       {/* Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-            <p className="text-sm text-gray-500 mt-1">Configure your BigCommerce API connection</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure your BigCommerce API connection</p>
           </div>
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="text-red-600 border-red-200 hover:bg-red-50"
+            className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950 w-full sm:w-auto"
           >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            <LogOut className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Logout</span>
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-2xl">
-          <Card>
+        <div className="p-4 sm:p-6 max-w-2xl">
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader>
-              <CardTitle>BigCommerce API Settings</CardTitle>
+              <CardTitle className="text-gray-900 dark:text-gray-100">BigCommerce API Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div>
-                  <Label htmlFor="storeHash">Store Hash *</Label>
+                  <Label htmlFor="storeHash" className="text-gray-900 dark:text-gray-100">Store Hash *</Label>
                   <Input
                     id="storeHash"
                     type="text"
                     value={storeHash}
                     onChange={(e) => setStoreHash(e.target.value)}
                     placeholder="abc123def"
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Found in your BigCommerce store URL (e.g., store-abc123def.mybigcommerce.com)
                   </p>
                 </div>
                 
                 <div>
-                  <Label htmlFor="accessToken">Access Token *</Label>
+                  <Label htmlFor="accessToken" className="text-gray-900 dark:text-gray-100">Access Token *</Label>
                   <Input
                     id="accessToken"
                     type="password"
                     value={accessToken}
                     onChange={(e) => setAccessToken(e.target.value)}
                     placeholder="••••••••••••••••••••"
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     API token with products read/write scope
                   </p>
                 </div>
                 
                 <div>
-                  <Label htmlFor="clientId">Client ID *</Label>
+                  <Label htmlFor="clientId" className="text-gray-900 dark:text-gray-100">Client ID *</Label>
                   <Input
                     id="clientId"
                     type="text"
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     placeholder="abcdef123456789"
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Your app's client identifier
                   </p>
                 </div>
                 
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="space-y-0.5">
-                      <Label htmlFor="showStock">Show Stock Status</Label>
-                      <p className="text-xs text-gray-500">
+                      <Label htmlFor="showStock" className="text-gray-900 dark:text-gray-100">Show Stock Status</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Display stock quantities on the Products page
                       </p>
                     </div>
@@ -164,12 +164,13 @@ export default function Settings() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-end space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-4">
                   <Button
                     type="submit"
                     disabled={saveMutation.isPending}
+                    className="w-full sm:w-auto"
                   >
-                    <Save className="w-4 h-4 mr-2" />
+                    <Save className="w-4 h-4 sm:mr-2" />
                     {saveMutation.isPending ? "Saving..." : "Save Settings"}
                   </Button>
                 </div>
@@ -187,10 +188,10 @@ export default function Settings() {
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {(user as any).email}
                       </p>
-                      <p className="text-xs text-gray-500">Authenticated User</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Authenticated User</p>
                     </div>
                   </div>
                 </div>

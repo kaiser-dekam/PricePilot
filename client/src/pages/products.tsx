@@ -91,53 +91,61 @@ export default function Products() {
   return (
     <>
       {/* Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Products</h2>
-            <p className="text-sm text-gray-500 mt-1">Manage your BigCommerce store products</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your BigCommerce store products</p>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Search Bar */}
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <Input
                 type="text"
                 placeholder="Search products..."
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-64 pl-10"
+                className="sm:w-64 pl-10"
               />
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
             </div>
             
-            <Button
-              onClick={handleSync}
-              disabled={syncMutation.isPending}
-              variant={isApiConnected ? "default" : "outline"}
-              className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-              Sync
-            </Button>
-            
-            <Button onClick={() => setShowWorkOrderModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Work Order
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSync}
+                disabled={syncMutation.isPending}
+                variant={isApiConnected ? "default" : "outline"}
+                className={`flex-1 sm:flex-none ${isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                size="sm"
+              >
+                <RefreshCw className={`w-4 h-4 sm:mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Sync</span>
+              </Button>
+              
+              <Button 
+                onClick={() => setShowWorkOrderModal(true)}
+                className="flex-1 sm:flex-none"
+                size="sm"
+              >
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Create Work Order</span>
+                <span className="sm:hidden">Create</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Filters Bar */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                 <Select value={category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -155,18 +163,19 @@ export default function Products() {
                     setCategory("all");
                     setPage(1);
                   }}
+                  className="w-full sm:w-auto"
                 >
                   Clear Filters
                 </Button>
               </div>
               
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <div className="flex items-center space-x-2">
                   <span>{total}</span>
                   <span>products found</span>
                 </div>
                 {(apiSettings as any)?.lastSyncAt && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     Last Sync'd: {new Date((apiSettings as any).lastSyncAt).toLocaleString()}
                   </div>
                 )}
@@ -176,14 +185,14 @@ export default function Products() {
 
           {/* Products Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-4 w-2/3"></div>
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 animate-pulse">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-2/3"></div>
                   <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   </div>
                 </div>
               ))}
@@ -191,8 +200,8 @@ export default function Products() {
           ) : products.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-              <p className="text-gray-500 mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No products found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {search || category ? "Try adjusting your filters" : "Sync products from BigCommerce to get started"}
               </p>
               {!search && !category && (
@@ -204,7 +213,7 @@ export default function Products() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}

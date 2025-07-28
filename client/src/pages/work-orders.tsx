@@ -137,20 +137,20 @@ export default function WorkOrders() {
   };
 
   // Work orders are already filtered server-side based on showArchived
-  const filteredWorkOrders = workOrders || [];
+  const filteredWorkOrders = (workOrders as WorkOrder[]) || [];
 
   return (
     <>
       {/* Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Work Orders</h2>
-              <p className="text-sm text-gray-500 mt-1">Manage batch product updates and schedules</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Work Orders</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage batch product updates and schedules</p>
             </div>
             <Select value={showArchived ? "archived" : "active"} onValueChange={(value) => setShowArchived(value === "archived")}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -159,19 +159,25 @@ export default function WorkOrders() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-col xs:flex-row gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => refetch()}
               disabled={isLoading}
+              className="flex-1 xs:flex-none"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
+              <RefreshCw className={`w-4 h-4 xs:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden xs:inline">Refresh</span>
             </Button>
-            <Button size="sm" onClick={() => setShowWorkOrderModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Work Order
+            <Button 
+              size="sm" 
+              onClick={() => setShowWorkOrderModal(true)}
+              className="flex-1 xs:flex-none"
+            >
+              <Plus className="w-4 h-4 xs:mr-2" />
+              <span className="hidden xs:inline">Create Work Order</span>
+              <span className="xs:hidden">Create</span>
             </Button>
           </div>
         </div>
@@ -179,7 +185,7 @@ export default function WorkOrders() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
