@@ -49,7 +49,7 @@ export async function apiRequest(
 
     await throwIfResNotOk(res);
     return res;
-  } catch (error) {
+  } catch (error: any) {
     console.error("API request error:", { 
       url, 
       method, 
@@ -97,7 +97,7 @@ export const getQueryFn: <T>(options: {
 
       await throwIfResNotOk(res);
       return await res.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Query function error:", { 
         url, 
         error: error.message || error, 

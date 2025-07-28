@@ -31,10 +31,7 @@ export default function CompanySetup() {
 
   const createCompanyMutation = useMutation({
     mutationFn: async (data: CreateCompanyForm) => {
-      return await apiRequest('/api/company/create', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('POST', '/api/company/create', data);
     },
     onSuccess: () => {
       toast({
@@ -42,7 +39,9 @@ export default function CompanySetup() {
         description: "Your company has been created successfully.",
       });
       // Invalidate user query to refresh user data
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/firebase-user'] });
+      // Refresh the page to redirect to the main app
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
