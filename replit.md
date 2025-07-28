@@ -33,6 +33,14 @@ Preferred communication style: Simple, everyday language.
   - Changed application name from "BigCommerce Manager" to "Catalog Pilot" in sidebar
   - Made application name clickable to link to homepage with hover effects
   - Updated project documentation to reflect new branding
+- **Fixed Work Order Archive System**: Resolved archive/unarchive functionality issues
+  - Added missing archive and unarchive API routes to server
+  - Fixed server-side filtering for work orders based on archive status
+  - Removed conflicting client-side filtering logic
+  - Both archive and unarchive buttons now work correctly
+- **Fixed Team Invitation System**: Resolved "Method is not a valid HTTP token" error
+  - Corrected API request parameter order in team invitation calls
+  - Team member invitations now work properly with Firebase authentication
 
 ### January 27, 2025
 - **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios

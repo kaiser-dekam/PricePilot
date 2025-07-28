@@ -47,10 +47,7 @@ export default function Team() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (data: InviteUserForm) => {
-      return await apiRequest('/api/company/invite', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('POST', '/api/company/invite', data);
     },
     onSuccess: () => {
       toast({
