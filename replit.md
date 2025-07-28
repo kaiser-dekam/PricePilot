@@ -1,8 +1,8 @@
-# BigCommerce Product Manager
+# Catalog Pilot
 
 ## Overview
 
-This is a full-stack web application designed to manage BigCommerce products and handle bulk price updates through scheduled work orders. The application provides a clean interface for syncing products from BigCommerce, viewing product details, and creating automated price update tasks.
+Catalog Pilot is a full-stack web application designed to manage BigCommerce products and handle bulk price updates through scheduled work orders. The application provides a clean interface for syncing products from BigCommerce, viewing product details, and creating automated price update tasks.
 
 ## User Preferences
 
@@ -29,6 +29,10 @@ Preferred communication style: Simple, everyday language.
   - Fixed user session management to properly handle company associations
   - BigCommerce API settings can now be saved successfully with Firebase authentication
   - Fixed product sync endpoint routing to work with frontend sync calls
+- **Rebranding to Catalog Pilot**: Updated application name and branding
+  - Changed application name from "BigCommerce Manager" to "Catalog Pilot" in sidebar
+  - Made application name clickable to link to homepage with hover effects
+  - Updated project documentation to reflect new branding
 
 ### January 27, 2025
 - **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios

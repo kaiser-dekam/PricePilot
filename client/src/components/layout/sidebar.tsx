@@ -49,7 +49,11 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-white shadow-lg border-r border-gray-200">
       <div className="p-6 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">BigCommerce Manager</h1>
+        <Link href="/">
+          <h1 className="text-xl font-bold text-gray-900 hover:text-primary cursor-pointer transition-colors">
+            Catalog Pilot
+          </h1>
+        </Link>
         <p className="text-sm text-gray-500 mt-1">
           {isConnected ? "Connected Store" : "Not Connected"}
         </p>
