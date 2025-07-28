@@ -288,6 +288,9 @@ export class DbStorage implements IStorage {
   }
 
   async clearCompanyProducts(companyId: string): Promise<void> {
+    // Delete product variants first due to foreign key constraint
+    await this.db.delete(productVariants).where(eq(productVariants.companyId, companyId));
+    // Then delete products
     await this.db.delete(products).where(eq(products.companyId, companyId));
   }
 
