@@ -24,6 +24,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Firebase Auth routes
+  app.get('/api/auth/firebase-user', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const idToken = authHeader.split('Bearer ')[1];
+      
+      // For now, we'll decode the token client-side, but in production you should verify it server-side
+      // Import Firebase Admin SDK and verify the token properly
+      
+      // For MVP, we'll trust the client and create/get user based on the token payload
+      // In production, use Firebase Admin SDK to verify the token
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      
+      const userData = {
+        id: payload.sub || payload.user_id,
+        email: payload.email,
+        firstName: payload.given_name || null,
+        lastName: payload.family_name || null,
+        profileImageUrl: payload.picture || null,
+        role: "member" as const,
+        isActive: true,
+      };
+
+      const user = await storage.upsertUser(userData);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error with Firebase auth:", error);
+      res.status(401).json({ message: "Unauthorized" });
+    }
+  });
+
   // Company setup routes (for users without a company)
   app.post('/api/company/create', isAuthenticated, async (req: any, res) => {
     try {
