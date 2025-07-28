@@ -32,7 +32,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     name: 'Starter',
     priceId: 'price_starter', // You'll need to create this in Stripe
     productLimit: 10,
-    price: 29,
+    price: 10,
     interval: 'month',
     features: ['10 products', 'Advanced sync', 'Work orders', 'Team collaboration']
   },
@@ -41,7 +41,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     name: 'Premium',
     priceId: 'price_premium', // You'll need to create this in Stripe
     productLimit: 1000,
-    price: 99,
+    price: 20,
     interval: 'month',
     features: ['1000 products', 'Full sync', 'Advanced work orders', 'Team collaboration', 'Priority support']
   }

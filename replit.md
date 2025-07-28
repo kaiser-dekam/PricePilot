@@ -25,6 +25,7 @@ Preferred communication style: Simple, everyday language.
   - Implemented webhook handling for subscription status updates (foundation)
   - Added proper error handling and user feedback for payment flows
   - Trial plan works without Stripe payments, paid plans require Stripe integration
+  - Updated pricing: Starter $10/month, Premium $20/month
 - **Fixed BigCommerce Sync Pagination**: Resolved issue where sync was only fetching 50 products instead of all products
   - Updated sync endpoints to use proper pagination with 250 products per page (BigCommerce maximum)
   - Added pagination loop to fetch all products automatically from multi-page stores
