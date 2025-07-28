@@ -11,13 +11,20 @@ async function throwIfResNotOk(res: Response) {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = auth.currentUser;
   if (user) {
-    const token = await user.getIdToken();
-    return {
-      'Authorization': `Bearer ${token}`,
-      'x-user-id': user.uid,
-      'x-user-email': user.email || '',
-    };
+    try {
+      const token = await user.getIdToken();
+      console.log("Got Firebase token, length:", token.length);
+      return {
+        'Authorization': `Bearer ${token}`,
+        'x-user-id': user.uid,
+        'x-user-email': user.email || '',
+      };
+    } catch (error) {
+      console.error("Error getting Firebase token:", error);
+      return {};
+    }
   }
+  console.log("No Firebase user for auth headers");
   return {};
 }
 
@@ -71,19 +78,24 @@ export const getQueryFn: <T>(options: {
       }
     }
 
-    const authHeaders = await getAuthHeaders();
+    try {
+      const authHeaders = await getAuthHeaders();
 
-    const res = await fetch(url, {
-      credentials: "include",
-      headers: authHeaders,
-    });
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: authHeaders,
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      console.error("Query function error:", error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

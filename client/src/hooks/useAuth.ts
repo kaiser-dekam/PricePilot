@@ -10,6 +10,7 @@ export function useAuth() {
   // Listen to Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("Firebase auth state changed:", !!user);
       setFirebaseUser(user);
       setIsFirebaseLoading(false);
     });
@@ -22,10 +23,25 @@ export function useAuth() {
     queryKey: ['/api/auth/firebase-user'],
     enabled: !!firebaseUser && !isFirebaseLoading,
     retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const isLoading = isFirebaseLoading || (firebaseUser && isBackendLoading);
   const isAuthenticated = !!firebaseUser && !!backendUser;
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Auth hook state:", {
+      firebaseUser: !!firebaseUser,
+      backendUser: !!backendUser,
+      isFirebaseLoading,
+      isBackendLoading,
+      isLoading,
+      isAuthenticated,
+      backendError: backendError?.message
+    });
+  }, [firebaseUser, backendUser, isFirebaseLoading, isBackendLoading, isLoading, isAuthenticated, backendError]);
 
   return {
     user: backendUser,

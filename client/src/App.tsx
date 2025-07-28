@@ -17,7 +17,10 @@ import InvitationAccept from "@/pages/invitation-accept";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, error } = useAuth();
+
+  // Log authentication state for debugging
+  console.log("Auth state:", { isAuthenticated, isLoading, hasUser: !!user, error });
 
   if (isLoading) {
     return (

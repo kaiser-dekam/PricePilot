@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid token format" });
       }
       
-      console.log("Attempting to decode Firebase token...");
+      console.log("Attempting to decode Firebase token...", { tokenLength: idToken.length });
       
       // Decode the JWT token payload (without verification for MVP)
       // In production, use Firebase Admin SDK to verify the token
