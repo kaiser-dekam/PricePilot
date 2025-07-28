@@ -340,6 +340,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Legacy sync endpoint for backwards compatibility
+  app.post("/api/sync", async (req, res) => {
+    try {
+      const { user } = await getFirebaseUserAndCompany(req);
+      const settings = await storage.getApiSettings(user.companyId!);
+      
+      if (!settings) {
+        return res.status(400).json({ message: "No API settings found. Please configure BigCommerce API first." });
+      }
+
+      const bcService = new BigCommerceService(settings);
+      
+      // Clear existing products and variants
+      await storage.clearCompanyProducts(user.companyId!);
+      
+      // Fetch products from BigCommerce
+      const result = await bcService.getProducts();
+      const bcProducts = result.products;
+      const bcCategories = await bcService.getCategories();
+      
+      const categoryMap = new Map(bcCategories.map(cat => [cat.id, cat.name]));
+      
+      // Save products to database
+      let syncedCount = 0;
+      for (const bcProduct of bcProducts) {
+        const product = {
+          id: bcProduct.id.toString(),
+          name: bcProduct.name,
+          sku: bcProduct.sku || undefined,
+          description: bcProduct.description || undefined,
+          category: bcProduct.categories && bcProduct.categories.length > 0 
+            ? categoryMap.get(bcProduct.categories[0]) || "Uncategorized"
+            : "Uncategorized",
+          regularPrice: bcProduct.price ? bcProduct.price.toString() : undefined,
+          salePrice: bcProduct.sale_price && parseFloat(bcProduct.sale_price) > 0 ? bcProduct.sale_price.toString() : undefined,
+          stock: bcProduct.inventory_level || 0,
+          weight: bcProduct.weight ? bcProduct.weight.toString() : undefined,
+          status: bcProduct.is_visible ? "published" : "draft"
+        };
+        
+        await storage.createProduct(user.companyId!, product);
+        
+        // Fetch and save variants for this product
+        try {
+          const bcVariants = await bcService.getProductVariants(bcProduct.id);
+          for (const bcVariant of bcVariants) {
+            const variant = {
+              id: bcVariant.id.toString(),
+              productId: bcProduct.id.toString(),
+              variantSku: bcVariant.sku || undefined,
+              optionValues: bcVariant.option_values || [],
+              regularPrice: bcVariant.price ? bcVariant.price.toString() : undefined,
+              salePrice: bcVariant.sale_price && parseFloat(bcVariant.sale_price) > 0 ? bcVariant.sale_price.toString() : undefined,
+              calculatedPrice: bcVariant.calculated_price ? bcVariant.calculated_price.toString() : undefined,
+              stock: bcVariant.inventory_level || 0
+            };
+            
+            await storage.createProductVariant(user.companyId!, variant);
+          }
+        } catch (variantError) {
+          console.warn(`Failed to fetch variants for product ${bcProduct.id}:`, variantError);
+        }
+
+        syncedCount++;
+      }
+      
+      // Update last sync time
+      await storage.updateApiSettingsLastSync(user.companyId!, new Date());
+      
+      res.json({ 
+        message: "Products synced successfully", 
+        count: syncedCount 
+      });
+      
+    } catch (error: any) {
+      console.error("Sync error:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/products/sync", async (req, res) => {
     try {
       const { user } = await getFirebaseUserAndCompany(req);

@@ -28,6 +28,7 @@ Preferred communication style: Simple, everyday language.
   - Replaced old requireCompany middleware with getFirebaseUserAndCompany helper function
   - Fixed user session management to properly handle company associations
   - BigCommerce API settings can now be saved successfully with Firebase authentication
+  - Fixed product sync endpoint routing to work with frontend sync calls
 
 ### January 27, 2025
 - **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios
