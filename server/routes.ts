@@ -60,13 +60,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid token format" });
       }
       
+      // Check if user already exists to preserve their role
+      const existingUser = await storage.getUser(payload.sub || payload.user_id);
+      
       const userData = {
         id: payload.sub || payload.user_id,
         email: payload.email,
         firstName: payload.given_name || payload.name?.split(' ')[0] || null,
         lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || null,
         profileImageUrl: payload.picture || null,
-        role: "member" as const,
+        role: existingUser?.role || "member" as const, // Preserve existing role or default to member
         isActive: true,
       };
 
