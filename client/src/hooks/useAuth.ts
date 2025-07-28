@@ -18,7 +18,7 @@ export function useAuth() {
   }, []);
 
   // Get user data from backend when Firebase user exists
-  const { data: backendUser, isLoading: isBackendLoading } = useQuery({
+  const { data: backendUser, isLoading: isBackendLoading, error: backendError } = useQuery({
     queryKey: ['/api/auth/firebase-user'],
     enabled: !!firebaseUser && !isFirebaseLoading,
     retry: false,
@@ -32,5 +32,6 @@ export function useAuth() {
     firebaseUser,
     isLoading,
     isAuthenticated,
+    error: backendError,
   };
 }

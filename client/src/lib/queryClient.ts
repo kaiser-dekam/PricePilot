@@ -26,21 +26,26 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const authHeaders = await getAuthHeaders();
-  const headers = {
-    ...(data ? { "Content-Type": "application/json" } : {}),
-    ...authHeaders,
-  };
+  try {
+    const authHeaders = await getAuthHeaders();
+    const headers = {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders,
+    };
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error("API request error:", error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

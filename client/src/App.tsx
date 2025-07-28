@@ -42,8 +42,8 @@ function Router() {
     );
   }
 
-  // Handle users without a company
-  if (isAuthenticated && user && !user.companyId) {
+  // Handle users without a company  
+  if (isAuthenticated && user && !(user as any).companyId) {
     return (
       <Switch>
         <Route path="/invite/:token" component={InvitationAccept} />

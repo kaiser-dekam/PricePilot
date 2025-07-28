@@ -29,33 +29,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({ message: "No authorization header" });
       }
 
       const idToken = authHeader.split('Bearer ')[1];
+      if (!idToken || idToken.length < 10) {
+        return res.status(401).json({ message: "Invalid token format" });
+      }
       
-      // For now, we'll decode the token client-side, but in production you should verify it server-side
-      // Import Firebase Admin SDK and verify the token properly
+      console.log("Attempting to decode Firebase token...");
       
-      // For MVP, we'll trust the client and create/get user based on the token payload
+      // Decode the JWT token payload (without verification for MVP)
       // In production, use Firebase Admin SDK to verify the token
-      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      let payload;
+      try {
+        const parts = idToken.split('.');
+        if (parts.length !== 3) {
+          throw new Error("Invalid JWT format");
+        }
+        
+        // Add padding if needed for base64 decoding
+        let base64Payload = parts[1];
+        const padding = '===='.slice(0, (4 - base64Payload.length % 4) % 4);
+        base64Payload += padding;
+        
+        payload = JSON.parse(atob(base64Payload));
+        console.log("Decoded payload:", { sub: payload.sub, email: payload.email });
+      } catch (decodeError) {
+        console.error("Token decode error:", decodeError);
+        return res.status(401).json({ message: "Invalid token format" });
+      }
       
       const userData = {
         id: payload.sub || payload.user_id,
         email: payload.email,
-        firstName: payload.given_name || null,
-        lastName: payload.family_name || null,
+        firstName: payload.given_name || payload.name?.split(' ')[0] || null,
+        lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || null,
         profileImageUrl: payload.picture || null,
         role: "member" as const,
         isActive: true,
       };
 
+      console.log("Creating/updating user:", userData.id, userData.email);
       const user = await storage.upsertUser(userData);
+      console.log("User upserted successfully");
       res.json(user);
     } catch (error: any) {
       console.error("Error with Firebase auth:", error);
-      res.status(401).json({ message: "Unauthorized" });
+      res.status(500).json({ message: "Internal server error", error: error.message });
     }
   });
 
