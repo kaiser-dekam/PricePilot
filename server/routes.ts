@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: limit ? parseInt(limit as string) : undefined,
       };
 
-      const result = await storage.getProducts(user.user.companyId!!, filters);
+      const result = await storage.getProducts(user.companyId!, filters);
       res.json(result);
     } catch (error: any) {
       console.error("Error fetching products:", error);
@@ -312,7 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const product = await storage.getProduct(user.user.companyId!!, id);
+      const product = await storage.getProduct(user.companyId!, id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -415,6 +415,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error: any) {
       console.error("Sync error:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
@@ -426,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { archived } = req.query;
       
       const filters = archived !== undefined ? { archived: archived === 'true' } : undefined;
-      const workOrders = await storage.getWorkOrders(user.user.companyId!!, filters);
+      const workOrders = await storage.getWorkOrders(user.companyId!, filters);
       res.json(workOrders);
     } catch (error: any) {
       console.error("Error fetching work orders:", error);
@@ -457,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/work-orders", async (req, res) => {
     try {
       const { user } = await getFirebaseUserAndCompany(req);
-      const createdBy = req.currentUser.id;
+      const createdBy = user.id;
       const validatedData = insertWorkOrderSchema.parse(req.body);
       
       const workOrder = await storage.createWorkOrder(user.companyId!, createdBy, validatedData);
