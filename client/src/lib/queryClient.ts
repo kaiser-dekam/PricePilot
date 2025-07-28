@@ -12,7 +12,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = auth.currentUser;
   if (user) {
     return {
-      'X-User-ID': user.uid,
+      'X-User-Id': user.uid,
       'X-User-Email': user.email || '',
     };
   }

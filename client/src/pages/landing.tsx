@@ -24,13 +24,13 @@ export default function Landing() {
                 Get Started
               </Button>
             </Link>
-            <Link href="/test-auth">
+            <Link href="/test-simple">
               <Button 
                 size="lg"
                 variant="outline"
                 className="text-lg px-8 py-3"
               >
-                Test Auth
+                Test API
               </Button>
             </Link>
           </div>
