@@ -7,8 +7,8 @@ import { scheduler } from "./services/scheduler";
 
 // Simple middleware to extract Firebase user info from headers
 const getFirebaseUser = (req: any, res: any, next: any) => {
-  const userId = req.headers['x-user-id'];
-  const userEmail = req.headers['x-user-email'];
+  const userId = req.headers['x-user-id'] || req.headers['X-User-ID'];
+  const userEmail = req.headers['x-user-email'] || req.headers['X-User-Email'];
   
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
