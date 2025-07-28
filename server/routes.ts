@@ -596,6 +596,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Archive work order
+  app.patch("/api/work-orders/:id/archive", async (req, res) => {
+    try {
+      const { user } = await getFirebaseUserAndCompany(req);
+      const { id } = req.params;
+      
+      const workOrder = await storage.updateWorkOrder(user.companyId!, id, { archived: true });
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      
+      res.json(workOrder);
+    } catch (error: any) {
+      console.error("Error archiving work order:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Unarchive work order
+  app.patch("/api/work-orders/:id/unarchive", async (req, res) => {
+    try {
+      const { user } = await getFirebaseUserAndCompany(req);
+      const { id } = req.params;
+      
+      const workOrder = await storage.updateWorkOrder(user.companyId!, id, { archived: false });
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      
+      res.json(workOrder);
+    } catch (error: any) {
+      console.error("Error unarchiving work order:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/work-orders/:id/undo", async (req, res) => {
     try {
       const { user } = await getFirebaseUserAndCompany(req);
