@@ -17,7 +17,7 @@ export default function WorkOrders() {
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
 
   const { data: workOrders, isLoading, refetch } = useQuery({
-    queryKey: ["/api/work-orders", { includeArchived: true }],
+    queryKey: ["/api/work-orders", { archived: showArchived }],
     refetchInterval: 5000, // Poll every 5 seconds for status updates
     refetchIntervalInBackground: true,
   });
@@ -136,10 +136,8 @@ export default function WorkOrders() {
     }
   };
 
-  // Filter work orders based on archive status
-  const filteredWorkOrders = (workOrders || []).filter((order: WorkOrder) => 
-    showArchived ? (order as any).archived : !(order as any).archived
-  );
+  // Work orders are already filtered server-side based on showArchived
+  const filteredWorkOrders = workOrders || [];
 
   return (
     <>
