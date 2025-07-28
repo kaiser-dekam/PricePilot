@@ -11,6 +11,11 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 28, 2025
+- **Fixed BigCommerce Sync Pagination**: Resolved issue where sync was only fetching 50 products instead of all products
+  - Updated sync endpoints to use proper pagination with 250 products per page (BigCommerce maximum)
+  - Added pagination loop to fetch all products automatically from multi-page stores
+  - Fixed database foreign key constraint violation by deleting product variants before products during sync
+  - Sync now properly handles stores with hundreds or thousands of products
 - **Reconfigured Signup Process**: Streamlined user onboarding flow for better user experience
   - Changed flow from company-first to user-first registration
   - Users now create their account first, then set up their company
