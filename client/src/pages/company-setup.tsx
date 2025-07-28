@@ -40,8 +40,10 @@ export default function CompanySetup() {
       });
       // Invalidate user query to refresh user data
       queryClient.invalidateQueries({ queryKey: ['/api/auth/firebase-user'] });
-      // Refresh the page to redirect to the main app
-      window.location.reload();
+      // Redirect to main app
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
     },
     onError: (error: Error) => {
       toast({
@@ -74,7 +76,7 @@ export default function CompanySetup() {
             Welcome to BigCommerce Manager
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            To get started, you'll need to create a company or join an existing one.
+            Great! Your account is ready. Now let's set up your company to manage BigCommerce products and pricing.
           </p>
         </div>
 
@@ -85,9 +87,9 @@ export default function CompanySetup() {
               <div className="flex justify-center mb-2">
                 <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
-              <CardTitle>Create a Company</CardTitle>
+              <CardTitle>Create Your Company</CardTitle>
               <CardDescription>
-                Start fresh with your own company and invite team members
+                Set up your company to start managing BigCommerce products
               </CardDescription>
             </CardHeader>
             <CardContent>

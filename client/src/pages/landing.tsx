@@ -20,7 +20,7 @@ export default function Landing() {
               size="lg"
               className="text-lg px-8 py-3"
             >
-              Get Started
+              Sign Up / Sign In
             </Button>
           </Link>
         </div>

@@ -45,13 +45,20 @@ function Router() {
     );
   }
 
-  // Handle users without a company  
+  // Handle users without a company - redirect to company setup
   if (isAuthenticated && user && !(user as any).companyId) {
     return (
-      <Switch>
-        <Route path="/invite/:token" component={InvitationAccept} />
-        <Route component={CompanySetup} />
-      </Switch>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Switch>
+          <Route path="/invite/:token" component={InvitationAccept} />
+          <Route path="/setup" component={CompanySetup} />
+          <Route component={() => {
+            // Auto-redirect to setup if user has no company
+            window.location.href = '/setup';
+            return <div>Redirecting...</div>;
+          }} />
+        </Switch>
+      </div>
     );
   }
 

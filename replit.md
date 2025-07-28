@@ -10,6 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### January 28, 2025
+- **Reconfigured Signup Process**: Streamlined user onboarding flow for better user experience
+  - Changed flow from company-first to user-first registration
+  - Users now create their account first, then set up their company
+  - Updated landing page and signin page messaging to reflect new flow
+  - Added automatic redirection to company setup page (/setup) for new users
+  - Enhanced company setup page with clearer messaging about account completion
+  - Fixed authentication API calls that were causing "Method is not a valid HTTP token" errors
+- **Enhanced Authentication System**: Resolved all remaining authentication issues
+  - Fixed API request format in company setup page (corrected parameter order)
+  - Improved error handling and logging throughout authentication flow
+  - Added proper TypeScript error handling for better debugging
+  - Firebase authentication now works seamlessly with company creation
+
 ### January 27, 2025
 - **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios
   - Added "Remove Sale Prices" preset button to set sale prices to "0.00" for BigCommerce API compatibility

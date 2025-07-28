@@ -124,10 +124,10 @@ export default function SignIn() {
         <Card className="shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
-              {isSignUp ? "Create Account" : "Welcome Back"}
+              {isSignUp ? "Create Your Account" : "Welcome Back"}
             </CardTitle>
             <CardDescription>
-              {isSignUp ? "Create your BigCommerce Product Manager account" : "Sign in to your BigCommerce Product Manager account"}
+              {isSignUp ? "Join BigCommerce Product Manager to start managing your store" : "Sign in to access your BigCommerce management dashboard"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
