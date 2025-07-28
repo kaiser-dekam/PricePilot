@@ -10,15 +10,6 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### January 28, 2025
-- **Fixed Authentication System**: Successfully reverted from Replit Auth back to Firebase Auth per user request
-  - Restored Firebase authentication hooks and functions in client/src/hooks/useAuth.ts
-  - Updated landing page to redirect to /signin instead of /api/login
-  - Fixed query client to use Firebase user headers (X-User-ID, X-User-Email)
-  - Simplified storage layer to work with single userId instead of companyId
-  - Created test authentication page at /test-auth for debugging Firebase integration
-  - Resolved "Method is not a valid HTTP token" error by fixing authentication headers
-
 ### January 27, 2025
 - **Added Work Order Preset Options**: Implemented quick-action presets for common pricing scenarios
   - Added "Remove Sale Prices" preset button to set sale prices to "0.00" for BigCommerce API compatibility
