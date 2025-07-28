@@ -358,9 +358,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear existing products and variants
       await storage.clearCompanyProducts(user.companyId!);
       
-      // Fetch products from BigCommerce
-      const result = await bcService.getProducts();
-      const bcProducts = result.products;
+      // Fetch all products from BigCommerce with pagination
+      let allProducts: any[] = [];
+      let page = 1;
+      let hasMorePages = true;
+      
+      console.log("Starting BigCommerce product sync (legacy endpoint)...");
+      
+      while (hasMorePages) {
+        console.log(`Fetching page ${page} of products...`);
+        const result = await bcService.getProducts(page, 250); // Use max limit of 250 per page
+        const pageProducts = result.products;
+        
+        allProducts.push(...pageProducts);
+        
+        // Check if there are more pages
+        const total = result.total || 0;
+        const currentCount = page * 250;
+        hasMorePages = currentCount < total;
+        page++;
+        
+        console.log(`Fetched ${pageProducts.length} products. Total so far: ${allProducts.length} / ${total}`);
+      }
+      
+      console.log(`Finished fetching all ${allProducts.length} products from BigCommerce`);
+      const bcProducts = allProducts;
       const bcCategories = await bcService.getCategories();
       
       const categoryMap = new Map(bcCategories.map(cat => [cat.id, cat.name]));
@@ -440,9 +462,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear existing products and variants
       await storage.clearCompanyProducts(user.companyId!);
       
-      // Fetch products from BigCommerce
-      const result = await bcService.getProducts();
-      const bcProducts = result.products;
+      // Fetch all products from BigCommerce with pagination
+      let allProducts: any[] = [];
+      let page = 1;
+      let hasMorePages = true;
+      
+      console.log("Starting BigCommerce product sync...");
+      
+      while (hasMorePages) {
+        console.log(`Fetching page ${page} of products...`);
+        const result = await bcService.getProducts(page, 250); // Use max limit of 250 per page
+        const pageProducts = result.products;
+        
+        allProducts.push(...pageProducts);
+        
+        // Check if there are more pages
+        const total = result.total || 0;
+        const currentCount = page * 250;
+        hasMorePages = currentCount < total;
+        page++;
+        
+        console.log(`Fetched ${pageProducts.length} products. Total so far: ${allProducts.length} / ${total}`);
+      }
+      
+      console.log(`Finished fetching all ${allProducts.length} products from BigCommerce`);
+      const bcProducts = allProducts;
       const bcCategories = await bcService.getCategories();
       
       const categoryMap = new Map(bcCategories.map(cat => [cat.id, cat.name]));
