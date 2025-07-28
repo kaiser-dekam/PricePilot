@@ -205,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyId: user.companyId!,
         invitedBy: currentUser.id,
         token: randomUUID(),
-        expiresAt: addDays(new Date(), 7).toISOString(),
+        expiresAt: addDays(new Date(), 7),
       });
 
       const invitation = await storage.createInvitation(validatedData);
