@@ -18,6 +18,12 @@ export const sessions = pgTable(
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  subscriptionPlan: text("subscription_plan").default("trial"), // trial, starter, premium
+  productLimit: integer("product_limit").default(5),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status").default("active"), // active, cancelled, past_due
+  currentPeriodEnd: timestamp("current_period_end"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -136,6 +142,15 @@ export const workOrders = pgTable("work_orders", {
 
 export const insertCompanySchema = createInsertSchema(companies).pick({
   name: true,
+});
+
+export const updateCompanySubscriptionSchema = createInsertSchema(companies).pick({
+  subscriptionPlan: true,
+  productLimit: true,
+  stripeCustomerId: true,
+  stripeSubscriptionId: true,
+  subscriptionStatus: true,
+  currentPeriodEnd: true,
 });
 
 export const insertApiSettingsSchema = createInsertSchema(apiSettings).pick({

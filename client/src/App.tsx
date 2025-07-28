@@ -14,6 +14,7 @@ import Settings from "@/pages/settings";
 import CompanySetup from "@/pages/company-setup";
 import Team from "@/pages/team";
 import InvitationAccept from "@/pages/invitation-accept";
+import Subscription from "@/pages/subscription";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
@@ -73,6 +74,7 @@ function Router() {
           <Route path="/work-orders" component={WorkOrders} />
           <Route path="/settings" component={Settings} />
           <Route path="/team" component={Team} />
+          <Route path="/subscription" component={Subscription} />
           <Route path="/invite/:token" component={InvitationAccept} />
           <Route component={NotFound} />
         </Switch>

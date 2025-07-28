@@ -5,6 +5,7 @@ import { insertApiSettingsSchema, insertWorkOrderSchema, insertCompanySchema, in
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
 import { setupAuth, isAuthenticated, requireCompany } from "./replitAuth";
+import { stripeService, SUBSCRIPTION_PLANS } from "./services/stripe";
 import { randomUUID } from "crypto";
 import { addDays } from "date-fns";
 
@@ -736,6 +737,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: "Work order undone successfully" });
     } catch (error: any) {
       console.error("Error undoing work order:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Subscription and billing routes
+  app.get('/api/subscription/plans', async (req, res) => {
+    res.json(Object.values(SUBSCRIPTION_PLANS));
+  });
+
+  app.get('/api/subscription/current', async (req, res) => {
+    try {
+      const { user, company } = await getFirebaseUserAndCompany(req);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      res.json({
+        currentPlan: company.subscriptionPlan || 'trial',
+        productLimit: company.productLimit || 5,
+        subscriptionStatus: company.subscriptionStatus || 'active',
+        currentPeriodEnd: company.currentPeriodEnd,
+        stripeCustomerId: company.stripeCustomerId,
+        stripeSubscriptionId: company.stripeSubscriptionId
+      });
+    } catch (error: any) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/subscription/create', async (req, res) => {
+    try {
+      const { user, company } = await getFirebaseUserAndCompany(req);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const { planId } = req.body;
+
+      if (!planId || !SUBSCRIPTION_PLANS[planId]) {
+        return res.status(400).json({ message: 'Invalid plan selected' });
+      }
+
+      const plan = SUBSCRIPTION_PLANS[planId];
+      
+      // Trial plan doesn't require Stripe
+      if (planId === 'trial') {
+        await storage.updateCompanySubscription(company.id, {
+          subscriptionPlan: 'trial',
+          productLimit: 5,
+          subscriptionStatus: 'active'
+        });
+        return res.json({ success: true });
+      }
+
+      // Create or get Stripe customer
+      let customerId = company.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripeService.createCustomer(
+          user.email || '', 
+          company.name
+        );
+        customerId = customer.id;
+        
+        await storage.updateCompanySubscription(company.id, {
+          stripeCustomerId: customerId
+        });
+      }
+
+      // Create subscription
+      const subscription = await stripeService.createSubscription(customerId, plan.priceId);
+      
+      await storage.updateCompanySubscription(company.id, {
+        subscriptionPlan: planId,
+        productLimit: plan.productLimit,
+        stripeSubscriptionId: subscription.id,
+        subscriptionStatus: subscription.status,
+        currentPeriodEnd: new Date((subscription as any).current_period_end * 1000)
+      });
+
+      const latestInvoice = (subscription as any).latest_invoice;
+      const clientSecret = latestInvoice?.payment_intent?.client_secret;
+
+      res.json({
+        subscriptionId: subscription.id,
+        clientSecret,
+        success: true
+      });
+
+    } catch (error: any) {
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/subscription/cancel', async (req, res) => {
+    try {
+      const { company } = await getFirebaseUserAndCompany(req);
+      
+      if (!company || !company.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'No active subscription found' });
+      }
+
+      await stripeService.cancelSubscription(company.stripeSubscriptionId);
+      
+      await storage.updateCompanySubscription(company.id, {
+        subscriptionStatus: 'cancelled'
+      });
+
+      res.json({ success: true });
+
+    } catch (error: any) {
+      console.error("Error canceling subscription:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Product limit enforcement endpoint
+  app.get('/api/products/can-sync', async (req, res) => {
+    try {
+      const { company } = await getFirebaseUserAndCompany(req);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      const { products } = await storage.getProducts(company.id, { limit: 1000 });
+      
+      const currentProductCount = products.length;
+      const productLimit = company.productLimit || 5;
+      
+      res.json({
+        canSync: currentProductCount < productLimit,
+        currentCount: currentProductCount,
+        limit: productLimit,
+        plan: company.subscriptionPlan || 'trial'
+      });
+    } catch (error: any) {
+      console.error("Error checking sync ability:", error);
       res.status(500).json({ message: error.message });
     }
   });

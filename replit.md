@@ -11,6 +11,20 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 28, 2025
+- **Implemented Subscription Plan System**: Added company-based subscription tiers with product limits
+  - Created three plans: Trial (5 products), Starter (10 products), Premium (1000 products)
+  - Added subscription fields to companies table: subscriptionPlan, productLimit, stripeCustomerId, etc.
+  - Built comprehensive subscription management page with plan selection and Stripe integration
+  - Added subscription menu item to sidebar navigation for easy access
+  - Implemented product limit enforcement to prevent syncing beyond plan limits
+  - Created subscription API endpoints for plan management, upgrades, and cancellations
+- **Stripe Payment Integration**: Set up Stripe payment processing for paid subscriptions
+  - Integrated @stripe/stripe-js and @stripe/react-stripe-js packages
+  - Created StripeService for customer and subscription management
+  - Added payment form with Elements integration for secure card processing
+  - Implemented webhook handling for subscription status updates (foundation)
+  - Added proper error handling and user feedback for payment flows
+  - Trial plan works without Stripe payments, paid plans require Stripe integration
 - **Fixed BigCommerce Sync Pagination**: Resolved issue where sync was only fetching 50 products instead of all products
   - Updated sync endpoints to use proper pagination with 250 products per page (BigCommerce maximum)
   - Added pagination loop to fetch all products automatically from multi-page stores

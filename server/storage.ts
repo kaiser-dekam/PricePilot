@@ -30,6 +30,7 @@ export interface IStorage {
   // Company operations
   getCompany(id: string): Promise<Company | undefined>;
   createCompany(company: InsertCompany): Promise<Company>;
+  updateCompanySubscription(id: string, updates: Partial<Company>): Promise<Company | undefined>;
   
   // User operations  
   getUser(id: string): Promise<User | undefined>;
@@ -94,6 +95,15 @@ export class DbStorage implements IStorage {
     const result = await this.db
       .insert(companies)
       .values(companyData)
+      .returning();
+    return result[0];
+  }
+
+  async updateCompanySubscription(id: string, updates: Partial<Company>): Promise<Company | undefined> {
+    const result = await this.db
+      .update(companies)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(companies.id, id))
       .returning();
     return result[0];
   }

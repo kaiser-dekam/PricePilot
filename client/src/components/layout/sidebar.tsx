@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Package, ClipboardList, Settings, Users, Menu, X } from "lucide-react";
+import { Package, ClipboardList, Settings, Users, Menu, X, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,12 @@ export default function Sidebar() {
       href: "/team",
       icon: Users,
       current: location === "/team",
+    },
+    {
+      name: "Subscription",
+      href: "/subscription",
+      icon: CreditCard,
+      current: location === "/subscription",
     },
     {
       name: "Settings",
