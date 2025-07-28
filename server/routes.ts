@@ -138,42 +138,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to get user and company from Firebase token
+  async function getFirebaseUserAndCompany(req: any) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error("No authorization header");
+    }
+    
+    const idToken = authHeader.split('Bearer ')[1];
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    const userId = payload.sub || payload.user_id;
+    
+    console.log('Looking up user with ID:', userId);
+    const user = await storage.getUser(userId);
+    console.log('Found user:', user ? { id: user.id, companyId: user.companyId, role: user.role } : 'null');
+    
+    if (!user || !user.companyId) {
+      throw new Error("User not found or no company");
+    }
+    
+    const company = await storage.getCompany(user.companyId);
+    console.log('Found company:', company ? { id: company.id, name: company.name } : 'null');
+    return { user, company };
+  }
+
   // Company-based routes (require user to be part of a company)
-  app.get('/api/company', requireCompany, async (req: any, res) => {
+  app.get('/api/company', async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const company = await storage.getCompany(companyId);
+      const { company } = await getFirebaseUserAndCompany(req);
       res.json(company);
     } catch (error: any) {
       console.error("Error fetching company:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get('/api/company/users', requireCompany, async (req: any, res) => {
+  app.get('/api/company/users', async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const users = await storage.getCompanyUsers(companyId);
+      const { user } = await getFirebaseUserAndCompany(req);
+      const users = await storage.getCompanyUsers(user.companyId!);
       res.json(users);
     } catch (error: any) {
       console.error("Error fetching company users:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post('/api/company/invite', requireCompany, async (req: any, res) => {
+  app.post('/api/company/invite', async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const currentUser = req.currentUser;
+      const { user } = await getFirebaseUserAndCompany(req);
+      const currentUser = user;
       
       // Only owners and admins can invite
-      if (!['owner', 'admin'].includes(currentUser.role)) {
+      if (!currentUser.role || !['owner', 'admin'].includes(currentUser.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
       const validatedData = insertCompanyInvitationSchema.parse({
         ...req.body,
-        companyId,
+        companyId: user.companyId!,
         invitedBy: currentUser.id,
         token: randomUUID(),
         expiresAt: addDays(new Date(), 7).toISOString(),
@@ -187,46 +216,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/company/invitations', requireCompany, async (req: any, res) => {
+  app.get('/api/company/invitations', async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const invitations = await storage.getCompanyInvitations(companyId);
+      const { user } = await getFirebaseUserAndCompany(req);
+      const invitations = await storage.getCompanyInvitations(user.companyId!);
       res.json(invitations);
     } catch (error: any) {
       console.error("Error fetching invitations:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
   // API Settings routes
-  app.get("/api/settings", requireCompany, async (req: any, res) => {
+  app.get("/api/settings", async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const settings = await storage.getApiSettings(companyId);
+      const { user } = await getFirebaseUserAndCompany(req);
+      const settings = await storage.getApiSettings(user.companyId!);
       res.json(settings || null);
     } catch (error: any) {
       console.error("Error fetching settings:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/settings", requireCompany, async (req: any, res) => {
+  app.post("/api/settings", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const validatedData = insertApiSettingsSchema.parse(req.body);
       
-      const settings = await storage.saveApiSettings(companyId, validatedData);
+      const settings = await storage.saveApiSettings(user.companyId!, validatedData);
       res.json(settings);
     } catch (error: any) {
       console.error("Error saving settings:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/settings/test", requireCompany, async (req: any, res) => {
+  app.post("/api/settings/test", async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const settings = await storage.getApiSettings(companyId);
+      const { user } = await getFirebaseUserAndCompany(req);
+      const settings = await storage.getApiSettings(user.companyId!);
       
       if (!settings) {
         return res.status(400).json({ message: "No API settings found" });
@@ -238,14 +276,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: "Connection successful" });
     } catch (error: any) {
       console.error("Connection test failed:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(400).json({ success: false, message: error.message });
     }
   });
 
   // Products routes
-  app.get("/api/products", requireCompany, async (req: any, res) => {
+  app.get("/api/products", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { category, search, page, limit } = req.query;
       
       const filters = {
@@ -255,20 +296,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: limit ? parseInt(limit as string) : undefined,
       };
 
-      const result = await storage.getProducts(companyId, filters);
+      const result = await storage.getProducts(user.user.companyId!!, filters);
       res.json(result);
     } catch (error: any) {
       console.error("Error fetching products:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/products/:id", requireCompany, async (req: any, res) => {
+  app.get("/api/products/:id", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const product = await storage.getProduct(companyId, id);
+      const product = await storage.getProduct(user.user.companyId!!, id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -276,16 +320,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(product);
     } catch (error: any) {
       console.error("Error fetching product:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/products/:id/variants", requireCompany, async (req: any, res) => {
+  app.get("/api/products/:id/variants", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const variants = await storage.getProductVariants(companyId, id);
+      const variants = await storage.getProductVariants(user.companyId!, id);
       res.json(variants);
     } catch (error: any) {
       console.error("Error fetching product variants:", error);
@@ -293,10 +340,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products/sync", requireCompany, async (req: any, res) => {
+  app.post("/api/products/sync", async (req, res) => {
     try {
-      const companyId = req.companyId;
-      const settings = await storage.getApiSettings(companyId);
+      const { user } = await getFirebaseUserAndCompany(req);
+      const settings = await storage.getApiSettings(user.companyId!);
       
       if (!settings) {
         return res.status(400).json({ message: "No API settings found. Please configure BigCommerce API first." });
@@ -305,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bcService = new BigCommerceService(settings);
       
       // Clear existing products and variants
-      await storage.clearCompanyProducts(companyId);
+      await storage.clearCompanyProducts(user.companyId!);
       
       // Fetch products from BigCommerce
       const result = await bcService.getProducts();
@@ -332,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: bcProduct.is_visible ? "published" : "draft"
         };
         
-        await storage.createProduct(companyId, product);
+        await storage.createProduct(user.companyId!, product);
         
         // Fetch and save variants for this product
         try {
@@ -349,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stock: bcVariant.inventory_level || 0
             };
             
-            await storage.createProductVariant(companyId, variant);
+            await storage.createProductVariant(user.companyId!, variant);
           }
         } catch (variantError) {
           console.warn(`Failed to fetch variants for product ${bcProduct.id}:`, variantError);
@@ -359,7 +406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update last sync time
-      await storage.updateApiSettingsLastSync(companyId, new Date());
+      await storage.updateApiSettingsLastSync(user.companyId!, new Date());
       
       res.json({ 
         message: "Products synced successfully", 
@@ -373,26 +420,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Work Orders routes
-  app.get("/api/work-orders", requireCompany, async (req: any, res) => {
+  app.get("/api/work-orders", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { archived } = req.query;
       
       const filters = archived !== undefined ? { archived: archived === 'true' } : undefined;
-      const workOrders = await storage.getWorkOrders(companyId, filters);
+      const workOrders = await storage.getWorkOrders(user.user.companyId!!, filters);
       res.json(workOrders);
     } catch (error: any) {
       console.error("Error fetching work orders:", error);
+      if (error.message === "No authorization header" || error.message === "User not found or no company") {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/work-orders/:id", requireCompany, async (req: any, res) => {
+  app.get("/api/work-orders/:id", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const workOrder = await storage.getWorkOrder(companyId, id);
+      const workOrder = await storage.getWorkOrder(user.companyId!, id);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -404,13 +454,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/work-orders", requireCompany, async (req: any, res) => {
+  app.post("/api/work-orders", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const createdBy = req.currentUser.id;
       const validatedData = insertWorkOrderSchema.parse(req.body);
       
-      const workOrder = await storage.createWorkOrder(companyId, createdBy, validatedData);
+      const workOrder = await storage.createWorkOrder(user.companyId!, createdBy, validatedData);
       
       // Schedule work order if needed
       if (workOrder.executeImmediately) {
@@ -426,12 +476,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/work-orders/:id", requireCompany, async (req: any, res) => {
+  app.patch("/api/work-orders/:id", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const workOrder = await storage.updateWorkOrder(companyId, id, req.body);
+      const workOrder = await storage.updateWorkOrder(user.companyId!, id, req.body);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -443,12 +493,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/work-orders/:id", requireCompany, async (req: any, res) => {
+  app.delete("/api/work-orders/:id", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const success = await storage.deleteWorkOrder(companyId, id);
+      const success = await storage.deleteWorkOrder(user.companyId!, id);
       if (!success) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -460,12 +510,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/work-orders/:id/undo", requireCompany, async (req: any, res) => {
+  app.post("/api/work-orders/:id/undo", async (req, res) => {
     try {
-      const companyId = req.companyId;
+      const { user } = await getFirebaseUserAndCompany(req);
       const { id } = req.params;
       
-      const workOrder = await storage.getWorkOrder(companyId, id);
+      const workOrder = await storage.getWorkOrder(user.companyId!, id);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -478,7 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No original prices available for undo" });
       }
 
-      const settings = await storage.getApiSettings(companyId);
+      const settings = await storage.getApiSettings(user.companyId!);
       if (!settings) {
         return res.status(400).json({ message: "No API settings found" });
       }
@@ -509,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update work order status
-      await storage.updateWorkOrder(companyId, id, {
+      await storage.updateWorkOrder(user.companyId!, id, {
         status: "undone",
         undoneAt: new Date(),
       });
