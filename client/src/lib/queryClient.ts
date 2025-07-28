@@ -50,7 +50,12 @@ export async function apiRequest(
     await throwIfResNotOk(res);
     return res;
   } catch (error) {
-    console.error("API request error:", error);
+    console.error("API request error:", { 
+      url, 
+      method, 
+      error: error.message || error, 
+      stack: error.stack 
+    });
     throw error;
   }
 }
@@ -93,7 +98,11 @@ export const getQueryFn: <T>(options: {
       await throwIfResNotOk(res);
       return await res.json();
     } catch (error) {
-      console.error("Query function error:", error);
+      console.error("Query function error:", { 
+        url, 
+        error: error.message || error, 
+        stack: error.stack 
+      });
       throw error;
     }
   };

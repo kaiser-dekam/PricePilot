@@ -80,10 +80,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Company setup routes (for users without a company)
-  app.post('/api/company/create', isAuthenticated, async (req: any, res) => {
+  // Company setup routes (for users without a company) - Firebase Auth version
+  app.post('/api/company/create', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      // Get Firebase user ID from header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const idToken = authHeader.split('Bearer ')[1];
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      const userId = payload.sub || payload.user_id;
+      
       const user = await storage.getUser(userId);
       
       if (!user) {
