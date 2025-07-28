@@ -30,7 +30,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   starter: {
     id: 'starter',
     name: 'Starter',
-    priceId: 'price_starter', // You'll need to create this in Stripe
+    priceId: 'price_1RpxaNCQT46XbXAbWBt5Q4uT',
     productLimit: 10,
     price: 10,
     interval: 'month',
@@ -39,7 +39,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   premium: {
     id: 'premium',
     name: 'Premium',
-    priceId: 'price_premium', // You'll need to create this in Stripe
+    priceId: 'price_1Rpxb6CQT46XbXAbzzPOaput',
     productLimit: 1000,
     price: 20,
     interval: 'month',
