@@ -65,9 +65,9 @@ function Router() {
 
   // Authenticated users with a company
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0 ml-0">
+      <div className="flex-1 flex flex-col lg:ml-0 ml-0 overflow-y-auto">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/products" component={Products} />

@@ -215,8 +215,8 @@ export default function Subscription() {
   }
 
   return (
-    <div className="min-h-screen pb-20 space-y-6">
-      <div className="px-4 sm:px-0">
+    <div className="w-full space-y-6 p-4 sm:p-6">
+      <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Subscription Plans</h1>
         <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm sm:text-base">
           Choose the perfect plan for your business needs
@@ -225,24 +225,21 @@ export default function Subscription() {
 
       {/* Current Plan Status */}
       {currentSubscription && (
-        <div className="px-4 sm:px-0">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              You are currently on the <strong>{currentSubscription.currentPlan}</strong> plan 
-              with a limit of <strong>{currentSubscription.productLimit} products</strong>.
-              {currentSubscription.currentPeriodEnd && (
-                <> Your subscription renews on {new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}.</>
-              )}
-            </AlertDescription>
-          </Alert>
-        </div>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            You are currently on the <strong>{currentSubscription.currentPlan}</strong> plan 
+            with a limit of <strong>{currentSubscription.productLimit} products</strong>.
+            {currentSubscription.currentPeriodEnd && (
+              <> Your subscription renews on {new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}.</>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Plans Grid - Mobile-first responsive */}
-      <div className="px-4 sm:px-0">
-        <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {plans.map((plan: SubscriptionPlan) => {
+      <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {plans.map((plan: SubscriptionPlan) => {
           const isCurrentPlan = currentSubscription?.currentPlan === plan.id;
           const isUpgrade = plan.productLimit > (currentSubscription?.productLimit || 0);
           
@@ -325,21 +322,18 @@ export default function Subscription() {
             </Card>
           );
         })}
-        </div>
       </div>
 
       {/* Additional Information */}
-      <div className="px-4 sm:px-0">
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 rounded-lg">
-          <h3 className="font-semibold mb-2 text-sm sm:text-base">Plan Features Explained</h3>
-          <ul className="space-y-1 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-            <li>• <strong>Product Limit:</strong> Maximum number of products you can sync from BigCommerce</li>
-            <li>• <strong>Basic/Advanced Sync:</strong> Different levels of synchronization features</li>
-            <li>• <strong>Work Orders:</strong> Scheduled bulk price updates and automation</li>
-            <li>• <strong>Team Collaboration:</strong> Invite team members to manage your store</li>
-            <li>• <strong>Priority Support:</strong> Faster response times for support requests</li>
-          </ul>
-        </div>
+      <div className="bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 rounded-lg">
+        <h3 className="font-semibold mb-2 text-sm sm:text-base">Plan Features Explained</h3>
+        <ul className="space-y-1 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+          <li>• <strong>Product Limit:</strong> Maximum number of products you can sync from BigCommerce</li>
+          <li>• <strong>Basic/Advanced Sync:</strong> Different levels of synchronization features</li>
+          <li>• <strong>Work Orders:</strong> Scheduled bulk price updates and automation</li>
+          <li>• <strong>Team Collaboration:</strong> Invite team members to manage your store</li>
+          <li>• <strong>Priority Support:</strong> Faster response times for support requests</li>
+        </ul>
       </div>
     </div>
   );
