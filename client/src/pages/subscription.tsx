@@ -215,63 +215,66 @@ export default function Subscription() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Subscription Plans</h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-2">
+    <div className="min-h-screen pb-20 space-y-6">
+      <div className="px-4 sm:px-0">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Subscription Plans</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm sm:text-base">
           Choose the perfect plan for your business needs
         </p>
       </div>
 
       {/* Current Plan Status */}
       {currentSubscription && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            You are currently on the <strong>{currentSubscription.currentPlan}</strong> plan 
-            with a limit of <strong>{currentSubscription.productLimit} products</strong>.
-            {currentSubscription.currentPeriodEnd && (
-              <> Your subscription renews on {new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}.</>
-            )}
-          </AlertDescription>
-        </Alert>
+        <div className="px-4 sm:px-0">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              You are currently on the <strong>{currentSubscription.currentPlan}</strong> plan 
+              with a limit of <strong>{currentSubscription.productLimit} products</strong>.
+              {currentSubscription.currentPeriodEnd && (
+                <> Your subscription renews on {new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}.</>
+              )}
+            </AlertDescription>
+          </Alert>
+        </div>
       )}
 
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {plans.map((plan: SubscriptionPlan) => {
+      {/* Plans Grid - Mobile-first responsive */}
+      <div className="px-4 sm:px-0">
+        <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {plans.map((plan: SubscriptionPlan) => {
           const isCurrentPlan = currentSubscription?.currentPlan === plan.id;
           const isUpgrade = plan.productLimit > (currentSubscription?.productLimit || 0);
           
           return (
-            <Card key={plan.id} className={`relative ${isCurrentPlan ? 'ring-2 ring-blue-500' : ''}`}>
+            <Card key={plan.id} className={`relative ${isCurrentPlan ? 'ring-2 ring-blue-500' : ''} w-full`}>
               {isCurrentPlan && (
-                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
                   Current Plan
                 </Badge>
               )}
               
-              <CardHeader className="text-center">
-                <div className={`mx-auto mb-4 ${getPlanColor(plan.id)}`}>
+              <CardHeader className="text-center pb-4">
+                <div className={`mx-auto mb-3 ${getPlanColor(plan.id)}`}>
                   {getPlanIcon(plan.id)}
                 </div>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">{plan.name}</CardTitle>
                 <CardDescription>
-                  <span className="text-3xl font-bold">${plan.price}</span>
+                  <span className="text-2xl sm:text-3xl font-bold">${plan.price}</span>
                   {plan.price > 0 && <span className="text-sm">/{plan.interval}</span>}
                 </CardDescription>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-0">
                 <div className="text-center">
-                  <p className="font-semibold">Up to {plan.productLimit} products</p>
+                  <p className="font-semibold text-sm sm:text-base">Up to {plan.productLimit} products</p>
                 </div>
                 
                 <ul className="space-y-2">
                   {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span className="text-sm">{feature}</span>
+                    <li key={index} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -322,18 +325,21 @@ export default function Subscription() {
             </Card>
           );
         })}
+        </div>
       </div>
 
       {/* Additional Information */}
-      <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-        <h3 className="font-semibold mb-2">Plan Features Explained</h3>
-        <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-          <li>• <strong>Product Limit:</strong> Maximum number of products you can sync from BigCommerce</li>
-          <li>• <strong>Basic/Advanced Sync:</strong> Different levels of synchronization features</li>
-          <li>• <strong>Work Orders:</strong> Scheduled bulk price updates and automation</li>
-          <li>• <strong>Team Collaboration:</strong> Invite team members to manage your store</li>
-          <li>• <strong>Priority Support:</strong> Faster response times for support requests</li>
-        </ul>
+      <div className="px-4 sm:px-0">
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 rounded-lg">
+          <h3 className="font-semibold mb-2 text-sm sm:text-base">Plan Features Explained</h3>
+          <ul className="space-y-1 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+            <li>• <strong>Product Limit:</strong> Maximum number of products you can sync from BigCommerce</li>
+            <li>• <strong>Basic/Advanced Sync:</strong> Different levels of synchronization features</li>
+            <li>• <strong>Work Orders:</strong> Scheduled bulk price updates and automation</li>
+            <li>• <strong>Team Collaboration:</strong> Invite team members to manage your store</li>
+            <li>• <strong>Priority Support:</strong> Faster response times for support requests</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
