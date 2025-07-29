@@ -109,8 +109,11 @@ export default function Subscription() {
       return response;
     },
     onSuccess: (data: any) => {
+      console.log("Subscription creation response:", data);
       if (data.clientSecret) {
+        console.log("Setting clientSecret:", data.clientSecret);
         setClientSecret(data.clientSecret);
+        setSelectedPlan(selectedPlan); // Make sure selectedPlan is set
       } else {
         // Trial plan success
         toast({
@@ -151,6 +154,7 @@ export default function Subscription() {
   });
 
   const handleSelectPlan = (planId: string) => {
+    console.log("Selecting plan:", planId);
     setSelectedPlan(planId);
     createSubscriptionMutation.mutate(planId);
   };
@@ -191,8 +195,10 @@ export default function Subscription() {
   }
 
   // If we have a client secret, show payment form
+  console.log("Checking payment form conditions:", { clientSecret: !!clientSecret, selectedPlan });
   if (clientSecret && selectedPlan) {
     const plan = plans.find((p: SubscriptionPlan) => p.id === selectedPlan);
+    console.log("Showing payment form for plan:", plan);
     
     return (
       <div className="max-w-md mx-auto">
