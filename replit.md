@@ -11,6 +11,7 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 28, 2025
+- **Database Reset**: Wiped all data for fresh start - cleared all products, users, companies, work orders, and settings
 - **Implemented Subscription Plan System**: Added company-based subscription tiers with product limits
   - Created three plans: Trial (5 products), Starter (10 products), Premium (1000 products)
   - Added subscription fields to companies table: subscriptionPlan, productLimit, stripeCustomerId, etc.
