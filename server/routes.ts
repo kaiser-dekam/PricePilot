@@ -844,12 +844,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create subscription
       const subscription = await stripeService.createSubscription(customerId, plan.priceId);
       
+      // Handle period end safely - it might not be set for incomplete subscriptions
+      let currentPeriodEnd = null;
+      if ((subscription as any).current_period_end) {
+        currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+      }
+      
       await storage.updateCompanySubscription(company.id, {
         subscriptionPlan: planId,
         productLimit: plan.productLimit,
         stripeSubscriptionId: subscription.id,
         subscriptionStatus: subscription.status,
-        currentPeriodEnd: new Date((subscription as any).current_period_end * 1000)
+        currentPeriodEnd: currentPeriodEnd
       });
 
       const latestInvoice = (subscription as any).latest_invoice;
