@@ -106,7 +106,7 @@ export default function Subscription() {
   const createSubscriptionMutation = useMutation({
     mutationFn: async (planId: string) => {
       const response = await apiRequest('POST', '/api/subscription/create', { planId });
-      return response;
+      return await response.json();
     },
     onSuccess: (data: any) => {
       console.log("Subscription creation response:", data);
@@ -135,7 +135,8 @@ export default function Subscription() {
   // Cancel subscription mutation
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('POST', '/api/subscription/cancel');
+      const response = await apiRequest('POST', '/api/subscription/cancel');
+      return await response.json();
     },
     onSuccess: () => {
       toast({
