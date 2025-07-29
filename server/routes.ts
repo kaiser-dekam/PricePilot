@@ -861,11 +861,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const latestInvoice = (subscription as any).latest_invoice;
       const clientSecret = latestInvoice?.payment_intent?.client_secret;
 
-      res.json({
+      const responseData = {
         subscriptionId: subscription.id,
         clientSecret,
         success: true
-      });
+      };
+
+      console.log("Subscription response data:", responseData);
+      console.log("Latest invoice:", latestInvoice);
+      console.log("Payment intent:", latestInvoice?.payment_intent);
+      
+      res.json(responseData);
 
     } catch (error: any) {
       console.error("Error creating subscription:", error);
