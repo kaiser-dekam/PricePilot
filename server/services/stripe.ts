@@ -48,6 +48,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
 };
 
 export class StripeService {
+  public stripe = stripe; // Expose stripe instance for advanced operations
   
   async createCustomer(email: string, name: string): Promise<Stripe.Customer> {
     return await stripe.customers.create({
@@ -63,6 +64,7 @@ export class StripeService {
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
+      collection_method: 'charge_automatically',
     });
   }
 

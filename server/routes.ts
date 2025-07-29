@@ -859,7 +859,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const latestInvoice = (subscription as any).latest_invoice;
-      const clientSecret = latestInvoice?.payment_intent?.client_secret;
+      let clientSecret = latestInvoice?.payment_intent?.client_secret;
+
+      // If no payment intent exists, create one manually
+      if (!clientSecret && latestInvoice && latestInvoice.amount_due > 0) {
+        console.log("No payment intent found, creating one manually for invoice:", latestInvoice.id);
+        
+        // Create a payment intent for the invoice amount
+        const paymentIntent = await stripeService.stripe.paymentIntents.create({
+          amount: latestInvoice.amount_due,
+          currency: latestInvoice.currency,
+          customer: latestInvoice.customer as string,
+          metadata: {
+            invoice_id: latestInvoice.id,
+            subscription_id: subscription.id
+          },
+          automatic_payment_methods: {
+            enabled: true,
+          },
+        });
+        
+        clientSecret = paymentIntent.client_secret;
+        console.log("Created manual payment intent with clientSecret:", !!clientSecret);
+      }
 
       const responseData = {
         subscriptionId: subscription.id,
