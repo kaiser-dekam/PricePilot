@@ -347,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Legacy sync endpoint for backwards compatibility
   app.post("/api/sync", async (req, res) => {
     try {
-      const { user } = await getFirebaseUserAndCompany(req);
+      const { user, company } = await getFirebaseUserAndCompany(req);
       const settings = await storage.getApiSettings(user.companyId!);
       
       if (!settings) {
@@ -355,6 +355,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const bcService = new BigCommerceService(settings);
+      
+      // Fetch total product count from BigCommerce first to check limits
+      console.log("Checking BigCommerce product count for limit enforcement...");
+      const firstPageResult = await bcService.getProducts(1, 1);
+      const totalBcProducts = firstPageResult.total || 0;
+      
+      // Check subscription plan limits
+      const productLimit = company?.productLimit || 5; // Default to trial plan limit
+      const subscriptionPlan = company?.subscriptionPlan || 'trial';
+      
+      if (totalBcProducts > productLimit) {
+        return res.status(400).json({ 
+          message: `Your ${subscriptionPlan} plan is limited to ${productLimit} products, but your BigCommerce store has ${totalBcProducts} products. Please upgrade your subscription to sync more products.`,
+          currentPlan: subscriptionPlan,
+          productLimit: productLimit,
+          storeProductCount: totalBcProducts
+        });
+      }
       
       // Clear existing products and variants
       await storage.clearCompanyProducts(user.companyId!);
@@ -364,7 +382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let page = 1;
       let hasMorePages = true;
       
-      console.log("Starting BigCommerce product sync (legacy endpoint)...");
+      console.log(`Starting BigCommerce product sync (legacy endpoint) - ${totalBcProducts} products within ${productLimit} limit...`);
       
       while (hasMorePages) {
         console.log(`Fetching page ${page} of products...`);
@@ -451,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/products/sync", async (req, res) => {
     try {
-      const { user } = await getFirebaseUserAndCompany(req);
+      const { user, company } = await getFirebaseUserAndCompany(req);
       const settings = await storage.getApiSettings(user.companyId!);
       
       if (!settings) {
@@ -459,6 +477,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const bcService = new BigCommerceService(settings);
+      
+      // Fetch total product count from BigCommerce first to check limits
+      console.log("Checking BigCommerce product count for limit enforcement...");
+      const firstPageResult = await bcService.getProducts(1, 1);
+      const totalBcProducts = firstPageResult.total || 0;
+      
+      // Check subscription plan limits
+      const productLimit = company?.productLimit || 5; // Default to trial plan limit
+      const subscriptionPlan = company?.subscriptionPlan || 'trial';
+      
+      if (totalBcProducts > productLimit) {
+        return res.status(400).json({ 
+          message: `Your ${subscriptionPlan} plan is limited to ${productLimit} products, but your BigCommerce store has ${totalBcProducts} products. Please upgrade your subscription to sync more products.`,
+          currentPlan: subscriptionPlan,
+          productLimit: productLimit,
+          storeProductCount: totalBcProducts
+        });
+      }
       
       // Clear existing products and variants
       await storage.clearCompanyProducts(user.companyId!);
@@ -468,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let page = 1;
       let hasMorePages = true;
       
-      console.log("Starting BigCommerce product sync...");
+      console.log(`Starting BigCommerce product sync - ${totalBcProducts} products within ${productLimit} limit...`);
       
       while (hasMorePages) {
         console.log(`Fetching page ${page} of products...`);

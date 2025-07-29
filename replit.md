@@ -12,6 +12,11 @@ Preferred communication style: Simple, everyday language.
 
 ### January 28, 2025
 - **Database Reset**: Wiped all data for fresh start - cleared all products, users, companies, work orders, and settings
+- **Fixed Subscription Plan Enforcement**: Added product limit checks to sync endpoints to properly enforce subscription tiers
+  - Both /api/sync and /api/products/sync now check BigCommerce product count against plan limits
+  - Trial plan: 5 products max, Starter: 10 products max, Premium: 1000 products max
+  - Users get clear error messages when trying to sync beyond their plan limits
+  - Sync operations are blocked until users upgrade their subscription plan
 - **Implemented Subscription Plan System**: Added company-based subscription tiers with product limits
   - Created three plans: Trial (5 products), Starter (10 products), Premium (1000 products)
   - Added subscription fields to companies table: subscriptionPlan, productLimit, stripeCustomerId, etc.
