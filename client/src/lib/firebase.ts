@@ -9,13 +9,13 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 
-// Support both naming conventions for environment variables
-const firebaseApiKey = import.meta.env.VITE_FIREBASE_API_KEY || import.meta.env.VITE_Firebase_API_Key;
-const firebaseProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || import.meta.env.VITE_Firebase_Project_ID;
-const firebaseAppId = import.meta.env.VITE_FIREBASE_APP_ID || import.meta.env.VITE_Firebase_App_ID;
+// Support both naming conventions for environment variables (prioritize Vite_ format)
+const firebaseApiKey = import.meta.env.VITE_Firebase_API_Key || import.meta.env.VITE_FIREBASE_API_KEY;
+const firebaseProjectId = import.meta.env.VITE_Firebase_Project_ID || import.meta.env.VITE_FIREBASE_PROJECT_ID;
+const firebaseAppId = import.meta.env.VITE_Firebase_App_ID || import.meta.env.VITE_FIREBASE_APP_ID;
 
 if (!firebaseApiKey || !firebaseProjectId || !firebaseAppId) {
-  throw new Error('Missing required Firebase configuration. Please set VITE_FIREBASE_* or VITE_Firebase_* environment variables.');
+  throw new Error('Missing required Firebase configuration. Please set VITE_Firebase_* or VITE_FIREBASE_* environment variables.');
 }
 
 const firebaseConfig = {
