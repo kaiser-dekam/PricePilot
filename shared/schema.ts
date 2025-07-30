@@ -3,16 +3,7 @@ import { pgTable, text, varchar, decimal, timestamp, boolean, integer, json, ind
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for authentication
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: json("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
+// Note: Sessions table removed as we use Firebase Auth instead of session-based auth
 
 // Companies table
 export const companies = pgTable("companies", {

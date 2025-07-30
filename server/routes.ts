@@ -4,26 +4,12 @@ import { storage } from "./storage";
 import { insertApiSettingsSchema, insertWorkOrderSchema, insertCompanySchema, insertCompanyInvitationSchema } from "@shared/schema";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
-import { setupAuth, isAuthenticated, requireCompany } from "./replitAuth";
+
 import { stripeService, SUBSCRIPTION_PLANS } from "./services/stripe";
 import { randomUUID } from "crypto";
 import { addDays } from "date-fns";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
 
   // Firebase Auth routes
   app.get('/api/auth/firebase-user', async (req, res) => {
@@ -124,9 +110,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/invitations/accept/:token', isAuthenticated, async (req: any, res) => {
+  app.post('/api/invitations/accept/:token', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const idToken = authHeader.split('Bearer ')[1];
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      const userId = payload.sub || payload.user_id;
+      
       const { token } = req.params;
       
       const success = await storage.acceptInvitation(token, userId);
