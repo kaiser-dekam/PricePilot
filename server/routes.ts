@@ -360,8 +360,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subscriptionPlan = company?.subscriptionPlan || 'trial';
       const willSyncPartial = totalBcProducts > productLimit;
       
-      // Clear existing products and variants
-      await storage.clearCompanyProducts(user.companyId!);
+      // Note: Using upsert logic instead of clearing to avoid duplicate key errors
+      console.log("Using upsert logic for reliable sync (no clearing needed)");
       
       // Fetch products from BigCommerce with pagination, respecting the plan limit
       let allProducts: any[] = [];
@@ -478,8 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subscriptionPlan = company?.subscriptionPlan || 'trial';
       const willSyncPartial = totalBcProducts > productLimit;
       
-      // Clear existing products and variants
-      await storage.clearCompanyProducts(user.companyId!);
+      // Note: Using upsert logic instead of clearing to avoid duplicate key errors
+      console.log("Using upsert logic for reliable sync (no clearing needed)");
       
       // Fetch products from BigCommerce with pagination, respecting the plan limit
       let allProducts: any[] = [];
