@@ -222,6 +222,7 @@ export class DbStorage implements IStorage {
 
   // Products
   async getProducts(companyId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }> {
+    console.log(`Getting products for company: ${companyId}`);
     const page = filters?.page || 1;
     const limit = filters?.limit || 50;
     const offset = (page - 1) * limit;
@@ -243,6 +244,13 @@ export class DbStorage implements IStorage {
 
     const whereClause = and(...conditions);
     
+    // First, let's check total products in database for this company
+    const allProductsCount = await this.db
+      .select({ count: count() })
+      .from(products)
+      .where(eq(products.companyId, companyId));
+    console.log(`Total products in DB for company ${companyId}: ${allProductsCount[0]?.count || 0}`);
+    
     // Get products with pagination
     const productResults = await this.db
       .select()
@@ -258,6 +266,8 @@ export class DbStorage implements IStorage {
       .from(products)
       .where(whereClause);
 
+    console.log(`Query returned ${productResults.length} products, total count: ${countResult[0]?.count || 0}`);
+    
     return {
       products: productResults,
       total: countResult[0]?.count || 0,
