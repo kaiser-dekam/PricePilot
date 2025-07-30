@@ -1,11 +1,14 @@
 import Stripe from 'stripe';
 import { storage } from '../storage';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+// Support both naming conventions for environment variables
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.Stripe_Secret_Key;
+
+if (!stripeSecretKey) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY or Stripe_Secret_Key');
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(stripeSecretKey);
 
 export interface SubscriptionPlan {
   id: string;
