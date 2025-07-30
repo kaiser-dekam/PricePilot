@@ -4,9 +4,28 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import { ShoppingCart, ClipboardList, Settings, LogOut } from "lucide-react";
 import type { User } from "@shared/schema";
+import { signOutUser } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { user } = useAuth() as { user: User | undefined };
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -23,7 +42,7 @@ export default function Home() {
           </div>
           <Button 
             variant="outline"
-            onClick={() => window.location.href = '/api/logout'}
+            onClick={handleLogout}
             className="flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />

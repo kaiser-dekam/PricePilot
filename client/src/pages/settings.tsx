@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { signOutUser } from "@/lib/firebase";
 
 export default function Settings() {
   const [storeHash, setStoreHash] = useState("");
@@ -70,8 +71,20 @@ export default function Settings() {
     });
   };
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

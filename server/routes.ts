@@ -942,6 +942,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple logout endpoint that just returns success (Firebase handles logout on client side)
+  app.get('/api/logout', (req, res) => {
+    res.json({ success: true, message: "Logout successful" });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
