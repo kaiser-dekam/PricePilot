@@ -8,18 +8,18 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+//if (!process.env.REPLIT_DOMAINS) {
+//  throw new Error("Environment variable // REPLIT_DOMAINS not provided");
+// }
 
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
+      process.env.REPL_ID!,
     );
   },
-  { maxAge: 3600 * 1000 }
+  { maxAge: 3600 * 1000 },
 );
 
 export function getSession() {
@@ -46,7 +46,7 @@ export function getSession() {
 
 function updateUserSession(
   user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
+  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
 ) {
   user.claims = tokens.claims();
   user.access_token = tokens.access_token;
@@ -57,7 +57,7 @@ function updateUserSession(
 async function upsertUser(claims: any) {
   // Check if user already exists
   const existingUser = await storage.getUser(claims["sub"]);
-  
+
   if (existingUser) {
     // Update existing user
     return await storage.upsertUser({
@@ -96,7 +96,7 @@ export async function setupAuth(app: Express) {
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
+    verified: passport.AuthenticateCallback,
   ) => {
     const user = {};
     updateUserSession(user, tokens);
@@ -104,8 +104,7 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
+  for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
@@ -141,7 +140,7 @@ export async function setupAuth(app: Express) {
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
           post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
+        }).href,
       );
     });
   });
@@ -179,7 +178,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 // Company-based authentication middleware
 export const requireCompany: RequestHandler = async (req, res, next) => {
   const sessionUser = req.user as any;
-  
+
   if (!sessionUser?.claims?.sub) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -191,9 +190,9 @@ export const requireCompany: RequestHandler = async (req, res, next) => {
     }
 
     if (!user.companyId) {
-      return res.status(403).json({ 
-        message: "No company associated", 
-        requiresCompany: true 
+      return res.status(403).json({
+        message: "No company associated",
+        requiresCompany: true,
       });
     }
 
@@ -204,7 +203,7 @@ export const requireCompany: RequestHandler = async (req, res, next) => {
     // Attach user and company info to request
     (req as any).currentUser = user;
     (req as any).companyId = user.companyId;
-    
+
     return next();
   } catch (error) {
     console.error("Error in requireCompany middleware:", error);
