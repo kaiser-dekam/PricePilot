@@ -273,26 +273,33 @@ export class DbStorage implements IStorage {
   }
 
   async createProduct(companyId: string, product: InsertProduct & { id: string }): Promise<Product> {
-    const result = await this.db
-      .insert(products)
-      .values({ ...product, companyId })
-      .onConflictDoUpdate({
-        target: products.id,
-        set: {
-          name: product.name,
-          sku: product.sku,
-          description: product.description,
-          category: product.category,
-          regularPrice: product.regularPrice,
-          salePrice: product.salePrice,
-          stock: product.stock,
-          weight: product.weight,
-          status: product.status,
-          lastUpdated: new Date()
-        }
-      })
-      .returning();
-    return result[0];
+    try {
+      console.log(`Creating/updating product ${product.id}: ${product.name}`);
+      const result = await this.db
+        .insert(products)
+        .values({ ...product, companyId })
+        .onConflictDoUpdate({
+          target: products.id,
+          set: {
+            name: product.name,
+            sku: product.sku,
+            description: product.description,
+            category: product.category,
+            regularPrice: product.regularPrice,
+            salePrice: product.salePrice,
+            stock: product.stock,
+            weight: product.weight,
+            status: product.status,
+            lastUpdated: new Date()
+          }
+        })
+        .returning();
+      console.log(`Product ${product.id} saved successfully`);
+      return result[0];
+    } catch (error) {
+      console.error(`Error saving product ${product.id}:`, error);
+      throw error;
+    }
   }
 
   async updateProduct(companyId: string, id: string, updates: Partial<Product>): Promise<Product | undefined> {
@@ -350,22 +357,13 @@ export class DbStorage implements IStorage {
   }
 
   async createProductVariant(companyId: string, variant: InsertProductVariant & { id: string; productId: string }): Promise<ProductVariant> {
-    const result = await this.db
-      .insert(productVariants)
-      .values({
-        id: variant.id,
-        companyId,
-        productId: variant.productId,
-        variantSku: variant.variantSku,
-        optionValues: variant.optionValues || [],
-        regularPrice: variant.regularPrice,
-        salePrice: variant.salePrice,
-        calculatedPrice: variant.calculatedPrice,
-        stock: variant.stock
-      } as any)
-      .onConflictDoUpdate({
-        target: productVariants.id,
-        set: {
+    try {
+      console.log(`Creating/updating variant ${variant.id} for product ${variant.productId}`);
+      const result = await this.db
+        .insert(productVariants)
+        .values({
+          id: variant.id,
+          companyId,
           productId: variant.productId,
           variantSku: variant.variantSku,
           optionValues: variant.optionValues || [],
@@ -373,10 +371,26 @@ export class DbStorage implements IStorage {
           salePrice: variant.salePrice,
           calculatedPrice: variant.calculatedPrice,
           stock: variant.stock
-        }
-      })
-      .returning();
-    return result[0];
+        } as any)
+        .onConflictDoUpdate({
+          target: productVariants.id,
+          set: {
+            productId: variant.productId,
+            variantSku: variant.variantSku,
+            optionValues: variant.optionValues || [],
+            regularPrice: variant.regularPrice,
+            salePrice: variant.salePrice,
+            calculatedPrice: variant.calculatedPrice,
+            stock: variant.stock
+          }
+        })
+        .returning();
+      console.log(`Variant ${variant.id} saved successfully`);
+      return result[0];
+    } catch (error) {
+      console.error(`Error saving variant ${variant.id}:`, error);
+      throw error;
+    }
   }
 
   async updateProductVariant(companyId: string, id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | undefined> {
