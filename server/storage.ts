@@ -276,6 +276,21 @@ export class DbStorage implements IStorage {
     const result = await this.db
       .insert(products)
       .values({ ...product, companyId })
+      .onConflictDoUpdate({
+        target: products.id,
+        set: {
+          name: product.name,
+          sku: product.sku,
+          description: product.description,
+          category: product.category,
+          regularPrice: product.regularPrice,
+          salePrice: product.salePrice,
+          stock: product.stock,
+          weight: product.weight,
+          status: product.status,
+          lastUpdated: new Date()
+        }
+      })
       .returning();
     return result[0];
   }
@@ -298,10 +313,32 @@ export class DbStorage implements IStorage {
   }
 
   async clearCompanyProducts(companyId: string): Promise<void> {
-    // Delete product variants first due to foreign key constraint
-    await this.db.delete(productVariants).where(eq(productVariants.companyId, companyId));
-    // Then delete products
-    await this.db.delete(products).where(eq(products.companyId, companyId));
+    console.log(`Clearing products for company ${companyId}...`);
+    
+    try {
+      // Delete product variants first due to foreign key constraint
+      const variantsDeleted = await this.db.delete(productVariants).where(eq(productVariants.companyId, companyId)).returning({ id: productVariants.id });
+      console.log(`Deleted ${variantsDeleted.length} product variants`);
+      
+      // Then delete products
+      const productsDeleted = await this.db.delete(products).where(eq(products.companyId, companyId)).returning({ id: products.id });
+      console.log(`Deleted ${productsDeleted.length} products`);
+      
+      // Verify products are cleared
+      const remainingCount = await this.db
+        .select({ count: count() })
+        .from(products)
+        .where(eq(products.companyId, companyId));
+      
+      if (remainingCount[0]?.count > 0) {
+        throw new Error(`Failed to clear all products. ${remainingCount[0].count} products remain.`);
+      }
+      
+      console.log(`Successfully cleared all company products`);
+    } catch (error) {
+      console.error(`Error clearing company products:`, error);
+      throw error;
+    }
   }
 
   // Product Variants
@@ -316,6 +353,18 @@ export class DbStorage implements IStorage {
     const result = await this.db
       .insert(productVariants)
       .values({ ...variant, companyId })
+      .onConflictDoUpdate({
+        target: productVariants.id,
+        set: {
+          productId: variant.productId,
+          variantSku: variant.variantSku,
+          optionValues: variant.optionValues,
+          regularPrice: variant.regularPrice,
+          salePrice: variant.salePrice,
+          calculatedPrice: variant.calculatedPrice,
+          stock: variant.stock
+        }
+      })
       .returning();
     return result[0];
   }
