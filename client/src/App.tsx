@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,9 +20,13 @@ import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
   const { user, isAuthenticated, isLoading, error } = useAuth();
+  const [location, navigate] = useLocation();
 
-  // Log authentication state for debugging
-  console.log("Auth state:", { isAuthenticated, isLoading, hasUser: !!user, error });
+  useEffect(() => {
+    if (isAuthenticated && location === "/") {
+      navigate("/products");
+    }
+  }, [isAuthenticated, location, navigate]);
 
   if (isLoading) {
     return (
@@ -34,64 +39,31 @@ function Router() {
     );
   }
 
-  // Handle non-authenticated users
   if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route path="/signin" component={SignIn} />
-        <Route path="/invite/:token" component={InvitationAccept} />
-        <Route component={Landing} />
-      </Switch>
-    );
+    return <SignIn />;
   }
 
-  // Handle users without a company - redirect to company setup
-  if (isAuthenticated && user && !(user as any).companyId) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Switch>
-          <Route path="/invite/:token" component={InvitationAccept} />
-          <Route path="/setup" component={CompanySetup} />
-          <Route component={() => {
-            // Auto-redirect to setup if user has no company
-            window.location.href = '/setup';
-            return <div>Redirecting...</div>;
-          }} />
-        </Switch>
-      </div>
-    );
-  }
-
-  // Authenticated users with a company
-  return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-0 ml-0 overflow-y-auto">
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/products" component={Products} />
-          <Route path="/work-orders" component={WorkOrders} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/team" component={Team} />
-          <Route path="/subscription" component={Subscription} />
-          <Route path="/invite/:token" component={InvitationAccept} />
-          <Route component={NotFound} />
-        </Switch>
-      </div>
-    </div>
-  );
-}
-
-function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <Sidebar>
+          <Switch>
+            <Route path="/" component={Landing} />
+            <Route path="/home" component={Home} />
+            <Route path="/products" component={Products} />
+            <Route path="/work-orders" component={WorkOrders} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/company-setup" component={CompanySetup} />
+            <Route path="/team" component={Team} />
+            <Route path="/invitation-accept" component={InvitationAccept} />
+            <Route path="/subscription" component={Subscription} />
+            <Route component={NotFound} />
+          </Switch>
+        </Sidebar>
       </TooltipProvider>
+      <Toaster />
     </QueryClientProvider>
   );
 }
 
-export default App;
+export default Router;
