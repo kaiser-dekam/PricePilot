@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### January 29, 2025
+- **Enhanced Render Deployment Support**: Updated environment variable handling for consistent Render deployment
+  - Added support for alternative environment variable naming conventions used by Render hosting
+  - Updated Stripe integration to support both `STRIPE_SECRET_KEY`/`Stripe_Secret_Key` naming patterns
+  - Updated Firebase configuration to support both `VITE_FIREBASE_*`/`VITE_Firebase_*` naming patterns
+  - Maintains backward compatibility with existing variable names while supporting Render conventions
+  - All authentication and payment systems now work seamlessly with Render environment variable setup
+
 ### January 28, 2025
 - **Database Reset**: Wiped all data for fresh start - cleared all products, users, companies, work orders, and settings
 - **Fixed Subscription Plan Enforcement**: Added product limit checks to sync endpoints to properly enforce subscription tiers
