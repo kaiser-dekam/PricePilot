@@ -237,7 +237,7 @@ export class DbStorage implements IStorage {
           ilike(products.name, `%${filters.search}%`),
           ilike(products.sku, `%${filters.search}%`),
           eq(products.id, filters.search)
-        )
+        )!
       );
     }
 
@@ -352,13 +352,23 @@ export class DbStorage implements IStorage {
   async createProductVariant(companyId: string, variant: InsertProductVariant & { id: string; productId: string }): Promise<ProductVariant> {
     const result = await this.db
       .insert(productVariants)
-      .values({ ...variant, companyId })
+      .values({
+        id: variant.id,
+        companyId,
+        productId: variant.productId,
+        variantSku: variant.variantSku,
+        optionValues: variant.optionValues || [],
+        regularPrice: variant.regularPrice,
+        salePrice: variant.salePrice,
+        calculatedPrice: variant.calculatedPrice,
+        stock: variant.stock
+      } as any)
       .onConflictDoUpdate({
         target: productVariants.id,
         set: {
           productId: variant.productId,
           variantSku: variant.variantSku,
-          optionValues: variant.optionValues,
+          optionValues: variant.optionValues || [],
           regularPrice: variant.regularPrice,
           salePrice: variant.salePrice,
           calculatedPrice: variant.calculatedPrice,
@@ -418,7 +428,17 @@ export class DbStorage implements IStorage {
   async createWorkOrder(companyId: string, createdBy: string, workOrder: InsertWorkOrder): Promise<WorkOrder> {
     const result = await this.db
       .insert(workOrders)
-      .values({ ...workOrder, companyId, createdBy })
+      .values({
+        title: workOrder.title,
+        companyId, 
+        createdBy,
+        productUpdates: workOrder.productUpdates || [],
+        originalPrices: [],
+        scheduledAt: workOrder.scheduledAt,
+        executeImmediately: workOrder.executeImmediately || false,
+        status: 'pending',
+        archived: false
+      } as any)
       .returning();
     return result[0];
   }
