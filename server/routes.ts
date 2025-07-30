@@ -358,40 +358,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check subscription plan limits
       const productLimit = company?.productLimit || 5; // Default to trial plan limit
       const subscriptionPlan = company?.subscriptionPlan || 'trial';
-      
-      if (totalBcProducts > productLimit) {
-        return res.status(400).json({ 
-          message: `Your ${subscriptionPlan} plan is limited to ${productLimit} products, but your BigCommerce store has ${totalBcProducts} products. Please upgrade your subscription to sync more products.`,
-          currentPlan: subscriptionPlan,
-          productLimit: productLimit,
-          storeProductCount: totalBcProducts
-        });
-      }
+      const willSyncPartial = totalBcProducts > productLimit;
       
       // Clear existing products and variants
       await storage.clearCompanyProducts(user.companyId!);
       
-      // Fetch all products from BigCommerce with pagination
+      // Fetch products from BigCommerce with pagination, respecting the plan limit
       let allProducts: any[] = [];
       let page = 1;
       let hasMorePages = true;
       
-      console.log(`Starting BigCommerce product sync (legacy endpoint) - ${totalBcProducts} products within ${productLimit} limit...`);
+      console.log(`Starting BigCommerce product sync (legacy endpoint) - ${willSyncPartial ? `syncing first ${productLimit} of ${totalBcProducts}` : `${totalBcProducts}`} products...`);
       
-      while (hasMorePages) {
+      while (hasMorePages && allProducts.length < productLimit) {
         console.log(`Fetching page ${page} of products...`);
-        const result = await bcService.getProducts(page, 250); // Use max limit of 250 per page
-        const pageProducts = result.products;
+        const result = await bcService.getProducts(page, Math.min(250, productLimit - allProducts.length)); // Limit to remaining allowed products
+        const pageProducts = result.products.slice(0, productLimit - allProducts.length); // Ensure we don't exceed the limit
         
         allProducts.push(...pageProducts);
         
-        // Check if there are more pages
+        // Check if there are more pages and we haven't reached our limit
         const total = result.total || 0;
         const currentCount = page * 250;
-        hasMorePages = currentCount < total;
+        hasMorePages = currentCount < total && allProducts.length < productLimit;
         page++;
         
-        console.log(`Fetched ${pageProducts.length} products. Total so far: ${allProducts.length} / ${total}`);
+        console.log(`Fetched ${pageProducts.length} products. Total so far: ${allProducts.length} / ${Math.min(total, productLimit)}`);
       }
       
       console.log(`Finished fetching all ${allProducts.length} products from BigCommerce`);
@@ -448,8 +440,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateApiSettingsLastSync(user.companyId!, new Date());
       
       res.json({ 
-        message: "Products synced successfully", 
-        count: syncedCount 
+        message: willSyncPartial 
+          ? `Synced ${syncedCount} products (limited by ${subscriptionPlan} plan). ${totalBcProducts - syncedCount} products not synced. Upgrade to sync more products.`
+          : "Products synced successfully", 
+        count: syncedCount,
+        totalInStore: totalBcProducts,
+        isPartialSync: willSyncPartial
       });
       
     } catch (error: any) {
@@ -480,40 +476,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check subscription plan limits
       const productLimit = company?.productLimit || 5; // Default to trial plan limit
       const subscriptionPlan = company?.subscriptionPlan || 'trial';
-      
-      if (totalBcProducts > productLimit) {
-        return res.status(400).json({ 
-          message: `Your ${subscriptionPlan} plan is limited to ${productLimit} products, but your BigCommerce store has ${totalBcProducts} products. Please upgrade your subscription to sync more products.`,
-          currentPlan: subscriptionPlan,
-          productLimit: productLimit,
-          storeProductCount: totalBcProducts
-        });
-      }
+      const willSyncPartial = totalBcProducts > productLimit;
       
       // Clear existing products and variants
       await storage.clearCompanyProducts(user.companyId!);
       
-      // Fetch all products from BigCommerce with pagination
+      // Fetch products from BigCommerce with pagination, respecting the plan limit
       let allProducts: any[] = [];
       let page = 1;
       let hasMorePages = true;
       
-      console.log(`Starting BigCommerce product sync - ${totalBcProducts} products within ${productLimit} limit...`);
+      console.log(`Starting BigCommerce product sync - ${willSyncPartial ? `syncing first ${productLimit} of ${totalBcProducts}` : `${totalBcProducts}`} products...`);
       
-      while (hasMorePages) {
+      while (hasMorePages && allProducts.length < productLimit) {
         console.log(`Fetching page ${page} of products...`);
-        const result = await bcService.getProducts(page, 250); // Use max limit of 250 per page
-        const pageProducts = result.products;
+        const result = await bcService.getProducts(page, Math.min(250, productLimit - allProducts.length)); // Limit to remaining allowed products
+        const pageProducts = result.products.slice(0, productLimit - allProducts.length); // Ensure we don't exceed the limit
         
         allProducts.push(...pageProducts);
         
-        // Check if there are more pages
+        // Check if there are more pages and we haven't reached our limit
         const total = result.total || 0;
         const currentCount = page * 250;
-        hasMorePages = currentCount < total;
+        hasMorePages = currentCount < total && allProducts.length < productLimit;
         page++;
         
-        console.log(`Fetched ${pageProducts.length} products. Total so far: ${allProducts.length} / ${total}`);
+        console.log(`Fetched ${pageProducts.length} products. Total so far: ${allProducts.length} / ${Math.min(total, productLimit)}`);
       }
       
       console.log(`Finished fetching all ${allProducts.length} products from BigCommerce`);
@@ -570,8 +558,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateApiSettingsLastSync(user.companyId!, new Date());
       
       res.json({ 
-        message: "Products synced successfully", 
-        count: syncedCount 
+        message: willSyncPartial 
+          ? `Synced ${syncedCount} products (limited by ${subscriptionPlan} plan). ${totalBcProducts - syncedCount} products not synced. Upgrade to sync more products.`
+          : "Products synced successfully", 
+        count: syncedCount,
+        totalInStore: totalBcProducts,
+        isPartialSync: willSyncPartial
       });
       
     } catch (error: any) {

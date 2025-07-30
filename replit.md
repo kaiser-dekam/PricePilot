@@ -11,6 +11,17 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 29, 2025
+- **Implemented Partial Product Sync**: Enhanced sync functionality to respect subscription plan limits without blocking
+  - Modified both `/api/sync` and `/api/products/sync` endpoints to sync up to plan limits instead of rejecting
+  - Users with Starter plan (10 products) can now sync first 10 products from stores with 100+ products
+  - Added informative response messages indicating partial sync status and upgrade prompts
+  - Maintains pagination efficiency while respecting product limits for fair usage
+  - Enhanced user experience by allowing immediate productivity within plan constraints
+- **Fixed Firebase Logout Functionality**: Resolved logout button issues with proper Firebase signOut implementation
+  - Updated logout buttons in Home and Settings pages to call Firebase signOut directly
+  - Added proper error handling and success notifications for logout actions
+  - Removed redundant `/api/logout` backend route dependencies
+  - Logout now works correctly across all pages with Firebase authentication
 - **Complete Replit Auth Removal**: Cleaned up all remaining Replit authentication code for Firebase-only setup
   - Removed `server/replitAuth.ts` file and all related imports
   - Uninstalled passport, openid-client, express-session, and related authentication packages
