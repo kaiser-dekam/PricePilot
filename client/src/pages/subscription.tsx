@@ -12,11 +12,11 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
-// Support both naming conventions for environment variables
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_Stripe_Public_Key;
+// Support both naming conventions for environment variables (prioritize Vite_ format)
+const stripePublicKey = import.meta.env.VITE_Stripe_Public_Key || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
 if (!stripePublicKey) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY or VITE_Stripe_Public_Key');
+  throw new Error('Missing required Stripe key: VITE_Stripe_Public_Key or VITE_STRIPE_PUBLIC_KEY');
 }
 const stripePromise = loadStripe(stripePublicKey);
 

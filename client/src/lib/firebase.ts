@@ -14,7 +14,21 @@ const firebaseApiKey = import.meta.env.VITE_Firebase_API_Key || import.meta.env.
 const firebaseProjectId = import.meta.env.VITE_Firebase_Project_ID || import.meta.env.VITE_FIREBASE_PROJECT_ID;
 const firebaseAppId = import.meta.env.VITE_Firebase_App_ID || import.meta.env.VITE_FIREBASE_APP_ID;
 
+// Debug logging to help with Render deployment
+console.log('Firebase environment variables check:', {
+  hasViteFirebaseFormat: !!import.meta.env.VITE_Firebase_API_Key,
+  hasStandardFormat: !!import.meta.env.VITE_FIREBASE_API_KEY,
+  finalApiKey: !!firebaseApiKey,
+  finalProjectId: !!firebaseProjectId,
+  finalAppId: !!firebaseAppId
+});
+
 if (!firebaseApiKey || !firebaseProjectId || !firebaseAppId) {
+  console.error('Missing Firebase configuration:', {
+    apiKey: !!firebaseApiKey,
+    projectId: !!firebaseProjectId,
+    appId: !!firebaseAppId
+  });
   throw new Error('Missing required Firebase configuration. Please set VITE_Firebase_* or VITE_FIREBASE_* environment variables.');
 }
 
