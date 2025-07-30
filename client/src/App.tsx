@@ -19,7 +19,7 @@ import Subscription from "@/pages/subscription";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
-  const { user, isAuthenticated, isLoading, error } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [location, navigate] = useLocation();
 
   useEffect(() => {
@@ -28,38 +28,34 @@ function Router() {
     }
   }, [isAuthenticated, location, navigate]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <SignIn />;
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Sidebar>
-          <Switch>
-            <Route path="/" component={Landing} />
-            <Route path="/home" component={Home} />
-            <Route path="/products" component={Products} />
-            <Route path="/work-orders" component={WorkOrders} />
-            <Route path="/settings" component={Settings} />
-            <Route path="/company-setup" component={CompanySetup} />
-            <Route path="/team" component={Team} />
-            <Route path="/invitation-accept" component={InvitationAccept} />
-            <Route path="/subscription" component={Subscription} />
-            <Route component={NotFound} />
-          </Switch>
-        </Sidebar>
+        {isLoading ? (
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+            </div>
+          </div>
+        ) : !isAuthenticated ? (
+          <SignIn />
+        ) : (
+          <Sidebar>
+            <Switch>
+              <Route path="/" component={Landing} />
+              <Route path="/home" component={Home} />
+              <Route path="/products" component={Products} />
+              <Route path="/work-orders" component={WorkOrders} />
+              <Route path="/settings" component={Settings} />
+              <Route path="/company-setup" component={CompanySetup} />
+              <Route path="/team" component={Team} />
+              <Route path="/invitation-accept" component={InvitationAccept} />
+              <Route path="/subscription" component={Subscription} />
+              <Route component={NotFound} />
+            </Switch>
+          </Sidebar>
+        )}
       </TooltipProvider>
       <Toaster />
     </QueryClientProvider>
