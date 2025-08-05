@@ -5,7 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 
-export default function Sidebar() {
+interface SidebarProps {
+  children: React.ReactNode;
+}
+
+export default function Sidebar({ children }: SidebarProps) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -120,6 +124,11 @@ export default function Sidebar() {
             })}
           </div>
         </nav>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:ml-64 min-h-screen bg-gray-50 dark:bg-gray-900">
+        {children}
       </div>
     </>
   );
