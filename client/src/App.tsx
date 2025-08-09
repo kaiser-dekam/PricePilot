@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Products from "@/pages/products";
 import WorkOrders from "@/pages/work-orders";
 import Settings from "@/pages/settings";
+import Subscription from "@/pages/subscription";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/products" component={Products} />
           <Route path="/work-orders" component={WorkOrders} />
           <Route path="/settings" component={Settings} />
+          <Route path="/subscription" component={Subscription} />
           <Route component={NotFound} />
         </Switch>
       </div>
