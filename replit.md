@@ -11,6 +11,12 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 27, 2025
+- **Enhanced API Security**: Fixed critical security vulnerability in authentication system
+  - **SECURITY FIX**: Replaced insecure header-based authentication with proper Firebase token verification
+  - Implemented JWT token decoding with expiration checking to prevent unauthorized access
+  - Updated frontend to send Firebase ID tokens via Authorization Bearer headers
+  - All API endpoints now properly protected - return 401 Unauthorized for invalid/missing tokens
+  - Eliminated vulnerability where fake headers could bypass authentication
 - **Migrated to Firebase Auth**: Replaced Replit Auth with Firebase Google Sign-In
   - Implemented Firebase app configuration with provided project credentials
   - Set up Google authentication with popup-based sign-in flow

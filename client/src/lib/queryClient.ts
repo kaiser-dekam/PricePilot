@@ -15,11 +15,17 @@ export async function apiRequest(
 ): Promise<Response> {
   const headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
   
-  // Add Firebase auth headers
+  // Add Firebase auth token
   const user = auth.currentUser;
   if (user) {
-    headers['x-user-id'] = user.uid;
-    headers['x-user-email'] = user.email || '';
+    try {
+      const token = await user.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('Got Firebase token, length:', token.length);
+    } catch (error) {
+      console.error('Failed to get Firebase token:', error);
+      throw new Error('Authentication failed');
+    }
   }
 
   const res = await fetch(url, {
@@ -58,11 +64,20 @@ export const getQueryFn: <T>(options: {
 
     const headers: Record<string, string> = {};
     
-    // Add Firebase auth headers
+    // Add Firebase auth token
     const user = auth.currentUser;
     if (user) {
-      headers['x-user-id'] = user.uid;
-      headers['x-user-email'] = user.email || '';
+      try {
+        const token = await user.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Got Firebase token, length:', token.length);
+      } catch (error) {
+        console.error('Failed to get Firebase token:', error);
+        if (unauthorizedBehavior === "throw") {
+          throw new Error('Authentication failed');
+        }
+        return null;
+      }
     }
 
     const res = await fetch(url, {
