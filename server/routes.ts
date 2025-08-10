@@ -95,6 +95,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "API settings not configured" });
       }
 
+      // Get user's company to check product limit
+      const user = await storage.getUser(userId);
+      if (!user || !user.company) {
+        return res.status(400).json({ message: "User company information not found" });
+      }
+
+      const productLimit = user.company.productLimit || 5; // Default to 5 if null
+      const subscriptionPlan = user.company.subscriptionPlan || 'trial';
+
+      console.log(`User ${userId} has ${subscriptionPlan} plan with limit of ${productLimit} products`);
+
       const bigcommerce = new BigCommerceService(apiSettings);
       
       // Fetch all products by paginating through all pages
@@ -102,21 +113,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let page = 1;
       let hasMorePages = true;
       
-      while (hasMorePages) {
+      while (hasMorePages && allProducts.length < productLimit) {
         console.log(`Fetching page ${page} of products...`);
         const productsResponse = await bigcommerce.getProducts(page, 50);
         const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
         
-        allProducts.push(...pageProducts);
+        // Only add products up to the limit
+        const remainingSlots = productLimit - allProducts.length;
+        const productsToAdd = pageProducts.slice(0, remainingSlots);
+        allProducts.push(...productsToAdd);
         
-        // Check if there are more pages
+        // Check if there are more pages and we haven't hit our limit
         const total = productsResponse.total || 0;
         const currentCount = page * 50;
-        hasMorePages = currentCount < total;
+        hasMorePages = currentCount < total && allProducts.length < productLimit;
         page++;
       }
 
-      console.log(`Syncing ${allProducts.length} products for user ${userId}`);
+      // Check if user was limited
+      const isLimited = allProducts.length >= productLimit;
+      const totalAvailable = await bigcommerce.getProductCount();
+
+      console.log(`Syncing ${allProducts.length} products for user ${userId} (limited by ${subscriptionPlan} plan)`);
 
       // Clear existing products for this user before syncing new ones
       // This ensures we don't have duplicates and handles deleted products
@@ -145,9 +163,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update lastSyncAt in API settings
       await storage.updateApiSettingsLastSync(userId, new Date());
 
+      // Create appropriate response message
+      let message = `Successfully synced ${allProducts.length} products`;
+      let warning = null;
+
+      if (isLimited && totalAvailable > productLimit) {
+        message = `Synced ${allProducts.length} products (limited by ${subscriptionPlan} plan)`;
+        warning = `Your ${subscriptionPlan} plan allows up to ${productLimit} products. You have ${totalAvailable} products in your BigCommerce store. Upgrade your plan to sync more products.`;
+      }
+
       res.json({ 
-        message: `Successfully synced ${allProducts.length} products`,
-        count: allProducts.length 
+        message,
+        warning,
+        count: allProducts.length,
+        totalAvailable,
+        productLimit,
+        subscriptionPlan,
+        isLimited
       });
     } catch (error: any) {
       console.error("Error in /api/sync:", error);

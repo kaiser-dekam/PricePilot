@@ -192,3 +192,6 @@ export type ProductVariant = typeof productVariants.$inferSelect;
 export type InsertProductVariant = z.infer<typeof insertProductVariantSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
+
+// BigCommerce product type without companyId (used in BigCommerce service)
+export type BigCommerceProduct = Omit<Product, 'companyId'>;

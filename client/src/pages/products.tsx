@@ -38,12 +38,26 @@ export default function Products() {
 
   const syncMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/sync"),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      
+      // Show success message
       toast({
         title: "Success",
-        description: "Products synced successfully from BigCommerce",
+        description: data.message || "Products synced successfully from BigCommerce",
       });
+
+      // Show warning if user hit plan limits
+      if (data.warning) {
+        setTimeout(() => {
+          toast({
+            title: "Plan Limit Reached",
+            description: data.warning,
+            variant: "destructive",
+            duration: 8000, // Show longer for important plan information
+          });
+        }, 1000); // Delay slightly so success message shows first
+      }
     },
     onError: (error: any) => {
       toast({

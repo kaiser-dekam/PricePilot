@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { Product } from '@shared/schema';
+import { BigCommerceProduct as BigCommerceProductType } from '@shared/schema';
 
 export interface BigCommerceConfig {
   storeHash: string;
@@ -54,7 +54,22 @@ export class BigCommerceService {
     }
   }
 
-  async getProducts(page = 1, limit = 50): Promise<{ products: Product[]; total: number }> {
+  async getProductCount(): Promise<number> {
+    try {
+      console.log('Fetching product count from BigCommerce...');
+      const response = await this.api.get('/catalog/products', {
+        params: {
+          limit: 1, // Only fetch 1 product to get pagination metadata
+        },
+      });
+      return response.data.meta.pagination.total;
+    } catch (error: any) {
+      console.error('Error fetching product count from BigCommerce:', error);
+      throw new Error(`Failed to fetch product count: ${error.response?.data?.title || error.message}`);
+    }
+  }
+
+  async getProducts(page = 1, limit = 50): Promise<{ products: BigCommerceProductType[]; total: number }> {
     try {
       console.log(`Fetching products from BigCommerce (page: ${page}, limit: ${limit})`);
       
@@ -73,7 +88,7 @@ export class BigCommerceService {
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat.name])
       );
 
-      const products: Product[] = productsResponse.data.data.map((bcProduct: any) => ({
+      const products: BigCommerceProductType[] = productsResponse.data.data.map((bcProduct: any) => ({
         id: bcProduct.id.toString(),
         name: bcProduct.name,
         sku: bcProduct.sku || '',
@@ -97,7 +112,7 @@ export class BigCommerceService {
     }
   }
 
-  async getProduct(id: string): Promise<Product | null> {
+  async getProduct(id: string): Promise<BigCommerceProductType | null> {
     try {
       const [productResponse, categoriesResponse] = await Promise.all([
         this.api.get(`/catalog/products/${id}`),
@@ -132,7 +147,7 @@ export class BigCommerceService {
     }
   }
 
-  async updateProduct(id: string, updates: { regularPrice?: string; salePrice?: string }): Promise<Product> {
+  async updateProduct(id: string, updates: { regularPrice?: string; salePrice?: string }): Promise<BigCommerceProductType> {
     try {
       const updateData: any = {};
       
