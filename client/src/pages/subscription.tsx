@@ -134,18 +134,20 @@ export default function Subscription() {
 
   const handlePlanChange = (planName: string) => {
     const planLower = planName.toLowerCase();
+    const currentTier = getPlanTier(currentPlan);
+    const targetTier = getPlanTier(planLower);
     
-    // Handle free trial plan - direct change
-    if (planLower === 'trial') {
-      const confirmMessage = `Are you sure you want to downgrade to ${planName}? This will reduce your product limit to 5.`;
+    // Handle downgrades (including to trial) - direct change, no payment needed
+    if (targetTier <= currentTier) {
+      const confirmMessage = `Are you sure you want to downgrade to ${planName}? This will reduce your product limit.`;
       if (window.confirm(confirmMessage)) {
         changePlanMutation.mutate(planLower);
       }
       return;
     }
     
-    // Handle paid plans - redirect to Stripe checkout
-    if (planLower === 'starter' || planLower === 'premium') {
+    // Handle upgrades to paid plans - redirect to Stripe checkout
+    if (targetTier > currentTier && (planLower === 'starter' || planLower === 'premium')) {
       const confirmMessage = `Upgrade to ${planName} plan? You'll be redirected to secure payment processing.`;
       if (window.confirm(confirmMessage)) {
         // Create checkout session and redirect to Stripe
