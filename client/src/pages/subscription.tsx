@@ -73,8 +73,9 @@ export default function Subscription() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="h-full overflow-y-auto">
+      <div className="container mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Choose Your Plan
@@ -213,6 +214,7 @@ export default function Subscription() {
               </p>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
