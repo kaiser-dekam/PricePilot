@@ -5,6 +5,12 @@ import { insertApiSettingsSchema, insertWorkOrderSchema } from "@shared/schema";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
 import { isAuthenticated } from "./firebaseAuth";
+import Stripe from "stripe";
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-07-30.basil",
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes - simplified for Firebase
@@ -267,7 +273,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update subscription plan
+  // Create Stripe checkout session for subscription change
+  app.post("/api/subscription/checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const { plan } = req.body;
+      
+      // Validate plan
+      const validPlans = ['starter', 'premium']; // Only paid plans need checkout
+      if (!validPlans.includes(plan.toLowerCase())) {
+        return res.status(400).json({ message: "Invalid subscription plan for checkout" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.company) {
+        return res.status(400).json({ message: "User company information not found" });
+      }
+
+      // Define plan prices and limits
+      const planDetails = {
+        starter: { priceId: 'price_starter', amount: 1000, limit: 100 }, // $10.00
+        premium: { priceId: 'price_premium', amount: 2000, limit: 1000 } // $20.00
+      };
+
+      const selectedPlan = planDetails[plan.toLowerCase() as keyof typeof planDetails];
+
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Catalog Pilot ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
+                description: `Up to ${selectedPlan.limit} products`,
+              },
+              unit_amount: selectedPlan.amount,
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${req.protocol}://${req.get('host')}/subscription?success=true&plan=${plan}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/subscription?canceled=true`,
+        metadata: {
+          userId,
+          companyId: user.companyId,
+          plan: plan.toLowerCase(),
+        },
+      });
+
+      res.json({ checkoutUrl: session.url });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update subscription plan (for manual changes and webhook processing)
   app.post("/api/subscription/change", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
@@ -282,7 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set product limits based on plan
       const productLimits = {
         trial: 5,
-        starter: 10,
+        starter: 100,
         premium: 1000
       };
 

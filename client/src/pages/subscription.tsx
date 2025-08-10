@@ -6,6 +6,7 @@ import { Check, Crown, Zap, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useEffect } from "react";
 
 const PLANS = [
   {
@@ -28,9 +29,9 @@ const PLANS = [
     price: "$10",
     period: "per month",
     description: "Great for small businesses",
-    productLimit: 10,
+    productLimit: 100,
     features: [
-      "Up to 10 products",
+      "Up to 100 products",
       "Advanced filtering & search",
       "Bulk price updates",
       "Work order automation",
@@ -88,6 +89,35 @@ export default function Subscription() {
     },
   });
 
+  // Handle URL parameters for payment success/cancel
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const canceled = urlParams.get('canceled');
+    const plan = urlParams.get('plan');
+
+    if (success === 'true' && plan) {
+      // Update the subscription plan after successful payment
+      changePlanMutation.mutate(plan);
+      toast({
+        title: "Payment Successful!",
+        description: `Successfully upgraded to ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`,
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (canceled === 'true') {
+      toast({
+        title: "Payment Canceled",
+        description: "Your subscription change was canceled",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [changePlanMutation]);
+
   const getPlanTier = (planName: string): number => {
     const tiers = { trial: 0, starter: 1, premium: 2 };
     return tiers[planName.toLowerCase() as keyof typeof tiers] || 0;
@@ -103,12 +133,36 @@ export default function Subscription() {
   };
 
   const handlePlanChange = (planName: string) => {
-    const confirmMessage = getPlanTier(planName) < getPlanTier(currentPlan)
-      ? `Are you sure you want to downgrade to ${planName}? This will reduce your product limit.`
-      : `Upgrade to ${planName} plan?`;
-      
-    if (window.confirm(confirmMessage)) {
-      changePlanMutation.mutate(planName.toLowerCase());
+    const planLower = planName.toLowerCase();
+    
+    // Handle free trial plan - direct change
+    if (planLower === 'trial') {
+      const confirmMessage = `Are you sure you want to downgrade to ${planName}? This will reduce your product limit to 5.`;
+      if (window.confirm(confirmMessage)) {
+        changePlanMutation.mutate(planLower);
+      }
+      return;
+    }
+    
+    // Handle paid plans - redirect to Stripe checkout
+    if (planLower === 'starter' || planLower === 'premium') {
+      const confirmMessage = `Upgrade to ${planName} plan? You'll be redirected to secure payment processing.`;
+      if (window.confirm(confirmMessage)) {
+        // Create checkout session and redirect to Stripe
+        apiRequest("POST", "/api/subscription/checkout", { plan: planLower })
+          .then((response: any) => {
+            if (response.checkoutUrl) {
+              window.location.href = response.checkoutUrl;
+            }
+          })
+          .catch((error: any) => {
+            toast({
+              title: "Error",
+              description: error.message || "Failed to start checkout process",
+              variant: "destructive",
+            });
+          });
+      }
     }
   };
 
