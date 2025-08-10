@@ -1,9 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Zap, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const PLANS = [
   {
@@ -58,6 +60,7 @@ const PLANS = [
 
 export default function Subscription() {
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const { data: company } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -67,9 +70,46 @@ export default function Subscription() {
   const currentPlan = company?.subscriptionPlan || 'trial';
   const currentProductLimit = company?.productLimit || 5;
 
-  const handleUpgrade = (planName: string) => {
-    // TODO: Implement Stripe checkout
-    console.log("Upgrading to", planName);
+  const changePlanMutation = useMutation({
+    mutationFn: (plan: string) => apiRequest("POST", "/api/subscription/change", { plan }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Success",
+        description: data.message || "Subscription plan updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to update subscription plan",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getPlanTier = (planName: string): number => {
+    const tiers = { trial: 0, starter: 1, premium: 2 };
+    return tiers[planName.toLowerCase() as keyof typeof tiers] || 0;
+  };
+
+  const getButtonText = (planName: string): string => {
+    const currentTier = getPlanTier(currentPlan);
+    const targetTier = getPlanTier(planName);
+    
+    if (currentTier === targetTier) return "Current Plan";
+    if (targetTier > currentTier) return `Upgrade to ${planName}`;
+    return `Downgrade to ${planName}`;
+  };
+
+  const handlePlanChange = (planName: string) => {
+    const confirmMessage = getPlanTier(planName) < getPlanTier(currentPlan)
+      ? `Are you sure you want to downgrade to ${planName}? This will reduce your product limit.`
+      : `Upgrade to ${planName} plan?`;
+      
+    if (window.confirm(confirmMessage)) {
+      changePlanMutation.mutate(planName.toLowerCase());
+    }
   };
 
   return (
@@ -164,10 +204,10 @@ export default function Subscription() {
                   <Button
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
-                    disabled={isCurrentPlan}
-                    onClick={() => handleUpgrade(plan.name)}
+                    disabled={isCurrentPlan || changePlanMutation.isPending}
+                    onClick={() => handlePlanChange(plan.name)}
                   >
-                    {isCurrentPlan ? "Current Plan" : `Upgrade to ${plan.name}`}
+                    {changePlanMutation.isPending ? "Updating..." : getButtonText(plan.name)}
                   </Button>
                 </CardContent>
               </Card>

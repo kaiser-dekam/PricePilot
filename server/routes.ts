@@ -267,6 +267,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update subscription plan
+  app.post("/api/subscription/change", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const { plan } = req.body;
+      
+      // Validate plan
+      const validPlans = ['trial', 'starter', 'premium'];
+      if (!validPlans.includes(plan.toLowerCase())) {
+        return res.status(400).json({ message: "Invalid subscription plan" });
+      }
+
+      // Set product limits based on plan
+      const productLimits = {
+        trial: 5,
+        starter: 10,
+        premium: 1000
+      };
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.company) {
+        return res.status(400).json({ message: "User company information not found" });
+      }
+
+      // Update company subscription plan
+      await storage.updateCompanySubscription(user.companyId, {
+        subscriptionPlan: plan.toLowerCase(),
+        productLimit: productLimits[plan.toLowerCase() as keyof typeof productLimits]
+      });
+
+      res.json({ 
+        message: `Successfully changed to ${plan} plan`,
+        plan: plan.toLowerCase(),
+        productLimit: productLimits[plan.toLowerCase() as keyof typeof productLimits]
+      });
+    } catch (error: any) {
+      console.error("Error changing subscription plan:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Categories route for work order modal
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {

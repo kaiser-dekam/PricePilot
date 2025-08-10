@@ -19,6 +19,7 @@ export interface IStorage {
   // Company operations
   createCompany(company: InsertCompany): Promise<Company>;
   getCompany(id: string): Promise<Company | undefined>;
+  updateCompanySubscription(companyId: string, updates: { subscriptionPlan: string; productLimit: number }): Promise<void>;
   
   // API Settings
   getApiSettings(userId: string): Promise<ApiSettings | undefined>;
@@ -135,6 +136,17 @@ export class DbStorage implements IStorage {
     
     console.log('Found company:', { id: result[0].id, name: result[0].name });
     return result[0];
+  }
+
+  async updateCompanySubscription(companyId: string, updates: { subscriptionPlan: string; productLimit: number }): Promise<void> {
+    await this.db
+      .update(companies)
+      .set({
+        subscriptionPlan: updates.subscriptionPlan,
+        productLimit: updates.productLimit,
+        updatedAt: new Date(),
+      })
+      .where(eq(companies.id, companyId));
   }
 
   // API Settings
