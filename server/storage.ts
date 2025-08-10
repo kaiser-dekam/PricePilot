@@ -142,7 +142,7 @@ export class DbStorage implements IStorage {
     await this.db
       .update(companies)
       .set({
-        subscriptionPlan: updates.subscriptionPlan,
+        subscriptionPlan: updates.subscriptionPlan.trim().toLowerCase(),
         productLimit: updates.productLimit,
         updatedAt: new Date(),
       })
