@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Save, TestTube, LogOut } from "lucide-react";
+import { Save, TestTube, LogOut, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,24 @@ export default function Settings() {
       toast({
         title: "Error",
         description: error.message || "Failed to save settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteProductsMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/products/all"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: data.message || "All products deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete products",
         variant: "destructive",
       });
     },
@@ -80,6 +98,12 @@ export default function Settings() {
         description: error.message || "Failed to sign out",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDeleteAllProducts = () => {
+    if (window.confirm("Are you sure you want to delete ALL products? This action cannot be undone.")) {
+      deleteProductsMutation.mutate();
     }
   };
 
@@ -179,17 +203,17 @@ export default function Settings() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    {user.profileImageUrl && (
+                    {(user as any).profileImageUrl && (
                       <img 
-                        src={user.profileImageUrl} 
+                        src={(user as any).profileImageUrl} 
                         alt="Profile"
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     )}
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
+                        {(user as any).firstName && (user as any).lastName 
+                          ? `${(user as any).firstName} ${(user as any).lastName}` 
                           : user.email}
                       </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
@@ -199,6 +223,32 @@ export default function Settings() {
               </CardContent>
             </Card>
           )}
+
+          {/* Data Management */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Data Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-red-800 mb-2">Danger Zone</h4>
+                  <p className="text-sm text-red-700 mb-3">
+                    This will permanently delete all products from your local database. This action cannot be undone.
+                  </p>
+                  <Button
+                    onClick={handleDeleteAllProducts}
+                    disabled={deleteProductsMutation.isPending}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {deleteProductsMutation.isPending ? "Deleting..." : "Delete All Products"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Instructions */}
           <Card className="mt-6">

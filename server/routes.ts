@@ -255,6 +255,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all products route
+  app.delete("/api/products/all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      await storage.clearUserProducts(userId);
+      res.json({ message: "All products deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting all products:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Categories route for work order modal
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
