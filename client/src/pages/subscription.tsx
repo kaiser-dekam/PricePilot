@@ -153,11 +153,21 @@ export default function Subscription() {
         // Create checkout session and redirect to Stripe
         apiRequest("POST", "/api/subscription/checkout", { plan: planLower })
           .then((response: any) => {
-            if (response.checkoutUrl) {
+            console.log("Checkout response:", response);
+            if (response?.checkoutUrl) {
+              console.log("Redirecting to:", response.checkoutUrl);
               window.location.href = response.checkoutUrl;
+            } else {
+              console.error("No checkout URL in response:", response);
+              toast({
+                title: "Error",
+                description: "No checkout URL received from server",
+                variant: "destructive",
+              });
             }
           })
           .catch((error: any) => {
+            console.error("Checkout error:", error);
             toast({
               title: "Error",
               description: error.message || "Failed to start checkout process",
