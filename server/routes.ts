@@ -277,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/checkout", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const { plan } = req.body;
+      const { plan, couponCode } = req.body;
       
       // Validate plan
       const validPlans = ['starter', 'premium']; // Only paid plans need checkout
@@ -298,8 +298,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const selectedPlan = planDetails[plan.toLowerCase() as keyof typeof planDetails];
 
-      // Create Stripe checkout session
-      const session = await stripe.checkout.sessions.create({
+      // Create Stripe checkout session configuration
+      const sessionConfig: any = {
         payment_method_types: ['card'],
         line_items: [
           {
@@ -325,7 +325,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyId: user.companyId,
           plan: plan.toLowerCase(),
         },
-      });
+        allow_promotion_codes: true, // Enable promotion codes in Stripe checkout
+      };
+
+      // Add coupon if provided
+      if (couponCode && couponCode.trim()) {
+        try {
+          // Validate coupon exists in Stripe
+          const coupon = await stripe.coupons.retrieve(couponCode.trim());
+          sessionConfig.discounts = [{
+            coupon: couponCode.trim()
+          }];
+        } catch (couponError: any) {
+          console.log("Invalid coupon code:", couponCode, couponError.message);
+          return res.status(400).json({ 
+            message: "Invalid coupon code. Please check the code and try again." 
+          });
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
 
       res.json({ checkoutUrl: session.url });
     } catch (error: any) {

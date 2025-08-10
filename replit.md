@@ -33,6 +33,13 @@ Preferred communication style: Simple, everyday language.
   - Created backend endpoints for Stripe checkout session creation and subscription management
   - Added URL parameter handling for payment success/cancel redirects with user feedback
   - Trial plan remains free with direct plan changes, paid plans redirect to Stripe checkout
+  - Fixed response parsing issue where upgrade buttons returned ReadableStream instead of parsed JSON
+- **Added Stripe Coupon Code Support**: Implemented promotional code functionality for subscription checkouts
+  - Added coupon code input field to subscription page with expandable UI
+  - Backend validation ensures coupon codes exist in Stripe before applying discounts
+  - Coupon codes are validated and applied during Stripe checkout session creation
+  - Frontend sends coupon code to backend when provided, graceful error handling for invalid codes
+  - Enabled Stripe's built-in promotion codes UI in checkout for additional discount options
 
 ### January 26, 2025
 - **Implemented User Authentication System**: Added multi-user support with Replit Auth

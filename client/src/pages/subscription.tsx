@@ -2,11 +2,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Zap, Star } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Check, Crown, Zap, Star, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const PLANS = [
   {
@@ -62,6 +64,8 @@ const PLANS = [
 export default function Subscription() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [couponCode, setCouponCode] = useState("");
+  const [showCouponField, setShowCouponField] = useState(false);
   
   const { data: company } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -151,7 +155,12 @@ export default function Subscription() {
       const confirmMessage = `Upgrade to ${planName} plan? You'll be redirected to secure payment processing.`;
       if (window.confirm(confirmMessage)) {
         // Create checkout session and redirect to Stripe
-        apiRequest("POST", "/api/subscription/checkout", { plan: planLower })
+        const payload: any = { plan: planLower };
+        if (couponCode.trim()) {
+          payload.couponCode = couponCode.trim();
+        }
+        
+        apiRequest("POST", "/api/subscription/checkout", payload)
           .then(async (response: Response) => {
             console.log("Raw checkout response:", response);
             
@@ -214,6 +223,41 @@ export default function Subscription() {
             </div>
           </div>
         )}
+
+        {/* Coupon Code Section */}
+        <div className="max-w-md mx-auto mb-8">
+          <div className="text-center mb-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowCouponField(!showCouponField)}
+              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              <Tag className="w-4 h-4 mr-2" />
+              {showCouponField ? 'Hide coupon code' : 'Have a coupon code?'}
+            </Button>
+          </div>
+          
+          {showCouponField && (
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <Label htmlFor="coupon" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Coupon Code
+              </Label>
+              <div className="mt-2">
+                <Input
+                  id="coupon"
+                  type="text"
+                  placeholder="Enter coupon code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Enter your coupon code above. The discount will be applied during checkout.
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8">
