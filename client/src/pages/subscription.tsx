@@ -152,13 +152,18 @@ export default function Subscription() {
       if (window.confirm(confirmMessage)) {
         // Create checkout session and redirect to Stripe
         apiRequest("POST", "/api/subscription/checkout", { plan: planLower })
-          .then((response: any) => {
-            console.log("Checkout response:", response);
-            if (response?.checkoutUrl) {
-              console.log("Redirecting to:", response.checkoutUrl);
-              window.location.href = response.checkoutUrl;
+          .then(async (response: Response) => {
+            console.log("Raw checkout response:", response);
+            
+            // Parse JSON from the Response object
+            const data = await response.json();
+            console.log("Parsed checkout data:", data);
+            
+            if (data?.checkoutUrl) {
+              console.log("Redirecting to:", data.checkoutUrl);
+              window.location.href = data.checkoutUrl;
             } else {
-              console.error("No checkout URL in response:", response);
+              console.error("No checkout URL in parsed data:", data);
               toast({
                 title: "Error",
                 description: "No checkout URL received from server",
