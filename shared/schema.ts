@@ -50,6 +50,7 @@ export const companyInvitations = pgTable("company_invitations", {
   role: text("role").default("member"),
   invitedBy: varchar("invited_by").notNull().references(() => users.id),
   token: varchar("token").notNull().unique(),
+  status: text("status").default("pending"), // pending, accepted, rejected, expired
   expiresAt: timestamp("expires_at").notNull(),
   acceptedAt: timestamp("accepted_at"),
   createdAt: timestamp("created_at").defaultNow(),

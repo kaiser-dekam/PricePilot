@@ -4,7 +4,8 @@ import {
   type WorkOrder, type InsertWorkOrder, 
   type User, type UpsertUser,
   type Company, type InsertCompany,
-  apiSettings, products, workOrders, users, companies 
+  type CompanyInvitation,
+  apiSettings, products, workOrders, users, companies, companyInvitations 
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -363,6 +364,72 @@ export class DbStorage implements IStorage {
       .from(workOrders)
       .where(eq(workOrders.status, "pending"));
     return result;
+  }
+
+  // Company Invitations
+  async createInvitation(invitation: {
+    companyId: string;
+    email: string;
+    role: string;
+    invitedBy: string;
+    token: string;
+    expiresAt: Date;
+  }): Promise<CompanyInvitation> {
+    const result = await this.db
+      .insert(companyInvitations)
+      .values(invitation)
+      .returning();
+    return result[0];
+  }
+
+  async getCompanyInvitations(companyId: string): Promise<CompanyInvitation[]> {
+    const result = await this.db
+      .select()
+      .from(companyInvitations)
+      .where(eq(companyInvitations.companyId, companyId))
+      .orderBy(desc(companyInvitations.createdAt));
+    return result;
+  }
+
+  async getInvitationByToken(token: string): Promise<CompanyInvitation | undefined> {
+    const result = await this.db
+      .select()
+      .from(companyInvitations)
+      .where(eq(companyInvitations.token, token))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateInvitationStatus(token: string, status: string): Promise<void> {
+    await this.db
+      .update(companyInvitations)
+      .set({ 
+        status,
+        acceptedAt: status === 'accepted' ? new Date() : undefined 
+      })
+      .where(eq(companyInvitations.token, token));
+  }
+
+  async deleteInvitation(id: string): Promise<void> {
+    await this.db
+      .delete(companyInvitations)
+      .where(eq(companyInvitations.id, id));
+  }
+
+  async getCompanyUsers(companyId: string): Promise<User[]> {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.companyId, companyId))
+      .orderBy(desc(users.createdAt));
+    return result;
+  }
+
+  async updateUserCompany(userId: string, companyId: string, role: string = 'member'): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ companyId, role, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 }
 

@@ -11,6 +11,8 @@ import Products from "@/pages/products";
 import WorkOrders from "@/pages/work-orders";
 import Settings from "@/pages/settings";
 import Subscription from "@/pages/subscription";
+import Team from "@/pages/team";
+import AcceptInvitation from "@/pages/accept-invitation";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
@@ -31,6 +33,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/accept-invitation" component={AcceptInvitation} />
         <Route component={Landing} />
       </Switch>
     );
@@ -46,6 +49,7 @@ function Router() {
           <Route path="/work-orders" component={WorkOrders} />
           <Route path="/settings" component={Settings} />
           <Route path="/subscription" component={Subscription} />
+          <Route path="/team" component={Team} />
           <Route component={NotFound} />
         </Switch>
       </div>

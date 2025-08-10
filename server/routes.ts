@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertApiSettingsSchema, insertWorkOrderSchema } from "@shared/schema";
+import { insertApiSettingsSchema, insertWorkOrderSchema, insertCompanyInvitationSchema } from "@shared/schema";
+import { randomBytes } from "crypto";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
 import { isAuthenticated } from "./firebaseAuth";
@@ -402,6 +403,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categories = Array.from(new Set(result.products.map(p => p.category).filter(Boolean)));
       res.json(categories);
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Company Invitation routes
+  app.post("/api/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const validatedData = insertCompanyInvitationSchema.parse(req.body);
+      
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ message: "User not associated with a company" });
+      }
+
+      // Check if user has permission to invite (must be admin)
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: "Only company admins can send invitations" });
+      }
+
+      // Generate secure token
+      const token = randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      const invitation = await storage.createInvitation({
+        companyId: user.companyId,
+        email: validatedData.email,
+        role: validatedData.role || 'member',
+        invitedBy: userId,
+        token,
+        expiresAt,
+      });
+
+      res.json({ 
+        message: "Invitation sent successfully",
+        invitation: {
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          status: invitation.status,
+          createdAt: invitation.createdAt
+        }
+      });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid invitation data", errors: error.issues });
+      }
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ message: "User not associated with a company" });
+      }
+
+      const invitations = await storage.getCompanyInvitations(user.companyId);
+      res.json(invitations);
+    } catch (error: any) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/invitations/:token/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const userId = req.user.uid;
+      
+      const invitation = await storage.getInvitationByToken(token);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ message: "Invitation has already been processed" });
+      }
+
+      if (invitation.expiresAt < new Date()) {
+        return res.status(400).json({ message: "Invitation has expired" });
+      }
+
+      if (invitation.email !== req.user.email) {
+        return res.status(403).json({ message: "You can only accept invitations sent to your email" });
+      }
+
+      // Update user's company and role
+      await storage.updateUserCompany(userId, invitation.companyId, invitation.role || 'member');
+      
+      // Mark invitation as accepted
+      await storage.updateInvitationStatus(token, 'accepted');
+
+      res.json({ message: "Invitation accepted successfully" });
+    } catch (error: any) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/invitations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.uid;
+      
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ message: "User not associated with a company" });
+      }
+
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: "Only company admins can cancel invitations" });
+      }
+
+      await storage.deleteInvitation(id);
+      res.json({ message: "Invitation cancelled successfully" });
+    } catch (error: any) {
+      console.error("Error deleting invitation:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/company/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ message: "User not associated with a company" });
+      }
+
+      const users = await storage.getCompanyUsers(user.companyId);
+      res.json(users);
+    } catch (error: any) {
+      console.error("Error fetching company users:", error);
       res.status(500).json({ message: error.message });
     }
   });
