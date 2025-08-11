@@ -123,11 +123,32 @@ class SchedulerService {
           await bigcommerce.updateProduct(update.productId, updateData);
           console.log(`Work Order - Successfully updated product ${update.productId} in BigCommerce`);
           
-          // Update product in our database
-          await storage.updateProduct(workOrder.createdBy, update.productId, {
-            regularPrice: update.newRegularPrice || undefined,
-            salePrice: update.newSalePrice || undefined,
-          });
+          // Get current product to track price changes
+          const currentProduct = await storage.getProduct(workOrder.createdBy, update.productId);
+          if (currentProduct) {
+            // Update product in our database (skip automatic price history)
+            await storage.updateProduct(workOrder.createdBy, update.productId, {
+              regularPrice: update.newRegularPrice || undefined,
+              salePrice: update.newSalePrice || undefined,
+            }, true);
+
+            // Create price history entry specifically for work order
+            const hasRegularPriceChange = update.newRegularPrice && update.newRegularPrice !== currentProduct.regularPrice;
+            const hasSalePriceChange = update.newSalePrice !== undefined && update.newSalePrice !== currentProduct.salePrice;
+
+            if (hasRegularPriceChange || hasSalePriceChange) {
+              await storage.createPriceHistory(workOrder.createdBy, {
+                productId: update.productId,
+                companyId: workOrder.companyId,
+                oldRegularPrice: hasRegularPriceChange ? currentProduct.regularPrice : undefined,
+                newRegularPrice: hasRegularPriceChange ? update.newRegularPrice : undefined,
+                oldSalePrice: hasSalePriceChange ? (currentProduct.salePrice || null) : undefined,
+                newSalePrice: hasSalePriceChange ? (update.newSalePrice || null) : undefined,
+                changeType: 'work_order',
+                workOrderId: workOrder.id,
+              });
+            }
+          }
 
           console.log(`Updated product ${update.productId}`);
         } catch (error) {

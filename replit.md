@@ -11,6 +11,21 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 27, 2025
+- **Fixed Price History Duplicate Entries Bug**: Resolved issue where manual price updates created double history entries
+  - **BUG FIX**: Modified storage.updateProduct to accept skipPriceHistory parameter to prevent automatic price tracking
+  - API routes now explicitly control price history creation to avoid duplicates from both route and storage layers
+  - Maintained proper price change tracking with correct timestamps and change types
+- **Added Work Order Price History Tracking**: Work order executions now properly record price changes in history
+  - **FEATURE**: Scheduler service now creates price history entries with 'work_order' changeType during execution
+  - Added workOrderId reference to price history for better traceability
+  - Work order price changes now appear in product detail panel price history timeline
+  - Proper tracking of both regular and sale price changes from automated work order updates
+- **Completed Product Variant Price Editing Support**: Full manual price update capability for product variations
+  - **FEATURE**: Added expandable Product Variants section in product detail panel
+  - Individual price editing forms for each product variant with real-time updates
+  - Created API endpoints for fetching and updating product variant prices
+  - Built VariantPriceEditor component with proper form validation and error handling
+  - Database storage layer supports full CRUD operations for product variants with company isolation
 - **Fixed Critical Work Order Scheduling Bug**: Resolved issue where work orders were stuck in pending status
   - **BUG FIX**: Missing scheduler initialization in routes.ts prevented work orders from executing
   - Added scheduler.init() call to properly restore pending work orders on server startup

@@ -287,13 +287,16 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async updateProduct(userId: string, id: string, updates: Partial<Product>): Promise<Product | undefined> {
+  async updateProduct(userId: string, id: string, updates: Partial<Product>, skipPriceHistory = false): Promise<Product | undefined> {
     const user = await this.getUser(userId);
     if (!user?.companyId) return undefined;
     
-    // Get the current product to track price changes
-    const currentProduct = await this.getProduct(userId, id);
-    if (!currentProduct) return undefined;
+    // Get the current product to track price changes (only if needed)
+    let currentProduct;
+    if (!skipPriceHistory) {
+      currentProduct = await this.getProduct(userId, id);
+      if (!currentProduct) return undefined;
+    }
     
     const result = await this.db
       .update(products)
@@ -306,8 +309,8 @@ export class DbStorage implements IStorage {
     
     const updatedProduct = result[0];
     
-    // Create price history entry if prices changed
-    if (updatedProduct && (updates.regularPrice || updates.salePrice !== undefined)) {
+    // Create price history entry if prices changed (and not skipped)
+    if (!skipPriceHistory && updatedProduct && currentProduct && (updates.regularPrice || updates.salePrice !== undefined)) {
       const regularPriceChanged = updates.regularPrice && updates.regularPrice !== currentProduct.regularPrice;
       const salePriceChanged = updates.salePrice !== undefined && updates.salePrice !== currentProduct.salePrice;
       
@@ -319,7 +322,7 @@ export class DbStorage implements IStorage {
           newRegularPrice: regularPriceChanged ? updates.regularPrice : undefined,
           oldSalePrice: currentProduct.salePrice,
           newSalePrice: salePriceChanged ? updates.salePrice : undefined,
-          changeType: 'manual',
+          changeType: 'system',
         });
       }
     }

@@ -243,12 +243,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Update product in local database
+      // Update product in local database (skip price history here since we create it below)
       const updateData: any = {};
       if (regularPrice !== undefined) updateData.regularPrice = regularPrice;
       if (salePrice !== undefined) updateData.salePrice = salePrice || null;
 
-      const updatedProduct = await storage.updateProduct(userId, productId, updateData);
+      const updatedProduct = await storage.updateProduct(userId, productId, updateData, true);
       
       // Record price history
       const hasRegularPriceChange = regularPrice !== undefined && regularPrice !== currentProduct.regularPrice;
