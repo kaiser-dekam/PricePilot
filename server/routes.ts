@@ -558,9 +558,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a company" });
       }
 
-      // Check if user has permission to invite (must be admin)
-      if (user.role !== 'admin') {
-        return res.status(403).json({ message: "Only company admins can send invitations" });
+      // Check if user has permission to invite (must be admin or owner)
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        return res.status(403).json({ message: "Only company admins and owners can send invitations" });
       }
 
       // Generate secure token
