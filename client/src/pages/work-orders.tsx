@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Clock, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,14 @@ import { format } from "date-fns";
 
 export default function WorkOrders() {
   const { toast } = useToast();
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: workOrders, isLoading, refetch } = useQuery({
-    queryKey: ["/api/work-orders"],
+    queryKey: ["/api/work-orders", { includeArchived: showArchived }],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/work-orders?includeArchived=${showArchived}`);
+      return response.json();
+    },
     refetchInterval: 5000, // Poll every 5 seconds for status updates
     refetchIntervalInBackground: true,
   });
@@ -31,6 +36,24 @@ export default function WorkOrders() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete work order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/work-orders/${id}/archive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+      toast({
+        title: "Success",
+        description: "Work order archived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive work order",
         variant: "destructive",
       });
     },
@@ -57,6 +80,12 @@ export default function WorkOrders() {
     }
   };
 
+  const handleArchive = (id: string) => {
+    if (confirm("Are you sure you want to archive this work order?")) {
+      archiveMutation.mutate(id);
+    }
+  };
+
   return (
     <>
       {/* Header Bar */}
@@ -66,15 +95,34 @@ export default function WorkOrders() {
             <h2 className="text-2xl font-bold text-gray-900">Work Orders</h2>
             <p className="text-sm text-gray-500 mt-1">Manage batch product updates and schedules</p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived(!showArchived)}
+            >
+              {showArchived ? (
+                <>
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Hide Archived
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Show Archived
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -114,16 +162,31 @@ export default function WorkOrders() {
                       <CardTitle className="text-lg">{workOrder.title}</CardTitle>
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(workOrder.status || "pending")}
-                        {workOrder.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(workOrder.id!)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        {workOrder.archived && <Badge variant="outline">Archived</Badge>}
+                        <div className="flex space-x-1">
+                          {!workOrder.archived && workOrder.status !== "executing" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleArchive(workOrder.id!)}
+                              disabled={archiveMutation.isPending}
+                              title="Archive work order"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {workOrder.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(workOrder.id!)}
+                              disabled={deleteMutation.isPending}
+                              title="Delete work order"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardHeader>

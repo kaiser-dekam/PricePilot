@@ -211,7 +211,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const workOrders = await storage.getWorkOrders(userId);
+      const includeArchived = req.query.includeArchived === 'true';
+      const workOrders = await storage.getWorkOrders(userId, includeArchived);
       res.json(workOrders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -257,6 +258,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Work order not found" });
       }
       res.json({ message: "Work order deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/work-orders/:id/archive", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const workOrder = await storage.archiveWorkOrder(userId, req.params.id);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      res.json({ message: "Work order archived successfully", workOrder });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

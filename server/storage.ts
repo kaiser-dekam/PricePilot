@@ -304,14 +304,19 @@ export class DbStorage implements IStorage {
   }
 
   // Work Orders
-  async getWorkOrders(userId: string): Promise<WorkOrder[]> {
+  async getWorkOrders(userId: string, includeArchived: boolean = false): Promise<WorkOrder[]> {
     const user = await this.getUser(userId);
     if (!user?.companyId) return [];
+    
+    const conditions = [eq(workOrders.companyId, user.companyId)];
+    if (!includeArchived) {
+      conditions.push(eq(workOrders.archived, false));
+    }
     
     const result = await this.db
       .select()
       .from(workOrders)
-      .where(eq(workOrders.companyId, user.companyId))
+      .where(and(...conditions))
       .orderBy(desc(workOrders.createdAt));
     return result;
   }
@@ -356,6 +361,18 @@ export class DbStorage implements IStorage {
     
     const result = await this.db.delete(workOrders).where(and(eq(workOrders.companyId, user.companyId), eq(workOrders.id, id)));
     return result.rowCount > 0;
+  }
+
+  async archiveWorkOrder(userId: string, id: string): Promise<WorkOrder | undefined> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return undefined;
+    
+    const result = await this.db
+      .update(workOrders)
+      .set({ archived: true })
+      .where(and(eq(workOrders.companyId, user.companyId), eq(workOrders.id, id)))
+      .returning();
+    return result[0];
   }
 
   async getPendingWorkOrders(): Promise<WorkOrder[]> {

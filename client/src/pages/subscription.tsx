@@ -48,7 +48,7 @@ const PLANS = [
   },
   {
     name: "Premium",
-    price: "$20",
+    price: "$10",
     period: "per month",
     description: "Best for growing businesses",
     productLimit: 2000,
@@ -67,7 +67,6 @@ const PLANS = [
 export default function Subscription() {
   const { user } = useAuth();
   const { toast } = useToast();
-
 
   const { data: company } = useQuery({
     queryKey: ["/api/auth/user"],
