@@ -25,70 +25,70 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-16">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-8">
+        <div className="text-center mb-12 sm:mb-16">
+          <div className="flex justify-center mb-6 sm:mb-8">
             <img 
               src={logoPath} 
               alt="Catalog Pilot" 
-              className="h-20 md:h-24 object-contain"
+              className="h-16 sm:h-20 md:h-24 object-contain"
             />
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
             Catalog Pilot
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
+          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
             Streamline your BigCommerce store management with powerful tools for product sync, 
             bulk price updates, and automated work orders. Manage your inventory like a pro.
           </p>
           <Button 
             onClick={handleSignIn}
             size="lg"
-            className="text-lg px-8 py-3"
+            className="text-base sm:text-lg px-6 sm:px-8 py-2 sm:py-3 w-full sm:w-auto"
           >
             Sign In with Google
           </Button>
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <ShoppingCart className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-12 sm:mb-16">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg text-center">
+            <ShoppingCart className="h-10 sm:h-12 w-10 sm:w-12 text-primary mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Product Sync
             </h3>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
               Seamlessly sync your BigCommerce products with real-time updates and inventory tracking.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <BarChart3 className="h-12 w-12 text-accent mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg text-center">
+            <BarChart3 className="h-10 sm:h-12 w-10 sm:w-12 text-accent mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Bulk Price Updates
             </h3>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
               Update prices for multiple products at once with intelligent scheduling and automation.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <Clock className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg text-center">
+            <Clock className="h-10 sm:h-12 w-10 sm:w-12 text-primary mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Scheduled Work Orders
             </h3>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
               Create automated tasks that execute at specific times, perfect for sales and promotions.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <Shield className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg text-center">
+            <Shield className="h-10 sm:h-12 w-10 sm:w-12 text-destructive mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Secure & Reliable
             </h3>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
               Enterprise-grade security with user authentication and persistent data storage.
             </p>
           </div>

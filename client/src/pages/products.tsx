@@ -99,14 +99,14 @@ export default function Products() {
   return (
     <>
       {/* Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Products</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Products</h2>
             <p className="text-sm text-gray-500 mt-1">Manage your store products and inventory</p>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
             {/* Search Bar */}
             <div className="relative">
               <Input
@@ -114,38 +114,41 @@ export default function Products() {
                 placeholder="Search products..."
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-64 pl-10"
+                className="w-full sm:w-64 pl-10"
               />
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
             </div>
             
-            <Button
-              onClick={handleSync}
-              disabled={syncMutation.isPending}
-              variant={isApiConnected ? "default" : "outline"}
-              className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-              Sync
-            </Button>
-            
-            <Button onClick={() => setShowWorkOrderModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Work Order
-            </Button>
+            <div className="flex space-x-2">
+              <Button
+                onClick={handleSync}
+                disabled={syncMutation.isPending}
+                variant={isApiConnected ? "default" : "outline"}
+                className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Sync</span>
+              </Button>
+              
+              <Button onClick={() => setShowWorkOrderModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Create Work Order</span>
+                <span className="sm:hidden">Create</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Filters Bar */}
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <Select value={category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,12 +166,13 @@ export default function Products() {
                     setCategory("all");
                     setPage(1);
                   }}
+                  className="w-full sm:w-auto"
                 >
                   Clear Filters
                 </Button>
               </div>
               
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <div className="flex items-center justify-center sm:justify-end space-x-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-2">
                   <span>{total}</span>
                   <span>products found</span>
@@ -184,9 +188,9 @@ export default function Products() {
 
           {/* Products Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 animate-pulse">
                   <div className="h-4 bg-gray-200 rounded mb-2"></div>
                   <div className="h-3 bg-gray-200 rounded mb-4 w-2/3"></div>
                   <div className="space-y-2">
@@ -212,7 +216,7 @@ export default function Products() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -225,14 +229,15 @@ export default function Products() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
+                <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-gray-600 text-center sm:text-left">
                     Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of {total} products
                   </div>
                   
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => setPage(page - 1)}
                       disabled={page === 1}
                     >

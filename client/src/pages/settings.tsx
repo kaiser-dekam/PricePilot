@@ -114,16 +114,16 @@ export default function Settings() {
   return (
     <>
       {/* Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h2>
             <p className="text-sm text-gray-500 mt-1">Configure your BigCommerce API connection and preferences</p>
           </div>
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="text-red-600 border-red-200 hover:bg-red-50"
+            className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto justify-center"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -133,7 +133,7 @@ export default function Settings() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-2xl">
+        <div className="p-4 sm:p-6 max-w-2xl mx-auto">
           <Card>
             <CardHeader>
               <CardTitle>BigCommerce API Settings</CardTitle>

@@ -1,13 +1,29 @@
 import { Link, useLocation } from "wouter";
-import { Package, ClipboardList, Settings, Wifi, Crown, Users } from "lucide-react";
+import {
+  Package,
+  ClipboardList,
+  Settings,
+  Wifi,
+  Crown,
+  Users,
+  Menu,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import logoPath from "@assets/Artboard 1_1754940868643.png";
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const [location] = useLocation();
-  
+
   const { data: workOrders } = useQuery({
     queryKey: ["/api/work-orders"],
   });
@@ -16,7 +32,8 @@ export default function Sidebar() {
     queryKey: ["/api/settings"],
   });
 
-  const pendingWorkOrders = (workOrders as any[])?.filter((wo: any) => wo.status === "pending") || [];
+  const pendingWorkOrders =
+    (workOrders as any[])?.filter((wo: any) => wo.status === "pending") || [];
   const isConnected = !!apiSettings;
 
   const navigation = [
@@ -31,7 +48,8 @@ export default function Sidebar() {
       href: "/work-orders",
       icon: ClipboardList,
       current: location === "/work-orders",
-      badge: pendingWorkOrders.length > 0 ? pendingWorkOrders.length : undefined,
+      badge:
+        pendingWorkOrders.length > 0 ? pendingWorkOrders.length : undefined,
     },
     {
       name: "Team",
@@ -54,50 +72,77 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-white shadow-lg border-r border-gray-200">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3 mb-2">
-          <img 
-            src={logoPath} 
-            alt="Catalog Pilot" 
-            className="h-8 w-auto object-contain"
-          />
-          <h1 className="text-lg font-bold text-gray-900">Catalog Pilot</h1>
-        </div>
-        <p className="text-sm text-gray-500">
-          {isConnected ? "Connected Store" : "Not Connected"}
-        </p>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={onClose}
+        />
+      )}
       
-      <nav className="mt-6">
-        <div className="px-3">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.name} href={item.href}>
-                <button
-                  className={cn(
-                    "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                    item.current
-                      ? "text-white bg-primary"
-                      : "text-gray-700 hover:bg-gray-100"
-                  )}
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                  {item.badge && (
-                    <Badge className="ml-auto bg-warning text-white">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </button>
-              </Link>
-            );
-          })}
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:transform-none",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <img
+                src={logoPath}
+                alt="Catalog Pilot"
+                className="h-8 w-auto object-contain"
+              />
+              <h1 className="text-lg font-bold text-gray-900">Catalog Pilot</h1>
+            </div>
+            {/* Mobile close button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden"
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            {isConnected ? "Connected Store" : "Not Connected"}
+          </p>
         </div>
-      </nav>
-      
 
-    </div>
+        <nav className="mt-6">
+          <div className="px-3">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.name} href={item.href}>
+                  <button
+                    className={cn(
+                      "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors mb-1",
+                      item.current
+                        ? "text-white bg-primary"
+                        : "text-gray-700 hover:bg-gray-100",
+                    )}
+                    onClick={() => {
+                      // Close mobile menu when item is clicked
+                      if (onClose) onClose();
+                    }}
+                  >
+                    <Icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                    {item.badge && (
+                      <Badge className="ml-auto bg-warning text-white">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </button>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </>
   );
 }

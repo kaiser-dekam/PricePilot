@@ -22,31 +22,31 @@ export default function ProductCard({ product, onClick, showStockStatus = false 
 
   return (
     <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={onClick}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
-            <p className="text-sm text-gray-500">{product.category || 'Uncategorized'}</p>
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-start justify-between mb-3 sm:mb-4">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 mb-1 text-sm sm:text-base truncate">{product.name}</h3>
+            <p className="text-xs sm:text-sm text-gray-500">{product.category || 'Uncategorized'}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 ml-2">
             <Button size="sm" variant="ghost" className="p-1 text-gray-400 hover:text-gray-600">
-              <Edit className="w-4 h-4" />
+              <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Regular Price:</span>
-            <span className="font-semibold text-gray-900">
+            <span className="text-xs sm:text-sm text-gray-600">Regular Price:</span>
+            <span className="font-semibold text-gray-900 text-sm sm:text-base">
               ${product.regularPrice || '0.00'}
             </span>
           </div>
           
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Sale Price:</span>
+            <span className="text-xs sm:text-sm text-gray-600">Sale Price:</span>
             <span className={cn(
-              "font-semibold",
+              "font-semibold text-sm sm:text-base",
               product.salePrice ? "text-accent" : "text-gray-400"
             )}>
               {product.salePrice ? `$${product.salePrice}` : '—'}
@@ -55,11 +55,11 @@ export default function ProductCard({ product, onClick, showStockStatus = false 
           
           <div className="pt-2 border-t border-gray-100">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">
+              <span className="text-gray-500 truncate">
                 SKU: <span className="font-medium">{product.sku || 'N/A'}</span>
               </span>
               {showStockStatus && (
-                <Badge variant={stockStatus.variant} className="text-xs">
+                <Badge variant={stockStatus.variant} className="text-xs ml-2 shrink-0">
                   {stockStatus.label}
                 </Badge>
               )}

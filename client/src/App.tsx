@@ -14,9 +14,14 @@ import Subscription from "@/pages/subscription";
 import Team from "@/pages/team";
 import AcceptInvitation from "@/pages/accept-invitation";
 import Sidebar from "@/components/layout/sidebar";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
+import { useState } from "react";
+import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -41,17 +46,41 @@ function Router() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/products" component={Products} />
-          <Route path="/work-orders" component={WorkOrders} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/subscription" component={Subscription} />
-          <Route path="/team" component={Team} />
-          <Route component={NotFound} />
-        </Switch>
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <img
+              src={logoPath}
+              alt="Catalog Pilot"
+              className="h-6 w-auto object-contain"
+            />
+            <span className="text-lg font-bold text-gray-900">Catalog Pilot</span>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-auto">
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/products" component={Products} />
+            <Route path="/work-orders" component={WorkOrders} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/subscription" component={Subscription} />
+            <Route path="/team" component={Team} />
+            <Route component={NotFound} />
+          </Switch>
+        </div>
       </div>
     </div>
   );
