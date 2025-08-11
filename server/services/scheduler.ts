@@ -136,7 +136,18 @@ class SchedulerService {
             const hasRegularPriceChange = update.newRegularPrice && update.newRegularPrice !== currentProduct.regularPrice;
             const hasSalePriceChange = update.newSalePrice !== undefined && update.newSalePrice !== currentProduct.salePrice;
 
+            console.log(`Work Order Price Change Check:`, {
+              productId: update.productId,
+              hasRegularPriceChange,
+              hasSalePriceChange,
+              currentRegularPrice: currentProduct.regularPrice,
+              newRegularPrice: update.newRegularPrice,
+              currentSalePrice: currentProduct.salePrice,
+              newSalePrice: update.newSalePrice
+            });
+
             if (hasRegularPriceChange || hasSalePriceChange) {
+              console.log(`Work Order - Creating price history entry for product ${update.productId}`);
               await storage.createPriceHistory(workOrder.createdBy, {
                 productId: update.productId,
                 companyId: workOrder.companyId,
@@ -147,6 +158,9 @@ class SchedulerService {
                 changeType: 'work_order',
                 workOrderId: workOrder.id,
               });
+              console.log(`Work Order - Price history entry created for product ${update.productId}`);
+            } else {
+              console.log(`Work Order - No price changes detected for product ${update.productId}, skipping price history`);
             }
           }
 

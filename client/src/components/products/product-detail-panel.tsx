@@ -42,9 +42,9 @@ function VariantPriceEditor({ variant, onUpdate, isUpdating }: VariantPriceEdito
     <div className="border rounded-lg p-4 bg-gray-50">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h6 className="font-medium text-sm">{variant.name}</h6>
-          {variant.sku && (
-            <p className="text-xs text-gray-500 mt-1">SKU: {variant.sku}</p>
+          <h6 className="font-medium text-sm">{variant.variantSku}</h6>
+          {variant.variantSku && (
+            <p className="text-xs text-gray-500 mt-1">SKU: {variant.variantSku}</p>
           )}
         </div>
         {variant.stock !== undefined && (
@@ -68,7 +68,6 @@ function VariantPriceEditor({ variant, onUpdate, isUpdating }: VariantPriceEdito
               value={regularPrice}
               onChange={(e) => setRegularPrice(e.target.value)}
               className="flex-1 h-8"
-              size="sm"
             />
           </div>
         </div>
@@ -87,7 +86,6 @@ function VariantPriceEditor({ variant, onUpdate, isUpdating }: VariantPriceEdito
               onChange={(e) => setSalePrice(e.target.value)}
               className="flex-1 h-8"
               placeholder="Optional"
-              size="sm"
             />
           </div>
         </div>
