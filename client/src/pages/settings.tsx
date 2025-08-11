@@ -106,7 +106,11 @@ export default function Settings() {
   };
 
   const handleDeleteAllProducts = () => {
-    if (window.confirm("Are you sure you want to delete ALL products? This action cannot be undone.")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete ALL products? This action cannot be undone.",
+      )
+    ) {
       deleteProductsMutation.mutate();
     }
   };
@@ -117,8 +121,12 @@ export default function Settings() {
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h2>
-            <p className="text-sm text-gray-500 mt-1">Configure your BigCommerce API connection and preferences</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Settings
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Configure your BigCommerce API connection and preferences
+            </p>
           </div>
           <Button
             onClick={handleLogout}
@@ -151,10 +159,11 @@ export default function Settings() {
                     className="mt-1"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Found in your BigCommerce store URL (e.g., store-abc123def.mybigcommerce.com)
+                    Found in your BigCommerce store URL (e.g.,
+                    store-abc123def.mybigcommerce.com)
                   </p>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="accessToken">Access Token *</Label>
                   <Input
@@ -169,7 +178,7 @@ export default function Settings() {
                     API token with products read/write scope
                   </p>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="clientId">Client ID *</Label>
                   <Input
@@ -184,13 +193,16 @@ export default function Settings() {
                     Your app's client identifier
                   </p>
                 </div>
-                
+
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <Label htmlFor="showStockStatus">Display Stock Status</Label>
+                      <Label htmlFor="showStockStatus">
+                        Display Stock Status
+                      </Label>
                       <p className="text-xs text-gray-500">
-                        Show stock levels and inventory status in product listings
+                        Show stock levels and inventory status in product
+                        listings
                       </p>
                     </div>
                     <Switch
@@ -200,12 +212,9 @@ export default function Settings() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-end space-x-3 pt-4">
-                  <Button
-                    type="submit"
-                    disabled={saveMutation.isPending}
-                  >
+                  <Button type="submit" disabled={saveMutation.isPending}>
                     <Save className="w-4 h-4 mr-2" />
                     {saveMutation.isPending ? "Saving..." : "Save Settings"}
                   </Button>
@@ -224,16 +233,16 @@ export default function Settings() {
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
                     {(user as any).profileImageUrl && (
-                      <img 
-                        src={(user as any).profileImageUrl} 
+                      <img
+                        src={(user as any).profileImageUrl}
                         alt="Profile"
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     )}
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {(user as any).firstName && (user as any).lastName 
-                          ? `${(user as any).firstName} ${(user as any).lastName}` 
+                        {(user as any).firstName && (user as any).lastName
+                          ? `${(user as any).firstName} ${(user as any).lastName}`
                           : user.email}
                       </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
@@ -252,9 +261,13 @@ export default function Settings() {
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h4 className="text-sm font-medium text-red-800 mb-2">Danger Zone</h4>
+                  <h4 className="text-sm font-medium text-red-800 mb-2">
+                    Danger Zone
+                  </h4>
                   <p className="text-sm text-red-700 mb-3">
-                    This will permanently delete all products from your local database. This action cannot be undone.
+                    This will permanently delete all products from your Catalog
+                    Pilot database. Your BigCommerce products will not be
+                    touched. This action cannot be undone.
                   </p>
                   <Button
                     onClick={handleDeleteAllProducts}
@@ -263,7 +276,9 @@ export default function Settings() {
                     size="sm"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    {deleteProductsMutation.isPending ? "Deleting..." : "Delete All Products"}
+                    {deleteProductsMutation.isPending
+                      ? "Deleting..."
+                      : "Delete All Products"}
                   </Button>
                 </div>
               </div>
@@ -277,9 +292,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="prose prose-sm">
               <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
-                <li>
-                  Log into your BigCommerce admin panel
-                </li>
+                <li>Log into your BigCommerce admin panel</li>
                 <li>
                   Go to <strong>Settings → API Access</strong>
                 </li>
@@ -289,16 +302,16 @@ export default function Settings() {
                 <li>
                   Set the following scopes:
                   <ul className="list-disc list-inside ml-4 mt-1">
-                    <li>Products: <strong>modify</strong></li>
-                    <li>Information & Settings: <strong>read-only</strong></li>
+                    <li>
+                      Products: <strong>modify</strong>
+                    </li>
+                    <li>
+                      Information & Settings: <strong>read-only</strong>
+                    </li>
                   </ul>
                 </li>
-                <li>
-                  Copy the generated credentials and paste them above
-                </li>
-                <li>
-                  Click "Save Settings" to test the connection
-                </li>
+                <li>Copy the generated credentials and paste them above</li>
+                <li>Click "Save Settings" to test the connection</li>
               </ol>
             </CardContent>
           </Card>
