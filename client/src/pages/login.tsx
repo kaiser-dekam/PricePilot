@@ -22,7 +22,10 @@ export default function Login() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
+      console.log("User is authenticated, redirecting to home...");
+      // Force redirect using both wouter and window location
       setLocation("/");
+      window.location.href = "/";
     }
   }, [isAuthenticated, authLoading, setLocation]);
 
@@ -58,14 +61,17 @@ export default function Login() {
         title: "Success",
         description: "Successfully signed in with Google",
       });
-      // Redirect will happen via useEffect when auth state changes
+      // Force immediate redirect
+      console.log("Google sign-in successful, redirecting...");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to sign in with Google",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };

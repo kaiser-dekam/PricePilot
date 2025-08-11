@@ -21,8 +21,10 @@ import { useState } from "react";
 import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  console.log("Auth state:", { isAuthenticated, isLoading, user: user?.email });
 
   if (isLoading) {
     return (
