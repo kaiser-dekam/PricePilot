@@ -23,7 +23,16 @@ export default function Home() {
           </div>
           <Button 
             variant="outline"
-            onClick={() => window.location.href = '/api/logout'}
+            onClick={async () => {
+              try {
+                const { signOutUser } = await import("@/lib/firebase");
+                await signOutUser();
+                window.location.href = '/';
+              } catch (error) {
+                console.error("Logout error:", error);
+                window.location.href = '/';
+              }
+            }}
             className="flex items-center gap-2 w-full sm:w-auto justify-center"
           >
             <LogOut className="h-4 w-4" />
@@ -93,17 +102,17 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                {user.profileImageUrl && (
+                {(user as any).profileImageUrl && (
                   <img 
-                    src={user.profileImageUrl} 
+                    src={(user as any).profileImageUrl} 
                     alt="Profile" 
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 )}
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {user.firstName && user.lastName 
-                      ? `${user.firstName} ${user.lastName}`
+                    {(user as any).firstName && (user as any).lastName 
+                      ? `${(user as any).firstName} ${(user as any).lastName}`
                       : user.email
                     }
                   </p>
