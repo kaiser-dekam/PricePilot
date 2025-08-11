@@ -125,15 +125,15 @@ export const workOrders = pgTable("work_orders", {
 // Price history table to track product price changes over time
 export const priceHistory = pgTable("price_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  productId: varchar("product_id").notNull().references(() => products.id),
-  companyId: varchar("company_id").notNull().references(() => companies.id),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
   oldRegularPrice: decimal("old_regular_price", { precision: 10, scale: 2 }),
   newRegularPrice: decimal("new_regular_price", { precision: 10, scale: 2 }),
   oldSalePrice: decimal("old_sale_price", { precision: 10, scale: 2 }),
   newSalePrice: decimal("new_sale_price", { precision: 10, scale: 2 }),
   changeType: text("change_type").notNull(), // manual, work_order, sync
-  workOrderId: varchar("work_order_id").references(() => workOrders.id),
-  changedBy: varchar("changed_by").references(() => users.id),
+  workOrderId: varchar("work_order_id").references(() => workOrders.id, { onDelete: 'cascade' }),
+  changedBy: varchar("changed_by").references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
