@@ -372,7 +372,7 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                 <p className="text-xs text-gray-400 mt-1">Price changes will appear here when you update pricing</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-3">
                 {priceHistory.map((entry) => (
                   <div key={entry.id} className="border rounded-lg p-3 bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
