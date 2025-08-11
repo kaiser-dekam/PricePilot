@@ -578,6 +578,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize scheduler to restore pending work orders
+  scheduler.init().catch(console.error);
+
   const httpServer = createServer(app);
   return httpServer;
 }

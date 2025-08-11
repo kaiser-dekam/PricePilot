@@ -8,14 +8,33 @@ class SchedulerService {
 
   async init() {
     // Restore scheduled work orders on startup
+    console.log('Initializing scheduler...');
     const pendingWorkOrders = await storage.getPendingWorkOrders();
+    console.log(`Found ${pendingWorkOrders.length} pending work orders`);
+    
     for (const workOrder of pendingWorkOrders) {
-      if (workOrder.scheduledAt && new Date(workOrder.scheduledAt) > new Date()) {
-        this.scheduleWorkOrder(workOrder);
-      } else if (workOrder.executeImmediately) {
+      console.log(`Processing work order ${workOrder.id}: executeImmediately=${workOrder.executeImmediately}, scheduledAt=${workOrder.scheduledAt}`);
+      
+      if (workOrder.executeImmediately) {
+        console.log(`Executing work order ${workOrder.id} immediately`);
         this.executeWorkOrder(workOrder.id);
+      } else if (workOrder.scheduledAt) {
+        const scheduledTime = new Date(workOrder.scheduledAt);
+        const now = new Date();
+        
+        if (scheduledTime > now) {
+          console.log(`Scheduling work order ${workOrder.id} for ${scheduledTime.toISOString()}`);
+          this.scheduleWorkOrder(workOrder);
+        } else {
+          console.log(`Work order ${workOrder.id} is overdue, executing immediately`);
+          this.executeWorkOrder(workOrder.id);
+        }
+      } else {
+        console.log(`Work order ${workOrder.id} has no execution plan, skipping`);
       }
     }
+    
+    console.log('Scheduler initialization complete');
   }
 
   scheduleWorkOrder(workOrder: WorkOrder) {
@@ -68,6 +87,8 @@ class SchedulerService {
         console.error(`Work order ${workOrderId} not found`);
         return;
       }
+      
+      console.log(`Found work order: ${JSON.stringify({ id: workOrder.id, createdBy: workOrder.createdBy, companyId: workOrder.companyId })}`);
 
       if (workOrder.status !== "pending") {
         console.log(`Work order ${workOrderId} is not pending, skipping`);
@@ -75,12 +96,12 @@ class SchedulerService {
       }
 
       // Update status to executing
-      await storage.updateWorkOrder(workOrder.userId, workOrderId, { 
+      await storage.updateWorkOrder(workOrder.createdBy, workOrderId, { 
         status: "executing" 
       });
 
       // Get API settings for this user
-      const apiSettings = await storage.getApiSettings(workOrder.userId);
+      const apiSettings = await storage.getApiSettings(workOrder.createdBy);
       if (!apiSettings) {
         throw new Error("API settings not configured for this user");
       }
@@ -101,7 +122,7 @@ class SchedulerService {
           await bigcommerce.updateProduct(update.productId, updateData);
           
           // Update product in our database
-          await storage.updateProduct(workOrder.userId, update.productId, {
+          await storage.updateProduct(workOrder.createdBy, update.productId, {
             regularPrice: update.newRegularPrice || undefined,
             salePrice: update.newSalePrice || undefined,
           });
@@ -113,7 +134,7 @@ class SchedulerService {
       }
 
       // Mark as completed
-      await storage.updateWorkOrder(workOrder.userId, workOrderId, {
+      await storage.updateWorkOrder(workOrder.createdBy, workOrderId, {
         status: "completed",
         executedAt: new Date(),
       });
@@ -127,7 +148,7 @@ class SchedulerService {
         const allWorkOrders = await storage.getPendingWorkOrders();
         const workOrder = allWorkOrders.find(wo => wo.id === workOrderId);
         if (workOrder) {
-          await storage.updateWorkOrder(workOrder.userId, workOrderId, {
+          await storage.updateWorkOrder(workOrder.createdBy, workOrderId, {
             status: "failed",
             error: error.message,
             executedAt: new Date(),

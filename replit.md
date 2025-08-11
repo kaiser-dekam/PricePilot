@@ -11,6 +11,20 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 27, 2025
+- **Fixed Critical Work Order Scheduling Bug**: Resolved issue where work orders were stuck in pending status
+  - **BUG FIX**: Missing scheduler initialization in routes.ts prevented work orders from executing
+  - Added scheduler.init() call to properly restore pending work orders on server startup
+  - Updated scheduler service to use correct field names (createdBy instead of userId)
+  - Enhanced logging to debug work order execution flow and identify issues
+  - Work orders now properly execute immediately or schedule for future execution based on configuration
+- **Completed Product Price History Tracking System**: Implemented comprehensive price change monitoring
+  - **DATABASE**: Added price_history table with proper relationships and company isolation
+  - **BACKEND**: Created API endpoints for recording and retrieving product price changes
+  - **AUTOMATION**: Automatic price tracking when products are updated through manual edits or work orders
+  - **FRONTEND**: Enhanced ProductDetailPanel with chronological price history display
+  - **UI**: Visual indicators for different change types (manual updates, work orders, system sync)
+  - **USER EXPERIENCE**: Click any product to view its complete price change timeline with timestamps
+  - All price modifications are now automatically tracked and displayed in a clean, organized interface
 - **Enhanced API Security**: Fixed critical security vulnerability in authentication system
   - **SECURITY FIX**: Replaced insecure header-based authentication with proper Firebase token verification
   - Implemented JWT token decoding with expiration checking to prevent unauthorized access
