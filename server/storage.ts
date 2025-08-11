@@ -1,12 +1,13 @@
 import { 
   type ApiSettings, type InsertApiSettings, 
   type Product, type InsertProduct, 
+  type ProductVariant, type InsertProductVariant,
   type WorkOrder, type InsertWorkOrder, 
   type User, type UpsertUser,
   type Company, type InsertCompany,
   type CompanyInvitation,
   type PriceHistory, type InsertPriceHistory,
-  apiSettings, products, workOrders, users, companies, companyInvitations, priceHistory 
+  apiSettings, products, productVariants, workOrders, users, companies, companyInvitations, priceHistory 
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -35,6 +36,14 @@ export interface IStorage {
   updateProduct(userId: string, id: string, updates: Partial<Product>): Promise<Product | undefined>;
   deleteProduct(userId: string, id: string): Promise<boolean>;
   clearUserProducts(userId: string): Promise<void>;
+  
+  // Product Variants
+  getProductVariants(userId: string, productId: string): Promise<ProductVariant[]>;
+  getProductVariant(userId: string, variantId: string): Promise<ProductVariant | undefined>;
+  createProductVariant(userId: string, variant: InsertProductVariant & { id: string; productId: string }): Promise<ProductVariant>;
+  updateProductVariant(userId: string, variantId: string, updates: Partial<ProductVariant>): Promise<ProductVariant | undefined>;
+  deleteProductVariant(userId: string, variantId: string): Promise<boolean>;
+  clearProductVariants(userId: string, productId: string): Promise<void>;
   
   // Work Orders
   getWorkOrders(userId: string): Promise<WorkOrder[]>;
@@ -503,6 +512,94 @@ export class DbStorage implements IStorage {
       .update(users)
       .set({ companyId, role, updatedAt: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  // Product Variants
+  async getProductVariants(userId: string, productId: string): Promise<ProductVariant[]> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return [];
+    
+    const result = await this.db
+      .select()
+      .from(productVariants)
+      .where(and(
+        eq(productVariants.companyId, user.companyId),
+        eq(productVariants.productId, productId)
+      ))
+      .orderBy(desc(productVariants.lastUpdated));
+    
+    return result;
+  }
+
+  async getProductVariant(userId: string, variantId: string): Promise<ProductVariant | undefined> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return undefined;
+    
+    const result = await this.db
+      .select()
+      .from(productVariants)
+      .where(and(
+        eq(productVariants.companyId, user.companyId),
+        eq(productVariants.id, variantId)
+      ));
+    
+    return result[0];
+  }
+
+  async createProductVariant(userId: string, variant: InsertProductVariant & { id: string; productId: string }): Promise<ProductVariant> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) {
+      throw new Error("User company not found");
+    }
+    
+    const result = await this.db.insert(productVariants).values({
+      ...variant,
+      companyId: user.companyId,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async updateProductVariant(userId: string, variantId: string, updates: Partial<ProductVariant>): Promise<ProductVariant | undefined> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return undefined;
+    
+    const result = await this.db
+      .update(productVariants)
+      .set({ ...updates, lastUpdated: new Date() })
+      .where(and(
+        eq(productVariants.companyId, user.companyId),
+        eq(productVariants.id, variantId)
+      ))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteProductVariant(userId: string, variantId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return false;
+    
+    const result = await this.db
+      .delete(productVariants)
+      .where(and(
+        eq(productVariants.companyId, user.companyId),
+        eq(productVariants.id, variantId)
+      ));
+    
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async clearProductVariants(userId: string, productId: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return;
+    
+    await this.db
+      .delete(productVariants)
+      .where(and(
+        eq(productVariants.companyId, user.companyId),
+        eq(productVariants.productId, productId)
+      ));
   }
 }
 

@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { X, History, Clock } from "lucide-react";
+import { X, History, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Product, PriceHistory } from "@shared/schema";
+import { Product, PriceHistory, ProductVariant } from "@shared/schema";
 import { format } from "date-fns";
 
 interface ProductDetailPanelProps {
@@ -18,9 +19,96 @@ interface ProductDetailPanelProps {
   onClose: () => void;
 }
 
+interface VariantPriceEditorProps {
+  variant: ProductVariant;
+  onUpdate: (variant: ProductVariant, updates: { regularPrice?: string; salePrice?: string }) => void;
+  isUpdating: boolean;
+}
+
+function VariantPriceEditor({ variant, onUpdate, isUpdating }: VariantPriceEditorProps) {
+  const [regularPrice, setRegularPrice] = useState(variant.regularPrice?.toString() || "");
+  const [salePrice, setSalePrice] = useState(variant.salePrice?.toString() || "");
+
+  const handleUpdate = () => {
+    onUpdate(variant, { regularPrice, salePrice });
+  };
+
+  React.useEffect(() => {
+    setRegularPrice(variant.regularPrice?.toString() || "");
+    setSalePrice(variant.salePrice?.toString() || "");
+  }, [variant]);
+
+  return (
+    <div className="border rounded-lg p-4 bg-gray-50">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h6 className="font-medium text-sm">{variant.name}</h6>
+          {variant.sku && (
+            <p className="text-xs text-gray-500 mt-1">SKU: {variant.sku}</p>
+          )}
+        </div>
+        {variant.stock !== undefined && (
+          <Badge variant="outline" className="text-xs">
+            {variant.stock} in stock
+          </Badge>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <Label htmlFor={`regular-${variant.id}`} className="text-xs text-gray-600">
+            Regular Price
+          </Label>
+          <div className="flex items-center mt-1">
+            <span className="text-sm text-gray-500 mr-1">$</span>
+            <Input
+              id={`regular-${variant.id}`}
+              type="number"
+              step="0.01"
+              value={regularPrice}
+              onChange={(e) => setRegularPrice(e.target.value)}
+              className="flex-1 h-8"
+              size="sm"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor={`sale-${variant.id}`} className="text-xs text-gray-600">
+            Sale Price
+          </Label>
+          <div className="flex items-center mt-1">
+            <span className="text-sm text-gray-500 mr-1">$</span>
+            <Input
+              id={`sale-${variant.id}`}
+              type="number"
+              step="0.01"
+              value={salePrice}
+              onChange={(e) => setSalePrice(e.target.value)}
+              className="flex-1 h-8"
+              placeholder="Optional"
+              size="sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <Button
+        onClick={handleUpdate}
+        disabled={isUpdating}
+        size="sm"
+        className="w-full"
+      >
+        {isUpdating ? "Updating..." : "Update Variant"}
+      </Button>
+    </div>
+  );
+}
+
 export default function ProductDetailPanel({ product, isOpen, onClose }: ProductDetailPanelProps) {
   const [regularPrice, setRegularPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
+  const [showVariants, setShowVariants] = useState(false);
   const { toast } = useToast();
 
   // Fetch price history for this product
@@ -30,6 +118,17 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
       if (!product?.id) return [];
       const response = await apiRequest("GET", `/api/products/${product.id}/price-history`);
       return response.json() as Promise<PriceHistory[]>;
+    },
+    enabled: !!product?.id && isOpen,
+  });
+
+  // Fetch product variants
+  const { data: variants, isLoading: variantsLoading } = useQuery({
+    queryKey: ["/api/products", product?.id, "variants"],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const response = await apiRequest("GET", `/api/products/${product.id}/variants`);
+      return response.json() as Promise<ProductVariant[]>;
     },
     enabled: !!product?.id && isOpen,
   });
@@ -50,6 +149,26 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
       toast({
         title: "Error",
         description: error.message || "Failed to update product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateVariantMutation = useMutation({
+    mutationFn: ({ variantId, data }: { variantId: string; data: { regularPrice?: string; salePrice?: string }}) =>
+      apiRequest("PUT", `/api/variants/${variantId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", product?.id, "variants"] });
+      toast({
+        title: "Success",
+        description: "Product variant updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product variant",
         variant: "destructive",
       });
     },
@@ -91,18 +210,41 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
     return { label: "In Stock", variant: "default" as const };
   };
 
+  const handleVariantUpdate = (variant: ProductVariant, updates: { regularPrice?: string; salePrice?: string }) => {
+    const filteredUpdates: { regularPrice?: string; salePrice?: string } = {};
+    
+    if (updates.regularPrice !== undefined && updates.regularPrice !== variant.regularPrice?.toString()) {
+      filteredUpdates.regularPrice = updates.regularPrice;
+    }
+    
+    if (updates.salePrice !== undefined && updates.salePrice !== (variant.salePrice?.toString() || "")) {
+      filteredUpdates.salePrice = updates.salePrice;
+    }
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      toast({
+        title: "No Changes",
+        description: "No changes detected to update",
+      });
+      return;
+    }
+
+    updateVariantMutation.mutate({ variantId: variant.id, data: filteredUpdates });
+  };
+
   if (!product) return null;
 
   const stockStatus = getStockStatus(product.stock || 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-96">
-        <SheetHeader>
+      <SheetContent className="w-96 flex flex-col">
+        <SheetHeader className="shrink-0">
           <SheetTitle>Product Details</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="flex-1 overflow-y-auto mt-6 pr-2">
+          <div className="space-y-6">
           {/* Product Info */}
           <div>
             <h4 className="font-semibold text-gray-900 mb-2">{product.name}</h4>
@@ -158,6 +300,34 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
               {updateMutation.isPending ? "Updating..." : "Update Product"}
             </Button>
           </div>
+
+          {/* Product Variants Section */}
+          {variants && variants.length > 0 && (
+            <div className="border-t pt-6 mt-6">
+              <Collapsible open={showVariants} onOpenChange={setShowVariants}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between">
+                    <span className="font-medium">Product Variants ({variants.length})</span>
+                    {showVariants ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-4">
+                  {variantsLoading ? (
+                    <div className="text-center text-sm text-muted-foreground">Loading variants...</div>
+                  ) : (
+                    variants.map((variant) => (
+                      <VariantPriceEditor
+                        key={variant.id}
+                        variant={variant}
+                        onUpdate={handleVariantUpdate}
+                        isUpdating={updateVariantMutation.isPending}
+                      />
+                    ))
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          )}
           
           {/* Product Metadata */}
           <div>
@@ -258,6 +428,7 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                 ))}
               </div>
             )}
+          </div>
           </div>
         </div>
       </SheetContent>

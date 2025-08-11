@@ -292,6 +292,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product Variants endpoints
+  app.get("/api/products/:id/variants", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const productId = req.params.id;
+      
+      const variants = await storage.getProductVariants(userId, productId);
+      res.json(variants);
+    } catch (error: any) {
+      console.error("Error fetching product variants:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/variants/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const variantId = req.params.id;
+      const { regularPrice, salePrice } = req.body;
+
+      // Get current variant to track price changes
+      const currentVariant = await storage.getProductVariant(userId, variantId);
+      if (!currentVariant) {
+        return res.status(404).json({ message: "Product variant not found" });
+      }
+
+      // Update variant
+      const updateData: any = {};
+      if (regularPrice !== undefined) updateData.regularPrice = regularPrice;
+      if (salePrice !== undefined) updateData.salePrice = salePrice || null;
+
+      const updatedVariant = await storage.updateProductVariant(userId, variantId, updateData);
+      
+      console.log(`Updated variant ${variantId}`);
+      res.json(updatedVariant);
+    } catch (error: any) {
+      console.error("Error updating product variant:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Work Orders routes
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
