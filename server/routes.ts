@@ -207,6 +207,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/products/:id/price-history", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const productId = req.params.id;
+      
+      // Verify product exists and user has access
+      const product = await storage.getProduct(userId, productId);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const history = await storage.getProductPriceHistory(userId, productId);
+      res.json(history);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Work Orders routes
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {

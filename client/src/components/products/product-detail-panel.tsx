@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { X, History, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Product } from "@shared/schema";
+import { Product, PriceHistory } from "@shared/schema";
+import { format } from "date-fns";
 
 interface ProductDetailPanelProps {
   product: Product | null;
@@ -21,11 +23,23 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
   const [salePrice, setSalePrice] = useState("");
   const { toast } = useToast();
 
+  // Fetch price history for this product
+  const { data: priceHistory, isLoading: historyLoading } = useQuery({
+    queryKey: ["/api/products", product?.id, "price-history"],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const response = await apiRequest("GET", `/api/products/${product.id}/price-history`);
+      return response.json() as Promise<PriceHistory[]>;
+    },
+    enabled: !!product?.id && isOpen,
+  });
+
   const updateMutation = useMutation({
     mutationFn: (data: { regularPrice?: string; salePrice?: string }) =>
       apiRequest("PUT", `/api/products/${product?.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", product?.id, "price-history"] });
       toast({
         title: "Success",
         description: "Product updated successfully",
@@ -172,6 +186,82 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                 </Badge>
               </div>
             </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          {/* Price History */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <History className="h-4 w-4 text-gray-600" />
+              <h5 className="font-medium text-gray-900">Price History</h5>
+            </div>
+            
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : !priceHistory || priceHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                <Clock className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p>No price changes recorded yet</p>
+                <p className="text-xs text-gray-400 mt-1">Price changes will appear here when you update pricing</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {priceHistory.map((entry) => (
+                  <div key={entry.id} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge 
+                        variant={entry.changeType === 'manual' ? 'default' : entry.changeType === 'work_order' ? 'secondary' : 'outline'}
+                        className="text-xs"
+                      >
+                        {entry.changeType === 'manual' ? 'Manual Update' : 
+                         entry.changeType === 'work_order' ? 'Work Order' : 
+                         'System Sync'}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {format(new Date(entry.createdAt!), 'MMM d, h:mm a')}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {/* Regular Price Changes */}
+                      {(entry.oldRegularPrice !== null || entry.newRegularPrice !== null) && (
+                        <div>
+                          <span className="text-gray-600 block mb-1">Regular Price:</span>
+                          <div className="flex items-center gap-2">
+                            {entry.oldRegularPrice && (
+                              <span className="text-gray-500 line-through">${entry.oldRegularPrice}</span>
+                            )}
+                            {entry.newRegularPrice && (
+                              <span className="font-medium text-green-600">${entry.newRegularPrice}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Sale Price Changes */}
+                      {(entry.oldSalePrice !== null || entry.newSalePrice !== null) && (
+                        <div>
+                          <span className="text-gray-600 block mb-1">Sale Price:</span>
+                          <div className="flex items-center gap-2">
+                            {entry.oldSalePrice && (
+                              <span className="text-gray-500 line-through">${entry.oldSalePrice}</span>
+                            )}
+                            {entry.newSalePrice ? (
+                              <span className="font-medium text-blue-600">${entry.newSalePrice}</span>
+                            ) : entry.oldSalePrice && entry.newSalePrice === null && (
+                              <span className="font-medium text-gray-600">Removed</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </SheetContent>

@@ -122,6 +122,21 @@ export const workOrders = pgTable("work_orders", {
   error: text("error"),
 });
 
+// Price history table to track product price changes over time
+export const priceHistory = pgTable("price_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  oldRegularPrice: decimal("old_regular_price", { precision: 10, scale: 2 }),
+  newRegularPrice: decimal("new_regular_price", { precision: 10, scale: 2 }),
+  oldSalePrice: decimal("old_sale_price", { precision: 10, scale: 2 }),
+  newSalePrice: decimal("new_sale_price", { precision: 10, scale: 2 }),
+  changeType: text("change_type").notNull(), // manual, work_order, sync
+  workOrderId: varchar("work_order_id").references(() => workOrders.id),
+  changedBy: varchar("changed_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertCompanySchema = createInsertSchema(companies).pick({
   name: true,
   subscriptionPlan: true,
@@ -193,6 +208,8 @@ export type ProductVariant = typeof productVariants.$inferSelect;
 export type InsertProductVariant = z.infer<typeof insertProductVariantSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
+export type PriceHistory = typeof priceHistory.$inferSelect;
+export type InsertPriceHistory = typeof priceHistory.$inferInsert;
 
 // BigCommerce product type without companyId (used in BigCommerce service)
 export type BigCommerceProduct = Omit<Product, 'companyId'>;

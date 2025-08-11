@@ -5,7 +5,8 @@ import {
   type User, type UpsertUser,
   type Company, type InsertCompany,
   type CompanyInvitation,
-  apiSettings, products, workOrders, users, companies, companyInvitations 
+  type PriceHistory, type InsertPriceHistory,
+  apiSettings, products, workOrders, users, companies, companyInvitations, priceHistory 
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -42,6 +43,10 @@ export interface IStorage {
   updateWorkOrder(userId: string, id: string, updates: Partial<WorkOrder>): Promise<WorkOrder | undefined>;
   deleteWorkOrder(userId: string, id: string): Promise<boolean>;
   getPendingWorkOrders(): Promise<WorkOrder[]>;
+  
+  // Price History
+  createPriceHistory(userId: string, history: InsertPriceHistory): Promise<PriceHistory>;
+  getProductPriceHistory(userId: string, productId: string): Promise<PriceHistory[]>;
 }
 
 // Database storage implementation
@@ -277,6 +282,10 @@ export class DbStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user?.companyId) return undefined;
     
+    // Get the current product to track price changes
+    const currentProduct = await this.getProduct(userId, id);
+    if (!currentProduct) return undefined;
+    
     const result = await this.db
       .update(products)
       .set({
@@ -285,7 +294,28 @@ export class DbStorage implements IStorage {
       })
       .where(and(eq(products.companyId, user.companyId), eq(products.id, id)))
       .returning();
-    return result[0];
+    
+    const updatedProduct = result[0];
+    
+    // Create price history entry if prices changed
+    if (updatedProduct && (updates.regularPrice || updates.salePrice !== undefined)) {
+      const regularPriceChanged = updates.regularPrice && updates.regularPrice !== currentProduct.regularPrice;
+      const salePriceChanged = updates.salePrice !== undefined && updates.salePrice !== currentProduct.salePrice;
+      
+      if (regularPriceChanged || salePriceChanged) {
+        await this.createPriceHistory(userId, {
+          productId: id,
+          companyId: user.companyId,
+          oldRegularPrice: currentProduct.regularPrice,
+          newRegularPrice: regularPriceChanged ? updates.regularPrice : undefined,
+          oldSalePrice: currentProduct.salePrice,
+          newSalePrice: salePriceChanged ? updates.salePrice : undefined,
+          changeType: 'manual',
+        });
+      }
+    }
+    
+    return updatedProduct;
   }
 
   async deleteProduct(userId: string, id: string): Promise<boolean> {
@@ -373,6 +403,32 @@ export class DbStorage implements IStorage {
       .where(and(eq(workOrders.companyId, user.companyId), eq(workOrders.id, id)))
       .returning();
     return result[0];
+  }
+
+  // Price History
+  async createPriceHistory(userId: string, history: InsertPriceHistory): Promise<PriceHistory> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) {
+      throw new Error("User not associated with a company");
+    }
+    
+    const result = await this.db.insert(priceHistory).values({
+      ...history,
+      changedBy: userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getProductPriceHistory(userId: string, productId: string): Promise<PriceHistory[]> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return [];
+    
+    const result = await this.db
+      .select()
+      .from(priceHistory)
+      .where(and(eq(priceHistory.companyId, user.companyId), eq(priceHistory.productId, productId)))
+      .orderBy(desc(priceHistory.createdAt));
+    return result;
   }
 
   async getPendingWorkOrders(): Promise<WorkOrder[]> {
