@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, UserPlus, Mail, Crown, User } from 'lucide-react';
+import { Trash2, UserPlus, Mail, Crown, User, Building2, Edit2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -25,6 +25,8 @@ export default function Team() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isEditingCompanyName, setIsEditingCompanyName] = useState(false);
+  const [companyName, setCompanyName] = useState('');
 
   const form = useForm<ExtendedInvitationSchema>({
     resolver: zodResolver(insertCompanyInvitationSchema.extend({
@@ -50,6 +52,11 @@ export default function Team() {
   // Fetch user's own pending invitations
   const { data: myInvitations = [], isLoading: myInvitationsLoading } = useQuery<any[]>({
     queryKey: ['/api/my-invitations'],
+  });
+
+  // Fetch current user info
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ['/api/auth/user'],
   });
 
   // Send invitation mutation
@@ -120,6 +127,49 @@ export default function Team() {
     },
   });
 
+  // Update company name mutation
+  const updateCompanyNameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest('PUT', '/api/company/name', { name });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Company Name Updated",
+        description: "Company name has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setIsEditingCompanyName(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update company name",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove team member mutation
+  const removeMemberMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest('DELETE', `/api/company/users/${userId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Member Removed",
+        description: "Team member has been removed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/company/users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove team member",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: ExtendedInvitationSchema) => {
     sendInvitationMutation.mutate(data);
   };
@@ -128,6 +178,24 @@ export default function Team() {
     if (confirm('Are you sure you want to cancel this invitation?')) {
       cancelInvitationMutation.mutate(invitationId);
     }
+  };
+
+  const handleRemoveMember = (userId: string, userName: string) => {
+    if (confirm(`Are you sure you want to remove ${userName} from the team? They will be moved to their own company.`)) {
+      removeMemberMutation.mutate(userId);
+    }
+  };
+
+  const handleUpdateCompanyName = () => {
+    if (companyName.trim().length === 0) {
+      toast({
+        title: "Error",
+        description: "Company name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateCompanyNameMutation.mutate(companyName.trim());
   };
 
   const getStatusBadge = (status: string) => {
@@ -159,7 +227,28 @@ export default function Team() {
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Team Management</h1>
+          <div className="flex items-center space-x-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Team Management</h1>
+            {currentUser?.role === 'owner' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCompanyName(currentUser?.company?.name || '');
+                  setIsEditingCompanyName(true);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Building2 className="h-4 w-4 text-gray-500" />
+            <span className="text-gray-600 dark:text-gray-400">
+              {currentUser?.company?.name || 'My Company'}
+            </span>
+          </div>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Manage your team members and send invitations
           </p>
@@ -239,6 +328,46 @@ export default function Team() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Company Name Edit Dialog */}
+      <Dialog open={isEditingCompanyName} onOpenChange={setIsEditingCompanyName}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Company Name</DialogTitle>
+            <DialogDescription>
+              Change your company name. This will be visible to all team members.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Enter company name"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditingCompanyName(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateCompanyName}
+                disabled={updateCompanyNameMutation.isPending}
+              >
+                {updateCompanyNameMutation.isPending ? "Updating..." : "Update Name"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pending Invitations for Current User */}
       {myInvitations.length > 0 && (
@@ -329,6 +458,19 @@ export default function Team() {
                       <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                         {user.role}
                       </Badge>
+                      {(currentUser?.role === 'admin' || currentUser?.role === 'owner') && 
+                       user.role !== 'owner' && 
+                       user.id !== currentUser?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMember(user.id, user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email)}
+                          disabled={removeMemberMutation.isPending}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))

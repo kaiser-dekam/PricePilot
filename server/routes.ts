@@ -769,6 +769,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update company name (owner only)
+  app.put("/api/company/name", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const user = await storage.getUser(userId);
+      const { name } = req.body;
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ message: "User not associated with a company" });
+      }
+
+      if (user.role !== 'owner') {
+        return res.status(403).json({ message: "Only company owners can change the company name" });
+      }
+
+      if (!name || name.trim().length === 0) {
+        return res.status(400).json({ message: "Company name is required" });
+      }
+
+      await storage.updateCompanyName(user.companyId, name.trim());
+      res.json({ message: "Company name updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating company name:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Remove team member (admin/owner only)
+  app.delete("/api/company/users/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user.uid;
+      const { userId } = req.params;
+      const currentUser = await storage.getUser(currentUserId);
+      const targetUser = await storage.getUser(userId);
+      
+      if (!currentUser?.companyId) {
+        return res.status(400).json({ message: "User not associated with a company" });
+      }
+
+      if (!['admin', 'owner'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: "Only admins and owners can remove team members" });
+      }
+
+      if (!targetUser || targetUser.companyId !== currentUser.companyId) {
+        return res.status(404).json({ message: "User not found in your company" });
+      }
+
+      if (targetUser.role === 'owner') {
+        return res.status(403).json({ message: "Cannot remove the company owner" });
+      }
+
+      if (currentUserId === userId) {
+        return res.status(400).json({ message: "You cannot remove yourself" });
+      }
+
+      await storage.removeUserFromCompany(userId);
+      res.json({ message: "User removed from company successfully" });
+    } catch (error: any) {
+      console.error("Error removing user from company:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Initialize scheduler to restore pending work orders
   scheduler.init().catch(console.error);
 

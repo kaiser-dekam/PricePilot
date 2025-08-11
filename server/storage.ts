@@ -69,6 +69,8 @@ export interface IStorage {
   
   // Company operations
   getCompany(id: string): Promise<Company | undefined>;
+  updateCompanyName(companyId: string, name: string): Promise<void>;
+  removeUserFromCompany(userId: string): Promise<void>;
 }
 
 // Database storage implementation
@@ -551,14 +553,32 @@ export class DbStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  // Company operations
-  async getCompany(id: string): Promise<Company | undefined> {
-    const result = await this.db
-      .select()
-      .from(companies)
-      .where(eq(companies.id, id))
-      .limit(1);
-    return result[0];
+
+
+  async updateCompanyName(companyId: string, name: string): Promise<void> {
+    await this.db
+      .update(companies)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(companies.id, companyId));
+  }
+
+  async removeUserFromCompany(userId: string): Promise<void> {
+    // Create a new company for the user when they're removed
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    const newCompany = await this.createCompany({
+      name: user.email || 'My Company'
+    });
+
+    await this.db
+      .update(users)
+      .set({ 
+        companyId: newCompany.id, 
+        role: 'owner',
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
   }
 
   // Product Variants

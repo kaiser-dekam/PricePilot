@@ -11,6 +11,22 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### January 27, 2025
+- **Added Team Management Features**: Enhanced team administration with comprehensive user management capabilities
+  - **FEATURE**: Company owners can now edit and update company names through the Team page
+  - **FEATURE**: Admins and owners can remove team members (except owners cannot be removed)
+  - **BACKEND**: Added API endpoints for updating company names and removing team members 
+  - **SECURITY**: Proper role-based permissions - only admins/owners can remove members, only owners can change company names
+  - **UX**: When users are removed, they automatically get their own new company to continue working independently
+  - **UI**: Clean interface with edit button next to company name and remove buttons for eligible team members
+- **Completed Enhanced Invitation Workflow**: Finalized the manual invitation acceptance system
+  - **WORKFLOW**: Users must create accounts first, then manually accept invitations through Team page
+  - **UI**: Added prominent pending invitations section with company names and accept buttons
+  - **BACKEND**: Created /api/my-invitations endpoint for users to view their pending invitations
+  - **UX**: Invitation links now direct users to Team page instead of auto-accepting
+  - **EMAIL**: SendGrid integration working with verified sender and dynamic template
+  - Once accepted, users gain immediate access to shared company resources (API settings, products, work orders)
+
+### January 27, 2025
 - **Fixed Price History Duplicate Entries Bug**: Resolved issue where manual price updates created double history entries
   - **BUG FIX**: Modified storage.updateProduct to accept skipPriceHistory parameter to prevent automatic price tracking
   - API routes now explicitly control price history creation to avoid duplicates from both route and storage layers
