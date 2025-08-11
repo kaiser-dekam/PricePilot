@@ -714,8 +714,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a company" });
       }
 
-      if (user.role !== 'admin') {
-        return res.status(403).json({ message: "Only company admins can cancel invitations" });
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        return res.status(403).json({ message: "Only company admins and owners can cancel invitations" });
       }
 
       await storage.deleteInvitation(id);

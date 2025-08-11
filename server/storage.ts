@@ -61,6 +61,9 @@ export interface IStorage {
   createInvitation(invitation: { companyId: string; email: string; role: string; invitedBy: string; token: string; expiresAt: Date }): Promise<CompanyInvitation>;
   getCompanyInvitations(companyId: string): Promise<CompanyInvitation[]>;
   getInvitationByToken(token: string): Promise<CompanyInvitation | undefined>;
+  deleteInvitation(id: string): Promise<void>;
+  updateInvitationStatus(token: string, status: string): Promise<void>;
+  updateUserCompany(userId: string, companyId: string, role: string): Promise<void>;
 }
 
 // Database storage implementation
