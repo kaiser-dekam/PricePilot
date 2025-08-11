@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Mail, Eye, EyeOff } from "lucide-react";
+import { useLocation } from "wouter";
 import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 export default function Login() {
@@ -14,6 +16,15 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      setLocation("/");
+    }
+  }, [isAuthenticated, authLoading, setLocation]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +37,7 @@ export default function Login() {
         title: "Success",
         description: "Successfully signed in with email",
       });
+      // Redirect will happen via useEffect when auth state changes
     } catch (error: any) {
       toast({
         title: "Error",
@@ -46,6 +58,7 @@ export default function Login() {
         title: "Success",
         description: "Successfully signed in with Google",
       });
+      // Redirect will happen via useEffect when auth state changes
     } catch (error: any) {
       toast({
         title: "Error",
@@ -56,6 +69,18 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
