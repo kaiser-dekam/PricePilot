@@ -156,7 +156,12 @@ export class BigCommerceService {
       }
       
       if (updates.salePrice !== undefined) {
-        updateData.sale_price = updates.salePrice ? parseFloat(updates.salePrice) : '';
+        if (updates.salePrice && updates.salePrice.toString().trim() !== '') {
+          updateData.sale_price = parseFloat(updates.salePrice.toString());
+        } else {
+          // To clear sale price, we need to set it to 0 (BigCommerce doesn't accept null or empty string)
+          updateData.sale_price = 0;
+        }
       }
 
       console.log(`BigCommerce API - Updating product ${id} with payload:`, updateData);

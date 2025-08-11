@@ -188,7 +188,7 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
       updates.regularPrice = regularPrice;
     }
     if (salePrice !== product.salePrice) {
-      updates.salePrice = salePrice || null;
+      updates.salePrice = salePrice.trim() === "" ? null : salePrice;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -216,7 +216,7 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
     }
     
     if (updates.salePrice !== undefined && updates.salePrice !== (variant.salePrice?.toString() || "")) {
-      filteredUpdates.salePrice = updates.salePrice;
+      filteredUpdates.salePrice = updates.salePrice.trim() === "" ? undefined : updates.salePrice;
     }
 
     if (Object.keys(filteredUpdates).length === 0) {
