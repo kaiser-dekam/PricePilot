@@ -6,6 +6,7 @@ import { randomBytes } from "crypto";
 import { BigCommerceService } from "./services/bigcommerce";
 import { scheduler } from "./services/scheduler";
 import { isAuthenticated } from "./firebaseAuth";
+import { sendInvitationEmail } from "./services/email";
 import Stripe from "stripe";
 
 // Initialize Stripe
@@ -576,8 +577,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt,
       });
 
+      // Get company information for email
+      const company = await storage.getCompany(user.companyId);
+      const inviterName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.email || 'A team member';
+      
+      // Create invitation URL (you'll need to adjust the domain for production)
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://your-production-domain.com' 
+        : 'http://localhost:5000';
+      const invitationUrl = `${baseUrl}/accept-invitation?token=${token}`;
+
+      // Send invitation email
+      const emailSent = await sendInvitationEmail({
+        to: validatedData.email,
+        inviterName,
+        companyName: company?.name || 'Your Company',
+        role: validatedData.role || 'member',
+        invitationUrl,
+      });
+
+      if (!emailSent) {
+        console.warn(`Failed to send invitation email to ${validatedData.email}`);
+      }
+
       res.json({ 
         message: "Invitation sent successfully",
+        emailSent,
         invitation: {
           id: invitation.id,
           email: invitation.email,
@@ -608,6 +635,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invitations);
     } catch (error: any) {
       console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get invitation details by token (public endpoint for email links)
+  app.get("/api/invitations/:token", async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const invitation = await storage.getInvitationByToken(token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found or expired" });
+      }
+
+      // Get company info for display
+      const company = await storage.getCompany(invitation.companyId);
+      
+      res.json({
+        invitation: {
+          id: invitation.id,
+          companyName: company?.name || 'Unknown Company',
+          email: invitation.email,
+          role: invitation.role,
+          status: invitation.status,
+          expiresAt: invitation.expiresAt,
+          inviterEmail: invitation.invitedBy, // You might want to get the actual email
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching invitation details:", error);
       res.status(500).json({ message: error.message });
     }
   });

@@ -56,6 +56,11 @@ export interface IStorage {
   // Price History
   createPriceHistory(userId: string, history: InsertPriceHistory): Promise<PriceHistory>;
   getProductPriceHistory(userId: string, productId: string): Promise<PriceHistory[]>;
+  
+  // Company Invitations
+  createInvitation(invitation: { companyId: string; email: string; role: string; invitedBy: string; token: string; expiresAt: Date }): Promise<CompanyInvitation>;
+  getCompanyInvitations(companyId: string): Promise<CompanyInvitation[]>;
+  getInvitationByToken(token: string): Promise<CompanyInvitation | undefined>;
 }
 
 // Database storage implementation
