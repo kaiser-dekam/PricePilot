@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import { ShoppingCart, ClipboardList, Settings, LogOut } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function Home() {
-  const { user } = useAuth() as { user: User | undefined };
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -15,10 +15,10 @@ export default function Home() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Welcome back{user?.firstName ? `, ${user.firstName}` : ''}!
+              Welcome back{(user as any)?.firstName ? `, ${(user as any).firstName}` : ''}!
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
-              Manage your BigCommerce products and work orders
+              Manage your store products and work orders with Catalog Pilot
             </p>
           </div>
           <Button 
@@ -37,7 +37,7 @@ export default function Home() {
             <Card className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5 text-blue-600" />
+                  <ShoppingCart className="h-5 w-5 text-primary" />
                   Products
                 </CardTitle>
               </CardHeader>
@@ -54,7 +54,7 @@ export default function Home() {
             <Card className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5 text-green-600" />
+                  <ClipboardList className="h-5 w-5 text-accent" />
                   Work Orders
                 </CardTitle>
               </CardHeader>
@@ -71,7 +71,7 @@ export default function Home() {
             <Card className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-purple-600" />
+                  <Settings className="h-5 w-5 text-destructive" />
                   Settings
                 </CardTitle>
               </CardHeader>

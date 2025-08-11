@@ -1,4 +1,4 @@
-# BigCommerce Product Manager
+# Catalog Pilot - BigCommerce Product Manager
 
 ## Overview
 
@@ -9,6 +9,22 @@ This is a full-stack web application designed to manage BigCommerce products and
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
+
+### January 27, 2025
+- **Integrated Catalog Pilot Brand Identity**: Complete visual rebrand with logo and brand colors
+  - **LOGO**: Added Catalog Pilot logo throughout the application (sidebar, landing page, headers)
+  - **COLORS**: Updated brand colors to match logo palette - Primary: #6792FF (blue), Accent: #53E590 (green), Destructive: #FD7572 (coral)
+  - **BRANDING**: Updated all page titles and descriptions to use "Catalog Pilot" instead of generic names
+  - **DESIGN**: Applied brand colors consistently to buttons, icons, and UI elements across all pages
+  - **LANDING**: Enhanced landing page with logo prominence and brand-consistent feature icons
+  - **SIDEBAR**: Added logo to navigation sidebar with proper branding display
+- **Completed Stock Status Visibility Feature**: User-controlled stock information display settings
+  - **FEATURE**: Added toggle switch in Settings page for "Display Stock Status" (defaults to off)
+  - **DATABASE**: Added showStockStatus field to api_settings table with proper validation
+  - **UI**: Stock badges (In Stock, Low Stock, Out of Stock) now conditionally display based on user preference
+  - **UX**: When disabled, stock information is completely hidden from product cards for cleaner interface
+  - **BACKEND**: Updated API settings schema and storage to properly handle the new field
+  - Setting persists per company and applies immediately across the product listing interface
 
 ### January 27, 2025
 - **Added Team Management Features**: Enhanced team administration with comprehensive user management capabilities

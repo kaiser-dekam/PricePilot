@@ -3,6 +3,7 @@ import { Package, ClipboardList, Settings, Wifi, Crown, Users } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 export default function Sidebar() {
   const [location] = useLocation();
@@ -55,8 +56,15 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-white shadow-lg border-r border-gray-200">
       <div className="p-6 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">BigCommerce Manager</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <div className="flex items-center space-x-3 mb-2">
+          <img 
+            src={logoPath} 
+            alt="Catalog Pilot" 
+            className="h-8 w-auto object-contain"
+          />
+          <h1 className="text-lg font-bold text-gray-900">Catalog Pilot</h1>
+        </div>
+        <p className="text-sm text-gray-500">
           {isConnected ? "Connected Store" : "Not Connected"}
         </p>
       </div>

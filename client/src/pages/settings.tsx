@@ -118,7 +118,7 @@ export default function Settings() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-            <p className="text-sm text-gray-500 mt-1">Configure your BigCommerce API connection</p>
+            <p className="text-sm text-gray-500 mt-1">Configure your BigCommerce API connection and preferences</p>
           </div>
           <Button
             onClick={handleLogout}

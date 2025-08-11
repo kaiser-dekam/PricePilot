@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, BarChart3, Clock, Shield } from "lucide-react";
 import { signInWithGoogle } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 export default function Landing() {
   const { toast } = useToast();
@@ -27,8 +28,15 @@ export default function Landing() {
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-16">
+          <div className="flex justify-center mb-8">
+            <img 
+              src={logoPath} 
+              alt="Catalog Pilot" 
+              className="h-20 md:h-24 object-contain"
+            />
+          </div>
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            BigCommerce Product Manager
+            Catalog Pilot
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
             Streamline your BigCommerce store management with powerful tools for product sync, 
@@ -46,7 +54,7 @@ export default function Landing() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <ShoppingCart className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <ShoppingCart className="h-12 w-12 text-primary mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Product Sync
             </h3>
@@ -56,7 +64,7 @@ export default function Landing() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <BarChart3 className="h-12 w-12 text-green-600 mx-auto mb-4" />
+            <BarChart3 className="h-12 w-12 text-accent mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Bulk Price Updates
             </h3>
@@ -66,7 +74,7 @@ export default function Landing() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <Clock className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+            <Clock className="h-12 w-12 text-primary mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Scheduled Work Orders
             </h3>
@@ -76,7 +84,7 @@ export default function Landing() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-            <Shield className="h-12 w-12 text-red-600 mx-auto mb-4" />
+            <Shield className="h-12 w-12 text-destructive mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               Secure & Reliable
             </h3>

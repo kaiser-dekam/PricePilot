@@ -103,7 +103,7 @@ export default function Products() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Products</h2>
-            <p className="text-sm text-gray-500 mt-1">Manage your BigCommerce store products</p>
+            <p className="text-sm text-gray-500 mt-1">Manage your store products and inventory</p>
           </div>
           
           <div className="flex items-center space-x-3">
