@@ -66,7 +66,6 @@ function Router() {
               alt="Catalog Pilot"
               className="h-6 w-auto object-contain"
             />
-            <span className="text-lg font-bold text-gray-900">Catalog Pilot</span>
           </div>
         </div>
         
