@@ -32,7 +32,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      res.json(user);
+      // Fetch company info if user has a companyId
+      let userWithCompany = user;
+      if (user.companyId) {
+        const company = await storage.getCompany(user.companyId);
+        userWithCompany = { ...user, company };
+      }
+      
+      res.json(userWithCompany);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -780,8 +787,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a company" });
       }
 
-      if (user.role !== 'owner') {
-        return res.status(403).json({ message: "Only company owners can change the company name" });
+      if (user.role !== 'owner' && user.role !== 'admin') {
+        return res.status(403).json({ message: "Only company owners and admins can change the company name" });
       }
 
       if (!name || name.trim().length === 0) {

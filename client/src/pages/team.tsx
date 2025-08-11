@@ -58,6 +58,11 @@ export default function Team() {
   const { data: currentUser } = useQuery<any>({
     queryKey: ['/api/auth/user'],
   });
+  
+  // Debug: Log current user data
+  console.log('Current user data:', currentUser);
+  console.log('Current user role:', currentUser?.role);
+  console.log('Users data:', users);
 
   // Send invitation mutation
   const sendInvitationMutation = useMutation({
@@ -229,7 +234,7 @@ export default function Team() {
         <div>
           <div className="flex items-center space-x-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Team Management</h1>
-            {currentUser?.role === 'owner' && (
+            {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -238,6 +243,7 @@ export default function Team() {
                   setIsEditingCompanyName(true);
                 }}
                 className="text-gray-500 hover:text-gray-700"
+                title="Edit company name"
               >
                 <Edit2 className="h-4 w-4" />
               </Button>
@@ -246,8 +252,13 @@ export default function Team() {
           <div className="flex items-center space-x-2">
             <Building2 className="h-4 w-4 text-gray-500" />
             <span className="text-gray-600 dark:text-gray-400">
-              {currentUser?.company?.name || 'My Company'}
+              {currentUser?.company?.name || 'Loading...'}
             </span>
+            {currentUser?.role && (
+              <Badge variant="outline" className="ml-2">
+                {currentUser.role}
+              </Badge>
+            )}
           </div>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Manage your team members and send invitations
@@ -466,7 +477,8 @@ export default function Team() {
                           size="sm"
                           onClick={() => handleRemoveMember(user.id, user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email)}
                           disabled={removeMemberMutation.isPending}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Remove team member"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
