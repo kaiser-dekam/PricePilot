@@ -30,8 +30,11 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
 
     await sgMail.send(msg);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('SendGrid email error:', error);
+    if (error.response && error.response.body) {
+      console.error('SendGrid error details:', JSON.stringify(error.response.body, null, 2));
+    }
     return false;
   }
 }
