@@ -61,9 +61,14 @@ export interface IStorage {
   createInvitation(invitation: { companyId: string; email: string; role: string; invitedBy: string; token: string; expiresAt: Date }): Promise<CompanyInvitation>;
   getCompanyInvitations(companyId: string): Promise<CompanyInvitation[]>;
   getInvitationByToken(token: string): Promise<CompanyInvitation | undefined>;
+  getInvitationById(id: string): Promise<CompanyInvitation | undefined>;
   deleteInvitation(id: string): Promise<void>;
   updateInvitationStatus(token: string, status: string): Promise<void>;
   updateUserCompany(userId: string, companyId: string, role: string): Promise<void>;
+  getUserInvitations(email: string): Promise<CompanyInvitation[]>;
+  
+  // Company operations
+  getCompany(id: string): Promise<Company | undefined>;
 }
 
 // Database storage implementation
@@ -493,6 +498,27 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getInvitationById(id: string): Promise<CompanyInvitation | undefined> {
+    const result = await this.db
+      .select()
+      .from(companyInvitations)
+      .where(eq(companyInvitations.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getUserInvitations(email: string): Promise<CompanyInvitation[]> {
+    const result = await this.db
+      .select()
+      .from(companyInvitations)
+      .where(and(
+        eq(companyInvitations.email, email),
+        eq(companyInvitations.status, 'pending')
+      ))
+      .orderBy(desc(companyInvitations.createdAt));
+    return result;
+  }
+
   async updateInvitationStatus(token: string, status: string): Promise<void> {
     await this.db
       .update(companyInvitations)
@@ -523,6 +549,16 @@ export class DbStorage implements IStorage {
       .update(users)
       .set({ companyId, role, updatedAt: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  // Company operations
+  async getCompany(id: string): Promise<Company | undefined> {
+    const result = await this.db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, id))
+      .limit(1);
+    return result[0];
   }
 
   // Product Variants

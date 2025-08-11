@@ -111,7 +111,7 @@ export default function AcceptInvitation() {
               You need to sign in to accept this invitation to join <strong>{invitation?.companyName}</strong>.
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              After signing in, you'll be able to accept the invitation and join the company.
+              After signing in, go to the Team page to accept your pending invitations.
             </p>
             <Button onClick={() => window.location.href = '/api/login'}>
               Sign In
@@ -127,7 +127,7 @@ export default function AcceptInvitation() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-          <CardTitle>Company Invitation</CardTitle>
+          <CardTitle>Invitation Link</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center">
@@ -140,6 +140,15 @@ export default function AcceptInvitation() {
             <Badge variant="secondary" className="mb-4">
               Role: {invitation?.role}
             </Badge>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <p className="text-blue-800 text-sm font-medium mb-2">
+              ✓ You're signed in!
+            </p>
+            <p className="text-blue-700 text-sm">
+              Go to the <strong>Team</strong> page to accept your pending invitations and join the company.
+            </p>
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -163,29 +172,12 @@ export default function AcceptInvitation() {
             )}
           </div>
 
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setLocation('/')} 
-              variant="outline" 
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => acceptMutation.mutate()}
-              disabled={acceptMutation.isPending || invitation?.status !== 'pending'}
-              className="flex-1"
-            >
-              {acceptMutation.isPending ? (
-                <>
-                  <Clock className="w-4 h-4 mr-2 animate-spin" />
-                  Accepting...
-                </>
-              ) : (
-                'Accept Invitation'
-              )}
-            </Button>
-          </div>
+          <Button 
+            onClick={() => setLocation('/team')} 
+            className="w-full"
+          >
+            Go to Team Page
+          </Button>
         </CardContent>
       </Card>
     </div>

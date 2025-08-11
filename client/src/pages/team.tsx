@@ -42,9 +42,14 @@ export default function Team() {
     queryKey: ['/api/company/users'],
   });
 
-  // Fetch pending invitations
+  // Fetch pending invitations (for admin/owner view)
   const { data: invitations = [], isLoading: invitationsLoading } = useQuery<any[]>({
     queryKey: ['/api/invitations'],
+  });
+
+  // Fetch user's own pending invitations
+  const { data: myInvitations = [], isLoading: myInvitationsLoading } = useQuery<any[]>({
+    queryKey: ['/api/my-invitations'],
   });
 
   // Send invitation mutation
@@ -91,6 +96,30 @@ export default function Team() {
     },
   });
 
+  // Accept invitation mutation  
+  const acceptInvitationMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      return await apiRequest('POST', `/api/invitations/${invitationId}/accept`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invitation Accepted",
+        description: "You've successfully joined the company!",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/my-invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] }); // Refresh user data
+      // Refresh the page to show new company data
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to accept invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: ExtendedInvitationSchema) => {
     sendInvitationMutation.mutate(data);
   };
@@ -118,7 +147,7 @@ export default function Team() {
     return role === 'admin' ? <Crown className="h-4 w-4" /> : <User className="h-4 w-4" />;
   };
 
-  if (usersLoading || invitationsLoading) {
+  if (usersLoading || invitationsLoading || myInvitationsLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -210,6 +239,46 @@ export default function Team() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Pending Invitations for Current User */}
+      {myInvitations.length > 0 && (
+        <Card className="mb-8 bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-blue-800">
+              <Mail className="h-5 w-5" />
+              <span>Pending Invitations ({myInvitations.length})</span>
+            </CardTitle>
+            <CardDescription className="text-blue-700">
+              You have pending invitations to join companies. Accept them to access shared resources.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {myInvitations.map((invitation: any) => (
+                <div key={invitation.id} className="flex items-center justify-between p-4 bg-white border border-blue-200 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {invitation.companyName}
+                    </p>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                      <span>Role: {invitation.role}</span>
+                      <span>•</span>
+                      <span>Expires: {new Date(invitation.expiresAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => acceptInvitationMutation.mutate(invitation.id)}
+                    disabled={acceptInvitationMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {acceptInvitationMutation.isPending ? "Accepting..." : "Accept Invitation"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Current Team Members */}

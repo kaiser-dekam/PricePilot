@@ -622,6 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get company invitations (for admin/owner view)
   app.get("/api/invitations", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
@@ -635,6 +636,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invitations);
     } catch (error: any) {
       console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get pending invitations for current user's email
+  app.get("/api/my-invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.email;
+      const invitations = await storage.getUserInvitations(userEmail);
+      
+      // Add company names to invitations
+      const invitationsWithCompany = await Promise.all(
+        invitations.map(async (invitation) => {
+          const company = await storage.getCompany(invitation.companyId);
+          return {
+            ...invitation,
+            companyName: company?.name || 'Unknown Company'
+          };
+        })
+      );
+      
+      res.json(invitationsWithCompany);
+    } catch (error: any) {
+      console.error("Error fetching user invitations:", error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -669,12 +694,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/invitations/:token/accept", isAuthenticated, async (req: any, res) => {
+  // Accept invitation from Team page (user must be logged in and manually accept)
+  app.post("/api/invitations/:id/accept", isAuthenticated, async (req: any, res) => {
     try {
-      const { token } = req.params;
+      const { id } = req.params;
       const userId = req.user.uid;
       
-      const invitation = await storage.getInvitationByToken(token);
+      const invitation = await storage.getInvitationById(id);
       if (!invitation) {
         return res.status(404).json({ message: "Invitation not found" });
       }
@@ -695,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserCompany(userId, invitation.companyId, invitation.role || 'member');
       
       // Mark invitation as accepted
-      await storage.updateInvitationStatus(token, 'accepted');
+      await storage.updateInvitationStatus(invitation.token, 'accepted');
 
       res.json({ message: "Invitation accepted successfully" });
     } catch (error: any) {
