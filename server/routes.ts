@@ -231,13 +231,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Update product in BigCommerce
           const updateData: any = {};
-          if (regularPrice !== undefined) updateData.price = parseFloat(regularPrice);
-          if (salePrice !== undefined) updateData.sale_price = salePrice ? parseFloat(salePrice) : 0;
+          if (regularPrice !== undefined) updateData.regularPrice = regularPrice;
+          if (salePrice !== undefined) updateData.salePrice = salePrice || null;
 
+          console.log(`Updating product ${productId} in BigCommerce with:`, updateData);
           await bigcommerce.updateProduct(productId, updateData);
+          console.log(`Successfully updated product ${productId} in BigCommerce`);
         } catch (error: any) {
           console.error("Failed to update product in BigCommerce:", error);
-          return res.status(500).json({ message: "Failed to update product in BigCommerce" });
+          return res.status(500).json({ message: "Failed to update product in BigCommerce: " + error.message });
         }
       }
 

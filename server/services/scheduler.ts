@@ -113,13 +113,15 @@ class SchedulerService {
         try {
           const updateData: any = {};
           if (update.newRegularPrice) {
-            updateData.price = parseFloat(update.newRegularPrice);
+            updateData.regularPrice = update.newRegularPrice;
           }
           if (update.newSalePrice) {
-            updateData.sale_price = parseFloat(update.newSalePrice);
+            updateData.salePrice = update.newSalePrice;
           }
 
+          console.log(`Work Order - Updating product ${update.productId} in BigCommerce with:`, updateData);
           await bigcommerce.updateProduct(update.productId, updateData);
+          console.log(`Work Order - Successfully updated product ${update.productId} in BigCommerce`);
           
           // Update product in our database
           await storage.updateProduct(workOrder.createdBy, update.productId, {
