@@ -18,7 +18,7 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
   try {
     const msg = {
       to: data.to,
-      from: 'noreply@yourdomain.com', // Replace with your verified SendGrid sender email
+      from: process.env.SENDGRID_VERIFIED_SENDER_EMAIL!,
       templateId: 'd-e6ed096042054279a7b3282d95046708',
       dynamicTemplateData: {
         inviterName: data.inviterName,
