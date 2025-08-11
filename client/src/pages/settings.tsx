@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +14,7 @@ export default function Settings() {
   const [storeHash, setStoreHash] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [clientId, setClientId] = useState("");
+  const [showStockStatus, setShowStockStatus] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -62,6 +64,7 @@ export default function Settings() {
       setStoreHash((settings as any).storeHash || "");
       setAccessToken((settings as any).accessToken || "");
       setClientId((settings as any).clientId || "");
+      setShowStockStatus((settings as any).showStockStatus || false);
     }
   }, [settings]);
 
@@ -81,6 +84,7 @@ export default function Settings() {
       storeHash: storeHash.trim(),
       accessToken: accessToken.trim(),
       clientId: clientId.trim(),
+      showStockStatus,
     });
   };
 
@@ -179,6 +183,22 @@ export default function Settings() {
                   <p className="text-xs text-gray-500 mt-1">
                     Your app's client identifier
                   </p>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="showStockStatus">Display Stock Status</Label>
+                      <p className="text-xs text-gray-500">
+                        Show stock levels and inventory status in product listings
+                      </p>
+                    </div>
+                    <Switch
+                      id="showStockStatus"
+                      checked={showStockStatus}
+                      onCheckedChange={setShowStockStatus}
+                    />
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-end space-x-3 pt-4">

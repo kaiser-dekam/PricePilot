@@ -63,6 +63,7 @@ export const apiSettings = pgTable("api_settings", {
   accessToken: text("access_token").notNull(),
   clientId: text("client_id").notNull(),
   showStock: boolean("show_stock").default(false),
+  showStockStatus: boolean("show_stock_status").default(false),
   lastSyncAt: timestamp("last_sync_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -148,6 +149,7 @@ export const insertApiSettingsSchema = createInsertSchema(apiSettings).pick({
   accessToken: true,
   clientId: true,
   showStock: true,
+  showStockStatus: true,
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

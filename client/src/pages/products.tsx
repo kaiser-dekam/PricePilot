@@ -35,6 +35,7 @@ export default function Products() {
   });
 
   const isApiConnected = !!apiSettings;
+  const showStockStatus = (apiSettings as any)?.showStockStatus || false;
 
   const syncMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/sync"),
@@ -217,6 +218,7 @@ export default function Products() {
                     key={product.id}
                     product={product}
                     onClick={() => handleProductClick(product)}
+                    showStockStatus={showStockStatus}
                   />
                 ))}
               </div>
