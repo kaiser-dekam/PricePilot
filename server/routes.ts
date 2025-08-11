@@ -207,6 +207,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/products/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const productId = req.params.id;
+      const { regularPrice, salePrice } = req.body;
+
+      // Get current product to track price changes
+      const currentProduct = await storage.getProduct(userId, productId);
+      if (!currentProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Get API settings to update BigCommerce if configured
+      const apiSettings = await storage.getApiSettings(userId);
+      if (apiSettings && apiSettings.storeHash && apiSettings.accessToken) {
+        try {
+          const bigcommerce = new BigCommerceService({
+            storeHash: apiSettings.storeHash,
+            accessToken: apiSettings.accessToken,
+            clientId: apiSettings.clientId
+          });
+
+          // Update product in BigCommerce
+          const updateData: any = {};
+          if (regularPrice !== undefined) updateData.price = parseFloat(regularPrice);
+          if (salePrice !== undefined) updateData.sale_price = salePrice ? parseFloat(salePrice) : 0;
+
+          await bigcommerce.updateProduct(productId, updateData);
+        } catch (error: any) {
+          console.error("Failed to update product in BigCommerce:", error);
+          return res.status(500).json({ message: "Failed to update product in BigCommerce" });
+        }
+      }
+
+      // Update product in local database
+      const updateData: any = {};
+      if (regularPrice !== undefined) updateData.regularPrice = regularPrice;
+      if (salePrice !== undefined) updateData.salePrice = salePrice || null;
+
+      const updatedProduct = await storage.updateProduct(userId, productId, updateData);
+      
+      // Record price history
+      const hasRegularPriceChange = regularPrice !== undefined && regularPrice !== currentProduct.regularPrice;
+      const hasSalePriceChange = salePrice !== undefined && (salePrice || null) !== (currentProduct.salePrice || null);
+      
+      if (hasRegularPriceChange || hasSalePriceChange) {
+        await storage.createPriceHistory(userId, {
+          productId,
+          companyId: currentProduct.companyId,
+          oldRegularPrice: hasRegularPriceChange ? currentProduct.regularPrice : undefined,
+          newRegularPrice: hasRegularPriceChange ? regularPrice : undefined,
+          oldSalePrice: hasSalePriceChange ? (currentProduct.salePrice || null) : undefined,
+          newSalePrice: hasSalePriceChange ? (salePrice || null) : undefined,
+          changeType: 'manual',
+        });
+      }
+
+      console.log(`Updated product ${productId}`);
+      res.json(updatedProduct);
+    } catch (error: any) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/products/:id/price-history", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;

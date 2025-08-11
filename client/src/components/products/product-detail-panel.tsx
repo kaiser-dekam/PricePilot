@@ -107,10 +107,6 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
           <div>
             <h4 className="font-semibold text-gray-900 mb-2">{product.name}</h4>
             <p className="text-sm text-gray-500 mb-4">{product.category || 'Uncategorized'}</p>
-            
-            <div className="prose prose-sm text-gray-600">
-              <p>{product.description || 'No description available'}</p>
-            </div>
           </div>
           
           {/* Pricing Section */}
