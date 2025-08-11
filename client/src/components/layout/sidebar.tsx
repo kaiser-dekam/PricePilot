@@ -89,11 +89,13 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <img
-                src={logoPath}
-                alt="Catalog Pilot"
-                className="h-8 w-auto object-contain"
-              />
+              <Link href="/">
+                <img
+                  src={logoPath}
+                  alt="Catalog Pilot"
+                  className="h-8 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </Link>
             </div>
             {/* Mobile close button */}
             <Button
