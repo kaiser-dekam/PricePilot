@@ -429,6 +429,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                           {/* Only show dropdown arrow if product has multiple variants */}
                           {variantCount > 1 ? (
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleProductExpansion(product.id)}
