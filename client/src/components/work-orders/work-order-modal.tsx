@@ -229,6 +229,19 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setDiscountValue("");
   };
 
+  // Remove all sale prices from selected products/variants
+  const removeSalePrices = () => {
+    setProductUpdates(prev => prev.map(update => ({
+      ...update,
+      newSalePrice: ""
+    })));
+    
+    toast({
+      title: "Sale Prices Removed",
+      description: `Cleared sale prices from ${productUpdates.length} selected items`,
+    });
+  };
+
   const handleProductToggle = (productId: string, checked: boolean) => {
     if (checked) {
       setSelectedProducts(prev => [...prev, productId]);
@@ -570,6 +583,20 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                     disabled={!discountValue || productUpdates.length === 0}
                   >
                     Apply Discount
+                  </Button>
+                </div>
+                
+                {/* Additional Bulk Actions */}
+                <div className="flex gap-2 mt-3 pt-3 border-t border-blue-200">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={removeSalePrices}
+                    disabled={productUpdates.length === 0}
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Remove All Sale Prices
                   </Button>
                 </div>
               </div>
