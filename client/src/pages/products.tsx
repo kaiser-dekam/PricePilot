@@ -16,6 +16,7 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
@@ -31,7 +32,7 @@ export default function Products() {
       search, 
       category: category === "all" ? undefined : category, 
       page, 
-      limit: 20 
+      limit 
     }],
     enabled: true,
     staleTime: 0, // Always refetch when query changes
@@ -138,7 +139,7 @@ export default function Products() {
 
   const products: Product[] = (productsData as any)?.products || [];
   const total = (productsData as any)?.total || 0;
-  const totalPages = Math.ceil(total / 20);
+  const totalPages = Math.ceil(total / limit);
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -317,8 +318,28 @@ export default function Products() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-sm text-gray-600 text-center sm:text-left">
-                    Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of {total} products
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="text-sm text-gray-600 text-center sm:text-left">
+                      Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} products
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Show:</span>
+                      <Select value={limit.toString()} onValueChange={(value) => {
+                        setLimit(parseInt(value));
+                        setPage(1); // Reset to first page when changing limit
+                      }}>
+                        <SelectTrigger className="w-20 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="200">200</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-2">

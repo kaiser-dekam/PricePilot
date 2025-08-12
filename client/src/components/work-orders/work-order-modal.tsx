@@ -42,6 +42,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [loadedVariants, setLoadedVariants] = useState<Record<string, ProductVariant[]>>({});
   const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [showSelectAllProducts, setShowSelectAllProducts] = useState(false);
   
   // Bulk discount states
   const [discountType, setDiscountType] = useState("percentage"); // "percentage" or "amount"
@@ -172,6 +173,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setLoadedVariants({});
     setVariantCounts({});
     setShowValidationErrors(false);
+    setShowSelectAllProducts(false);
     setDiscountType("percentage");
     setDiscountValue("");
     setPriceType("regular");
@@ -487,10 +489,111 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                   }
                   
                   setProductUpdates(newUpdates);
+                  
+                  // Show the "Select All Products" option if visible products < total products
+                  if (filteredProducts.length < products.length) {
+                    setShowSelectAllProducts(true);
+                  }
                 }}
               >
                 Select All Visible ({filteredProducts.length})
               </Button>
+              
+              {showSelectAllProducts && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="text-blue-600 hover:text-blue-800 px-2"
+                  onClick={async () => {
+                    // Fetch ALL products from the API, not just the ones passed in
+                    toast({
+                      title: "Loading All Products",
+                      description: "Fetching all products to add to work order...",
+                    });
+                    
+                    try {
+                      let allProducts: Product[] = [];
+                      let page = 1;
+                      let hasMorePages = true;
+                      
+                      // Fetch all products by paginating through all pages
+                      while (hasMorePages) {
+                        const response = await apiRequest("GET", `/api/products?page=${page}&limit=200`);
+                        const data = await response.json();
+                        const pageProducts = data.products || [];
+                        allProducts.push(...pageProducts);
+                        
+                        const totalPages = Math.ceil(data.total / 200);
+                        hasMorePages = page < totalPages;
+                        page++;
+                      }
+                      
+                      // Select ALL products
+                      const allProductIds = allProducts.map(p => p.id);
+                      setSelectedProducts(allProductIds);
+                      
+                      const newUpdates = [...productUpdates];
+                      
+                      // Process all products and their variants
+                      for (const product of allProducts) {
+                        // Add main product if not already added
+                        if (!productUpdates.find(u => u.productId === product.id && !u.variantId)) {
+                          newUpdates.push({
+                            productId: product.id,
+                            productName: product.name,
+                            newRegularPrice: product.regularPrice || "",
+                            newSalePrice: product.salePrice || "",
+                          });
+                        }
+                        
+                        // Fetch and add variants only for products with multiple variants
+                        try {
+                          const variants = await fetchProductVariants(product.id);
+                          const variantCount = variants.length;
+                          
+                          // Only add variants if product has multiple variants (2+)
+                          if (variantCount > 1) {
+                            variants.forEach(variant => {
+                              // Check if this variant is already in updates
+                              if (!productUpdates.find(u => u.productId === product.id && u.variantId === variant.id)) {
+                                newUpdates.push({
+                                  productId: product.id,
+                                  productName: product.name,
+                                  variantId: variant.id,
+                                  variantSku: variant.variantSku || '',
+                                  newRegularPrice: variant.regularPrice || "",
+                                  newSalePrice: variant.salePrice || "",
+                                });
+                              }
+                            });
+                          }
+                        } catch (error) {
+                          console.error(`Error fetching variants for product ${product.id}:`, error);
+                        }
+                      }
+                      
+                      setProductUpdates(newUpdates);
+                      setShowSelectAllProducts(false); // Hide the button after use
+                      
+                      toast({
+                        title: "All Products Selected",
+                        description: `Selected all ${allProducts.length} products for the work order`,
+                      });
+                      
+                    } catch (error) {
+                      console.error('Error fetching all products:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to fetch all products. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Select All Products ({products.length})
+                </Button>
+              )}
               
               <Button
                 type="button"
