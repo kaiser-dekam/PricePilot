@@ -172,13 +172,39 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
     },
   });
 
+  // Calculate lowest prices from variants
+  const lowestPrices = React.useMemo(() => {
+    if (!variants || variants.length <= 1) {
+      return null;
+    }
+    
+    const regularPrices = variants
+      .map(v => parseFloat(v.regularPrice?.toString() || '0'))
+      .filter(p => p > 0);
+    
+    const salePrices = variants
+      .map(v => parseFloat(v.salePrice?.toString() || '0'))
+      .filter(p => p > 0);
+    
+    return {
+      lowestRegularPrice: regularPrices.length > 0 ? Math.min(...regularPrices) : 0,
+      lowestSalePrice: salePrices.length > 0 ? Math.min(...salePrices) : 0
+    };
+  }, [variants]);
+
+  const hasMultipleVariants = variants && variants.length > 1;
+
   // Update form when product changes
   React.useEffect(() => {
-    if (product) {
+    if (product && !hasMultipleVariants) {
       setRegularPrice(product.regularPrice || "");
       setSalePrice(product.salePrice || "");
+    } else if (hasMultipleVariants && lowestPrices) {
+      // For products with variants, show the lowest prices (read-only)
+      setRegularPrice(lowestPrices.lowestRegularPrice.toFixed(2));
+      setSalePrice(lowestPrices.lowestSalePrice > 0 ? lowestPrices.lowestSalePrice.toFixed(2) : "");
     }
-  }, [product]);
+  }, [product, hasMultipleVariants, lowestPrices]);
 
   const handleUpdate = () => {
     if (!product) return;
@@ -251,12 +277,25 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
           
           {/* Pricing Section */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <h5 className="font-medium text-gray-900 mb-3">Pricing</h5>
+            <div className="flex items-center justify-between mb-3">
+              <h5 className="font-medium text-gray-900">Pricing</h5>
+              {hasMultipleVariants && (
+                <Badge variant="outline" className="text-xs">
+                  Lowest variant prices
+                </Badge>
+              )}
+            </div>
+            
+            {hasMultipleVariants && (
+              <p className="text-xs text-gray-600 mb-3">
+                This product has variants. Edit individual variant prices below.
+              </p>
+            )}
             
             <div className="space-y-3">
               <div>
                 <Label htmlFor="regularPrice" className="text-sm text-gray-600">
-                  Regular Price
+                  Regular Price {hasMultipleVariants && "(Lowest)"}
                 </Label>
                 <div className="flex items-center mt-1">
                   <span className="text-sm text-gray-500 mr-1">$</span>
@@ -267,13 +306,15 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                     value={regularPrice}
                     onChange={(e) => setRegularPrice(e.target.value)}
                     className="flex-1"
+                    disabled={hasMultipleVariants}
+                    title={hasMultipleVariants ? "Price is managed through variants" : undefined}
                   />
                 </div>
               </div>
               
               <div>
                 <Label htmlFor="salePrice" className="text-sm text-gray-600">
-                  Sale Price
+                  Sale Price {hasMultipleVariants && "(Lowest)"}
                 </Label>
                 <div className="flex items-center mt-1">
                   <span className="text-sm text-gray-500 mr-1">$</span>
@@ -285,18 +326,22 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                     onChange={(e) => setSalePrice(e.target.value)}
                     className="flex-1"
                     placeholder="Optional"
+                    disabled={hasMultipleVariants}
+                    title={hasMultipleVariants ? "Price is managed through variants" : undefined}
                   />
                 </div>
               </div>
             </div>
             
-            <Button
-              onClick={handleUpdate}
-              disabled={updateMutation.isPending}
-              className="w-full mt-4"
-            >
-              {updateMutation.isPending ? "Updating..." : "Update Product"}
-            </Button>
+            {!hasMultipleVariants && (
+              <Button
+                onClick={handleUpdate}
+                disabled={updateMutation.isPending}
+                className="w-full mt-4"
+              >
+                {updateMutation.isPending ? "Updating..." : "Update Product"}
+              </Button>
+            )}
           </div>
 
           {/* Product Variants Section */}

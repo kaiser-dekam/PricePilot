@@ -1,12 +1,13 @@
+import React from "react";
 import { Edit } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Product } from "@shared/schema";
+import { Product, ProductVariant } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
-  product: Product;
+  product: Product & { variants?: ProductVariant[] };
   onClick: () => void;
   showStockStatus?: boolean;
 }
@@ -18,7 +19,39 @@ export default function ProductCard({ product, onClick, showStockStatus = false 
     return { label: "In Stock", variant: "default" as const };
   };
 
-  const stockStatus = getStockStatus(product.stock || 0);
+  // Calculate display prices and stock based on variants
+  const hasMultipleVariants = product.variants && product.variants.length > 1;
+  
+  const displayData = React.useMemo(() => {
+    if (!hasMultipleVariants) {
+      return {
+        regularPrice: product.regularPrice || "0.00",
+        salePrice: product.salePrice,
+        stock: product.stock || 0,
+        isVariantPricing: false
+      };
+    }
+    
+    const variants = product.variants!;
+    const regularPrices = variants
+      .map(v => parseFloat(v.regularPrice?.toString() || '0'))
+      .filter(p => p > 0);
+    
+    const salePrices = variants
+      .map(v => parseFloat(v.salePrice?.toString() || '0'))
+      .filter(p => p > 0);
+      
+    const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    
+    return {
+      regularPrice: regularPrices.length > 0 ? Math.min(...regularPrices).toFixed(2) : "0.00",
+      salePrice: salePrices.length > 0 ? Math.min(...salePrices).toFixed(2) : null,
+      stock: totalStock,
+      isVariantPricing: true
+    };
+  }, [product, hasMultipleVariants]);
+
+  const stockStatus = getStockStatus(displayData.stock);
 
   return (
     <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={onClick}>
@@ -37,19 +70,23 @@ export default function ProductCard({ product, onClick, showStockStatus = false 
         
         <div className="space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-gray-600">Regular Price:</span>
+            <span className="text-xs sm:text-sm text-gray-600">
+              Regular Price{displayData.isVariantPricing ? " (from)" : ":"}
+            </span>
             <span className="font-semibold text-gray-900 text-sm sm:text-base">
-              ${product.regularPrice || '0.00'}
+              ${displayData.regularPrice}
             </span>
           </div>
           
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-gray-600">Sale Price:</span>
+            <span className="text-xs sm:text-sm text-gray-600">
+              Sale Price{displayData.isVariantPricing ? " (from)" : ":"}
+            </span>
             <span className={cn(
               "font-semibold text-sm sm:text-base",
-              product.salePrice ? "text-accent" : "text-gray-400"
+              displayData.salePrice ? "text-accent" : "text-gray-400"
             )}>
-              {product.salePrice ? `$${product.salePrice}` : '—'}
+              {displayData.salePrice ? `$${displayData.salePrice}` : '—'}
             </span>
           </div>
           

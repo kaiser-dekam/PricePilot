@@ -214,7 +214,7 @@ export class DbStorage implements IStorage {
   }
 
   // Products
-  async getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }> {
+  async getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: (Product & { variants?: ProductVariant[] })[]; total: number }> {
     const user = await this.getUser(userId);
     if (!user?.companyId) {
       return { products: [], total: 0 };
@@ -259,7 +259,22 @@ export class DbStorage implements IStorage {
     
     console.log(`Query returned ${result.length} products, total count: ${total}`);
 
-    return { products: result, total };
+    // Fetch variants for each product
+    const productsWithVariants = await Promise.all(
+      result.map(async (product) => {
+        const variants = await this.db
+          .select()
+          .from(productVariants)
+          .where(and(eq(productVariants.companyId, user.companyId), eq(productVariants.productId, product.id)));
+        
+        return {
+          ...product,
+          variants
+        };
+      })
+    );
+
+    return { products: productsWithVariants, total };
   }
 
   async getProduct(userId: string, id: string): Promise<Product | undefined> {
