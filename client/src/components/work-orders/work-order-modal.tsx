@@ -17,7 +17,7 @@ import { Product, ProductVariant } from "@shared/schema";
 interface WorkOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  products: Product[];
+  products: Product[]; // This will now be used only for initial load
 }
 
 interface ProductPriceUpdate {
@@ -43,6 +43,10 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [showSelectAllProducts, setShowSelectAllProducts] = useState(false);
+  const [modalPage, setModalPage] = useState(1);
+  const [modalLimit, setModalLimit] = useState(20);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   
   // Bulk discount states
   const [discountType, setDiscountType] = useState("percentage"); // "percentage" or "amount"
@@ -50,6 +54,28 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [priceType, setPriceType] = useState("regular"); // "regular" or "sale"
   
   const { toast } = useToast();
+
+  // Fetch products for the modal with pagination
+  const { data: modalProductsData, isLoading: isLoadingModalProducts } = useQuery({
+    queryKey: ["/api/products", { 
+      search: searchTerm, 
+      category: categoryFilter === "all" ? undefined : categoryFilter, 
+      page: modalPage, 
+      limit: modalLimit 
+    }],
+    enabled: isOpen,
+    staleTime: 0, // Always refetch when query changes
+  });
+
+  // Update modal products and total when data changes
+  useEffect(() => {
+    if (modalProductsData) {
+      const fetchedProducts = (modalProductsData as any)?.products || [];
+      const total = (modalProductsData as any)?.total || 0;
+      setAllProducts(fetchedProducts);
+      setTotalProducts(total);
+    }
+  }, [modalProductsData]);
 
   // Fetch variants for a specific product
   const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
@@ -118,7 +144,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const categories = useMemo(() => {
     const allCategoryParts = new Set<string>();
     
-    products.forEach(product => {
+    allProducts.forEach(product => {
       if (product.category) {
         // Split the category path and add all parts
         const parts = product.category.split(' > ');
@@ -137,21 +163,10 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     });
     
     return Array.from(allCategoryParts).sort();
-  }, [products]);
+  }, [allProducts]);
 
-  // Filter products based on search and category
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = searchTerm === "" || 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.id.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesCategory = categoryFilter === "all" || 
-        (product.category && product.category.includes(categoryFilter));
-      
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchTerm, categoryFilter]);
+  // Use allProducts directly since they're already filtered by the API
+  const filteredProducts = allProducts;
 
   // Check variant counts when products change or filter changes
   useEffect(() => {
@@ -174,6 +189,10 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setVariantCounts({});
     setShowValidationErrors(false);
     setShowSelectAllProducts(false);
+    setModalPage(1);
+    setModalLimit(20);
+    setAllProducts([]);
+    setTotalProducts(0);
     setDiscountType("percentage");
     setDiscountValue("");
     setPriceType("regular");
@@ -437,8 +456,76 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
               </Select>
             </div>
 
+            {/* Pagination Controls */}
+            {totalProducts > modalLimit && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-gray-600">
+                    Showing {(modalPage - 1) * modalLimit + 1} to {Math.min(modalPage * modalLimit, totalProducts)} of {totalProducts} products
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Show:</span>
+                    <Select value={modalLimit.toString()} onValueChange={(value) => {
+                      setModalLimit(parseInt(value));
+                      setModalPage(1); // Reset to first page when changing limit
+                    }}>
+                      <SelectTrigger className="w-20 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                        <SelectItem value="200">200</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModalPage(modalPage - 1)}
+                    disabled={modalPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  
+                  {Array.from({ length: Math.min(3, Math.ceil(totalProducts / modalLimit)) }).map((_, i) => {
+                    const totalPages = Math.ceil(totalProducts / modalLimit);
+                    const startPage = Math.max(1, Math.min(modalPage - 1, totalPages - 2));
+                    const pageNum = startPage + i;
+                    
+                    if (pageNum > totalPages) return null;
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={modalPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setModalPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModalPage(modalPage + 1)}
+                    disabled={modalPage >= Math.ceil(totalProducts / modalLimit)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Selection Actions */}
-            <div className="flex gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               <Button
                 type="button"
                 variant="outline"
@@ -491,7 +578,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                   setProductUpdates(newUpdates);
                   
                   // Show the "Select All Products" option if visible products < total products
-                  if (filteredProducts.length < products.length) {
+                  if (filteredProducts.length < totalProducts) {
                     setShowSelectAllProducts(true);
                   }
                 }}
@@ -591,9 +678,103 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                     }
                   }}
                 >
-                  Select All Products ({products.length})
+                  Select All Products ({totalProducts})
                 </Button>
               )}
+              
+              {/* Direct "Select All Products" button - always visible */}
+              <Button
+                type="button"
+                variant="outline"  
+                size="sm"
+                onClick={async () => {
+                  // Fetch ALL products from the API
+                  toast({
+                    title: "Loading All Products",
+                    description: "Fetching all products to add to work order...",
+                  });
+                  
+                  try {
+                    let allProductsForSelection: Product[] = [];
+                    let page = 1;
+                    let hasMorePages = true;
+                    
+                    // Fetch all products by paginating through all pages
+                    while (hasMorePages) {
+                      const response = await apiRequest("GET", `/api/products?page=${page}&limit=200`);
+                      const data = await response.json();
+                      const pageProducts = data.products || [];
+                      allProductsForSelection.push(...pageProducts);
+                      
+                      const totalPages = Math.ceil(data.total / 200);
+                      hasMorePages = page < totalPages;
+                      page++;
+                    }
+                    
+                    // Select ALL products
+                    const allProductIds = allProductsForSelection.map(p => p.id);
+                    setSelectedProducts(allProductIds);
+                    
+                    const newUpdates = [...productUpdates];
+                    
+                    // Process all products and their variants
+                    for (const product of allProductsForSelection) {
+                      // Add main product if not already added
+                      if (!productUpdates.find(u => u.productId === product.id && !u.variantId)) {
+                        newUpdates.push({
+                          productId: product.id,
+                          productName: product.name,
+                          newRegularPrice: product.regularPrice || "",
+                          newSalePrice: product.salePrice || "",
+                        });
+                      }
+                      
+                      // Fetch and add variants only for products with multiple variants
+                      try {
+                        const variants = await fetchProductVariants(product.id);
+                        const variantCount = variants.length;
+                        
+                        // Only add variants if product has multiple variants (2+)
+                        if (variantCount > 1) {
+                          variants.forEach(variant => {
+                            // Check if this variant is already in updates
+                            if (!productUpdates.find(u => u.productId === product.id && u.variantId === variant.id)) {
+                              newUpdates.push({
+                                productId: product.id,
+                                productName: product.name,
+                                variantId: variant.id,
+                                variantSku: variant.variantSku || '',
+                                newRegularPrice: variant.regularPrice || "",
+                                newSalePrice: variant.salePrice || "",
+                              });
+                            }
+                          });
+                        }
+                      } catch (error) {
+                        console.error(`Error fetching variants for product ${product.id}:`, error);
+                      }
+                    }
+                    
+                    setProductUpdates(newUpdates);
+                    setShowSelectAllProducts(false); // Hide the conditional button
+                    
+                    toast({
+                      title: "All Products Selected",
+                      description: `Selected all ${allProductsForSelection.length} products for the work order`,
+                    });
+                    
+                  } catch (error) {
+                    console.error('Error fetching all products:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to fetch all products. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Select All Products ({totalProducts})
+              </Button>
               
               <Button
                 type="button"
@@ -708,7 +889,12 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
             {/* Product Selection with Variants */}
             <ScrollArea className="border rounded-lg h-72 mt-2">
               <div className="space-y-2 p-4">
-                {filteredProducts.length === 0 ? (
+                {isLoadingModalProducts ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                    <span className="ml-2 text-sm text-gray-600">Loading products...</span>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
                   <div className="text-center text-gray-500 py-8">
                     <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                     <p>No products found matching your search criteria</p>
