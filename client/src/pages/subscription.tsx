@@ -96,6 +96,24 @@ export default function Subscription() {
     },
   });
 
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/subscription/cancel", {}),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Subscription Cancelled",
+        description: data.message || "Your subscription has been cancelled",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel subscription",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle URL parameters for payment success/cancel
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -195,6 +213,14 @@ export default function Subscription() {
     }
   };
 
+  const handleCancelSubscription = () => {
+    const confirmMessage = `Are you sure you want to cancel your ${currentPlan} subscription? This will downgrade you to the Trial plan at the end of your billing period.`;
+    
+    if (window.confirm(confirmMessage)) {
+      cancelSubscriptionMutation.mutate();
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="container mx-auto px-6 py-8">
@@ -228,6 +254,19 @@ export default function Subscription() {
                 >
                   Active
                 </Badge>
+                
+                {/* Cancel Subscription Button for Paid Plans */}
+                {currentPlan !== 'trial' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelSubscription}
+                    disabled={cancelSubscriptionMutation.isPending}
+                    className="ml-4 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
+                  >
+                    {cancelSubscriptionMutation.isPending ? "Cancelling..." : "Cancel Subscription"}
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -310,6 +349,53 @@ export default function Subscription() {
               );
             })}
           </div>
+
+          {/* Subscription Management Section */}
+          {currentPlan !== 'trial' && (
+            <div className="mt-16">
+              <Card className="border-red-200 dark:border-red-800">
+                <CardHeader>
+                  <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Cancel Your Subscription
+                  </CardTitle>
+                  <CardDescription>
+                    Need to cancel your subscription? We're sorry to see you go.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">What happens when you cancel:</h4>
+                    <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
+                      <li>• Your subscription continues until the end of your current billing period</li>
+                      <li>• You'll keep access to all {currentPlan} features until then</li>
+                      <li>• After that, you'll be automatically moved to the Trial plan (5 products)</li>
+                      <li>• You can resubscribe anytime to regain access to premium features</li>
+                      <li>• Your data and settings will be preserved</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Questions? Contact our support team for assistance.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={handleCancelSubscription}
+                      disabled={cancelSubscriptionMutation.isPending}
+                      className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
+                    >
+                      {cancelSubscriptionMutation.isPending ? "Cancelling..." : "Cancel Subscription"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* FAQ Section */}
           <div className="mt-16 text-center">

@@ -24,6 +24,7 @@ export const companies = pgTable("companies", {
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status").default("active"),
   currentPeriodEnd: timestamp("current_period_end"),
+  cancelledAt: timestamp("cancelled_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

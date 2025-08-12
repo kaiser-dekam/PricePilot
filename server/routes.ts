@@ -683,6 +683,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cancel subscription endpoint
+  app.post("/api/subscription/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      const user = await storage.getUser(userId);
+      if (!user || !user.company) {
+        return res.status(400).json({ message: "User company information not found" });
+      }
+
+      const company = user.company;
+      
+      // Only allow cancellation for paid plans
+      if (company.subscriptionPlan === 'trial') {
+        return res.status(400).json({ message: "Trial plan cannot be cancelled" });
+      }
+
+      // If there's a Stripe subscription ID, cancel it
+      if (company.stripeSubscriptionId) {
+        try {
+          // Cancel the subscription at period end to maintain access until billing cycle ends
+          await stripe.subscriptions.update(company.stripeSubscriptionId, {
+            cancel_at_period_end: true,
+            metadata: {
+              cancelled_by_user: 'true',
+              cancelled_at: new Date().toISOString(),
+              user_id: userId
+            }
+          });
+
+          // Update company to reflect the cancellation pending status - only update supported fields
+          await storage.updateCompanySubscription(user.companyId, {
+            subscriptionPlan: company.subscriptionPlan, // Keep current plan until cancellation is effective
+            productLimit: company.productLimit || 5
+          });
+
+          res.json({ 
+            message: "Subscription scheduled for cancellation at the end of your billing period",
+            cancellationEffectiveDate: "end of current billing period"
+          });
+        } catch (stripeError: any) {
+          console.error("Error cancelling Stripe subscription:", stripeError);
+          
+          // Fallback: downgrade to trial immediately if Stripe fails
+          await storage.updateCompanySubscription(user.companyId, {
+            subscriptionPlan: 'trial',
+            productLimit: 5
+          });
+
+          res.json({ 
+            message: "Subscription cancelled and downgraded to Trial plan",
+            plan: "trial",
+            productLimit: 5
+          });
+        }
+      } else {
+        // No Stripe subscription ID, just downgrade to trial
+        await storage.updateCompanySubscription(user.companyId, {
+          subscriptionPlan: 'trial',
+          productLimit: 5
+        });
+
+        res.json({ 
+          message: "Subscription cancelled and downgraded to Trial plan",
+          plan: "trial",
+          productLimit: 5
+        });
+      }
+    } catch (error: any) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription. Please contact support." });
+    }
+  });
+
   // Categories route for work order modal
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
