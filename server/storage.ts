@@ -357,6 +357,10 @@ export class DbStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user?.companyId) return;
     
+    // Clear variants first (foreign key constraint)
+    await this.db.delete(productVariants).where(eq(productVariants.companyId, user.companyId));
+    
+    // Then clear products
     await this.db.delete(products).where(eq(products.companyId, user.companyId));
   }
 

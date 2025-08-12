@@ -200,4 +200,32 @@ export class BigCommerceService {
       }
     }
   }
+
+  async getProductVariants(productId: string): Promise<any[]> {
+    try {
+      console.log(`Fetching variants for product ${productId} from BigCommerce`);
+      const response = await this.api.get(`/catalog/products/${productId}/variants`);
+      
+      return response.data.data.map((variant: any) => ({
+        id: variant.id.toString(),
+        productId: productId,
+        variantSku: variant.sku || '',
+        regularPrice: variant.price || '0',
+        salePrice: variant.sale_price || null,
+        stock: variant.inventory_level || 0,
+        weight: variant.weight || '0',
+        optionValues: variant.option_values?.reduce((acc: any, opt: any) => {
+          acc[opt.option_display_name] = opt.label;
+          return acc;
+        }, {}) || {},
+        lastUpdated: new Date(),
+      }));
+    } catch (error: any) {
+      console.error(`Error fetching variants for product ${productId}:`, error);
+      if (error.response?.status === 404) {
+        return []; // Product has no variants
+      }
+      throw new Error(`Failed to fetch variants: ${error.response?.data?.title || error.message}`);
+    }
+  }
 }

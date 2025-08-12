@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // This ensures we don't have duplicates and handles deleted products
       await storage.clearUserProducts(userId);
 
-      // Store products in database
+      // Store products and their variants in database
       for (const product of allProducts) {
         try {
           await storage.createProduct(userId, {
@@ -170,6 +170,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             weight: product.weight || '0',
             status: product.status || 'draft',
           });
+
+          // Fetch and store variants for this product
+          try {
+            const variants = await bigcommerce.getProductVariants(product.id);
+            console.log(`Found ${variants.length} variants for product ${product.id}`);
+            
+            for (const variant of variants) {
+              await storage.createProductVariant(userId, {
+                id: variant.id,
+                productId: variant.productId,
+                variantSku: variant.variantSku,
+                regularPrice: variant.regularPrice,
+                salePrice: variant.salePrice,
+                stock: variant.stock,
+                optionValues: variant.optionValues,
+              });
+            }
+          } catch (variantError) {
+            console.error(`Error fetching/storing variants for product ${product.id}:`, variantError);
+            // Don't fail the entire sync if variants fail
+          }
         } catch (productError) {
           console.error(`Error storing product ${product.id}:`, productError);
         }
