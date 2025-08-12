@@ -192,9 +192,16 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     const discount = parseFloat(discountValue);
     
     setProductUpdates(prev => prev.map(update => {
-      const currentPrice = priceType === "regular" 
-        ? parseFloat(update.newRegularPrice) || 0
-        : parseFloat(update.newSalePrice) || 0;
+      let currentPrice: number;
+      
+      if (priceType === "regular") {
+        currentPrice = parseFloat(update.newRegularPrice) || 0;
+      } else {
+        // For sale price updates: use existing sale price, or fall back to regular price if no sale price exists
+        const existingSalePrice = parseFloat(update.newSalePrice) || 0;
+        const regularPrice = parseFloat(update.newRegularPrice) || 0;
+        currentPrice = existingSalePrice > 0 ? existingSalePrice : regularPrice;
+      }
       
       let newPrice: number;
       
