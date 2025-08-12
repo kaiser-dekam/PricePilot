@@ -421,14 +421,17 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => {
+                onClick={async () => {
                   const visibleProductIds = filteredProducts.map(p => p.id);
                   const newSelected = Array.from(new Set([...selectedProducts, ...visibleProductIds]));
                   setSelectedProducts(newSelected);
                   
                   const newUpdates = [...productUpdates];
-                  filteredProducts.forEach(product => {
-                    if (!productUpdates.find(u => u.productId === product.id)) {
+                  
+                  // Process each visible product and its variants
+                  for (const product of filteredProducts) {
+                    // Add main product if not already added
+                    if (!productUpdates.find(u => u.productId === product.id && !u.variantId)) {
                       newUpdates.push({
                         productId: product.id,
                         productName: product.name,
@@ -436,7 +439,28 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                         newSalePrice: product.salePrice || "",
                       });
                     }
-                  });
+                    
+                    // Fetch and add all variants for this product
+                    try {
+                      const variants = await fetchProductVariants(product.id);
+                      variants.forEach(variant => {
+                        // Check if this variant is already in updates
+                        if (!productUpdates.find(u => u.productId === product.id && u.variantId === variant.id)) {
+                          newUpdates.push({
+                            productId: product.id,
+                            productName: product.name,
+                            variantId: variant.id,
+                            variantSku: variant.variantSku || '',
+                            newRegularPrice: variant.regularPrice || "",
+                            newSalePrice: variant.salePrice || "",
+                          });
+                        }
+                      });
+                    } catch (error) {
+                      console.error(`Error fetching variants for product ${product.id}:`, error);
+                    }
+                  }
+                  
                   setProductUpdates(newUpdates);
                 }}
               >
@@ -450,6 +474,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                 onClick={() => {
                   const visibleProductIds = filteredProducts.map(p => p.id);
                   setSelectedProducts(prev => prev.filter(id => !visibleProductIds.includes(id)));
+                  // Remove all updates for visible products (including variants)
                   setProductUpdates(prev => prev.filter(update => !visibleProductIds.includes(update.productId)));
                 }}
                 disabled={filteredProducts.length === 0}
