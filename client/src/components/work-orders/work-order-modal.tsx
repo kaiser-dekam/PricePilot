@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [expandedProducts, setExpandedProducts] = useState<string[]>([]);
   const [loadedVariants, setLoadedVariants] = useState<Record<string, ProductVariant[]>>({});
+  const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
   const { toast } = useToast();
 
   // Fetch variants for a specific product
@@ -50,7 +52,40 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     const response = await apiRequest("GET", `/api/products/${productId}/variants`);
     const variants = await response.json() as ProductVariant[];
     setLoadedVariants(prev => ({ ...prev, [productId]: variants }));
+    setVariantCounts(prev => ({ ...prev, [productId]: variants.length }));
     return variants;
+  };
+
+  // Check variant counts for visible products to show/hide dropdown arrows
+  const checkVariantCounts = async () => {
+    const visibleProductIds = filteredProducts.map(p => p.id);
+    const uncheckedProducts = visibleProductIds.filter(id => !(id in variantCounts));
+    
+    if (uncheckedProducts.length === 0) return;
+    
+    // Fetch variant counts for products we haven't checked yet
+    const promises = uncheckedProducts.map(async (productId) => {
+      try {
+        const response = await apiRequest("GET", `/api/products/${productId}/variants`);
+        const variants = await response.json() as ProductVariant[];
+        return { productId, count: variants.length, variants };
+      } catch (error) {
+        console.error(`Error fetching variants for product ${productId}:`, error);
+        return { productId, count: 0, variants: [] };
+      }
+    });
+    
+    const results = await Promise.all(promises);
+    const newCounts: Record<string, number> = {};
+    const newVariants: Record<string, ProductVariant[]> = {};
+    
+    results.forEach(({ productId, count, variants }) => {
+      newCounts[productId] = count;
+      newVariants[productId] = variants;
+    });
+    
+    setVariantCounts(prev => ({ ...prev, ...newCounts }));
+    setLoadedVariants(prev => ({ ...prev, ...newVariants }));
   };
 
   const createMutation = useMutation({
@@ -92,6 +127,13 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     });
   }, [products, searchTerm, categoryFilter]);
 
+  // Check variant counts when products change or filter changes
+  useEffect(() => {
+    if (filteredProducts.length > 0) {
+      checkVariantCounts();
+    }
+  }, [filteredProducts, variantCounts]);
+
   const handleClose = () => {
     setTitle("");
     setSelectedProducts([]);
@@ -103,6 +145,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setCategoryFilter("all");
     setExpandedProducts([]);
     setLoadedVariants({});
+    setVariantCounts({});
+    setShowValidationErrors(false);
     onClose();
   };
 
@@ -176,6 +220,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowValidationErrors(true);
 
     if (!title.trim()) {
       toast({
@@ -367,6 +412,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                   filteredProducts.map((product) => {
                     const isExpanded = expandedProducts.includes(product.id);
                     const variants = loadedVariants[product.id] || [];
+                    const variantCount = variantCounts[product.id] || 0;
                     const isProductSelected = selectedProducts.includes(product.id);
                     const hasSelectedVariants = productUpdates.some(update => 
                       update.productId === product.id && update.variantId
@@ -380,17 +426,22 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                             checked={isProductSelected && !hasSelectedVariants}
                             onCheckedChange={(checked) => handleProductToggle(product.id, checked as boolean)}
                           />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleProductExpansion(product.id)}
-                            className="p-1 h-6 w-6"
-                          >
-                            {isExpanded ? 
-                              <ChevronDown className="h-4 w-4" /> : 
-                              <ChevronRight className="h-4 w-4" />
-                            }
-                          </Button>
+                          {/* Only show dropdown arrow if product has variants */}
+                          {variantCount > 0 ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleProductExpansion(product.id)}
+                              className="p-1 h-6 w-6"
+                            >
+                              {isExpanded ? 
+                                <ChevronDown className="h-4 w-4" /> : 
+                                <ChevronRight className="h-4 w-4" />
+                              }
+                            </Button>
+                          ) : (
+                            <div className="p-1 h-6 w-6" />
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <div className="flex-1 min-w-0">
@@ -400,8 +451,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                                 <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                                   <span>ID: {product.id}</span>
                                   {product.category && <span>Category: {product.category}</span>}
-                                  {variants.length > 0 && (
-                                    <span className="text-blue-600">{variants.length} variants</span>
+                                  {variantCount > 0 && (
+                                    <span className="text-blue-600">{variantCount} variants</span>
                                   )}
                                 </div>
                               </div>
