@@ -133,12 +133,10 @@ export default function Home() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Main Actions */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
                 <Link href="/products">
                   <div className="group bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02]">
                     <div className="flex items-center gap-3 mb-3">
@@ -218,54 +216,6 @@ export default function Home() {
                     </div>
                   </div>
                 </Link>
-              </div>
-            </div>
-
-            {/* Highlights Card */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-lg">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Your Catalog Pilot</h2>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center">
-                    <RefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">BigCommerce API Sync</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Real-time product + variant updates</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-950/50 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">Work Orders</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Schedule bulk price changes safely</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
-                  <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-950/50 flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">Price History</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Track trends & accountability</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-950/50 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">Teams & Roles</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Multi-user companies with permissions</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
