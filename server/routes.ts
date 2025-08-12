@@ -160,36 +160,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let allVariants: any[] = [];
 
       while (hasMorePages && allProducts.length < productLimit) {
-        console.log(`Fetching page ${page} of products...`);
-        const productsResponse = await bigcommerce.getProducts(page, 50);
-        const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
-        const pageVariants = productsResponse.variants || [];
+        console.log(`Fetching page ${page} of products (current count: ${allProducts.length}/${productLimit})...`);
         
-        // Only add products up to the limit
-        const remainingSlots = productLimit - allProducts.length;
-        const productsToAdd = pageProducts.slice(0, remainingSlots);
-        allProducts.push(...productsToAdd);
-        
-        // Add corresponding variants
-        const addedProductIds = new Set(productsToAdd.map(p => p.id));
-        const correspondingVariants = pageVariants.filter((v: any) => addedProductIds.has(v.productId));
-        allVariants.push(...correspondingVariants);
-        
-        // Update fetching progress
-        const fetchProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
-        sendProgress('fetching', fetchProgress, 100, `Fetched ${allProducts.length}/${effectiveLimit} products with variants`);
-        
-        // Check if there are more pages and we haven't hit our limit
-        const total = productsResponse.total || 0;
-        const currentCount = page * 50;
-        hasMorePages = currentCount < total && allProducts.length < productLimit;
-        page++;
+        try {
+          const productsResponse = await bigcommerce.getProducts(page, 50);
+          const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
+          const pageVariants = productsResponse.variants || [];
+          
+          console.log(`Page ${page}: Got ${pageProducts.length} products and ${pageVariants.length} variants from API`);
+          
+          // Only add products up to the limit
+          const remainingSlots = productLimit - allProducts.length;
+          const productsToAdd = pageProducts.slice(0, remainingSlots);
+          allProducts.push(...productsToAdd);
+          
+          // Add corresponding variants
+          const addedProductIds = new Set(productsToAdd.map(p => p.id));
+          const correspondingVariants = pageVariants.filter((v: any) => addedProductIds.has(v.productId));
+          allVariants.push(...correspondingVariants);
+          
+          console.log(`Added ${productsToAdd.length} products and ${correspondingVariants.length} variants. Total: ${allProducts.length} products, ${allVariants.length} variants`);
+          
+          // Update fetching progress
+          const fetchProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
+          sendProgress('fetching', fetchProgress, 100, `Fetched ${allProducts.length}/${effectiveLimit} products with variants`);
+          
+          // Check if there are more pages and we haven't hit our limit
+          const total = productsResponse.total || 0;
+          const currentCount = page * 50;
+          hasMorePages = currentCount < total && allProducts.length < productLimit;
+          
+          console.log(`Pagination check: currentCount=${currentCount}, total=${total}, hasMorePages=${hasMorePages}, allProducts.length=${allProducts.length}, productLimit=${productLimit}`);
+          
+          page++;
+          
+          // Stop if we got no products from this page
+          if (pageProducts.length === 0) {
+            console.log(`No products returned from page ${page - 1}, stopping pagination`);
+            break;
+          }
+          
+        } catch (error: any) {
+          console.error(`Error fetching page ${page}:`, error);
+          
+          // Check if it's a rate limit or timeout error
+          if (error.response?.status === 429) {
+            console.log(`Rate limited on page ${page}, waiting 2 seconds before retrying...`);
+            const currentProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
+            sendProgress('fetching', currentProgress, 100, `Rate limited, waiting before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            page--; // Retry the same page
+            continue;
+          }
+          
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            console.log(`Timeout on page ${page}, retrying once...`);
+            const currentProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
+            sendProgress('fetching', currentProgress, 100, `Request timeout, retrying...`);
+            page--; // Retry the same page
+            continue;
+          }
+          
+          console.error(`Fatal error on page ${page}, stopping sync:`, error.message);
+          sendProgress('error', 10, 100, `Error fetching products: ${error.message}`);
+          break;
+        }
       }
 
       // Check if user was limited
       const isLimited = allProducts.length >= productLimit;
 
-      console.log(`Syncing ${allProducts.length} products for user ${userId} (limited by ${subscriptionPlan} plan)`);
+      console.log(`Fetching complete. Got ${allProducts.length} products and ${allVariants.length} variants for user ${userId} (limit: ${productLimit}, plan: ${subscriptionPlan})`);
+      
+      if (allProducts.length === 0) {
+        sendProgress('completed', 100, 100, 'No products found to sync');
+        res.write(`data: ${JSON.stringify({ stage: 'completed', current: 100, total: 100, percentage: 100, message: 'Sync completed - no products found' })}\n\n`);
+        res.end();
+        return;
+      }
 
       sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
 
