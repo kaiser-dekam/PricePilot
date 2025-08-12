@@ -105,11 +105,14 @@ export const workOrders = pgTable("work_orders", {
   productUpdates: json("product_updates").$type<Array<{
     productId: string;
     productName: string;
+    variantId?: string;
+    variantSku?: string;
     newRegularPrice?: string;
     newSalePrice?: string;
   }>>().notNull(),
   originalPrices: json("original_prices").$type<Array<{
     productId: string;
+    variantId?: string;
     originalRegularPrice?: string;
     originalSalePrice?: string;
   }>>(),
@@ -123,10 +126,11 @@ export const workOrders = pgTable("work_orders", {
   error: text("error"),
 });
 
-// Price history table to track product price changes over time
+// Price history table to track product and variant price changes over time
 export const priceHistory = pgTable("price_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  variantId: varchar("variant_id"), // null for product-level changes, set for variant-level changes
   companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
   oldRegularPrice: decimal("old_regular_price", { precision: 10, scale: 2 }),
   newRegularPrice: decimal("new_regular_price", { precision: 10, scale: 2 }),

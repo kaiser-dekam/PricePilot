@@ -108,59 +108,93 @@ class SchedulerService {
 
       const bigcommerce = new BigCommerceService(apiSettings);
 
-      // Process each product update
+      // Process each product/variant update
       for (const update of workOrder.productUpdates) {
         try {
-          const updateData: any = {};
-          if (update.newRegularPrice) {
-            updateData.regularPrice = update.newRegularPrice;
-          }
-          if (update.newSalePrice) {
-            updateData.salePrice = update.newSalePrice;
-          }
+          if (update.variantId) {
+            // Handle variant update
+            const updateData: any = {};
+            if (update.newRegularPrice) {
+              updateData.regularPrice = update.newRegularPrice;
+            }
+            if (update.newSalePrice) {
+              updateData.salePrice = update.newSalePrice;
+            }
 
-          console.log(`Work Order - Updating product ${update.productId} in BigCommerce with:`, updateData);
-          await bigcommerce.updateProduct(update.productId, updateData);
-          console.log(`Work Order - Successfully updated product ${update.productId} in BigCommerce`);
+            console.log(`Work Order - Updating variant ${update.variantId} of product ${update.productId} in BigCommerce with:`, updateData);
+            await bigcommerce.updateProduct(update.productId, updateData, update.variantId);
+            console.log(`Work Order - Successfully updated variant ${update.variantId} in BigCommerce`);
+          } else {
+            // Handle product update
+            const updateData: any = {};
+            if (update.newRegularPrice) {
+              updateData.regularPrice = update.newRegularPrice;
+            }
+            if (update.newSalePrice) {
+              updateData.salePrice = update.newSalePrice;
+            }
+
+            console.log(`Work Order - Updating product ${update.productId} in BigCommerce with:`, updateData);
+            await bigcommerce.updateProduct(update.productId, updateData);
+            console.log(`Work Order - Successfully updated product ${update.productId} in BigCommerce`);
+          }
           
-          // Get current product to track price changes
-          const currentProduct = await storage.getProduct(workOrder.createdBy, update.productId);
-          if (currentProduct) {
-            // Update product in our database (skip automatic price history)
-            await storage.updateProduct(workOrder.createdBy, update.productId, {
-              regularPrice: update.newRegularPrice || undefined,
-              salePrice: update.newSalePrice || undefined,
-            }, true);
-
-            // Create price history entry specifically for work order
-            const hasRegularPriceChange = update.newRegularPrice && update.newRegularPrice !== currentProduct.regularPrice;
-            const hasSalePriceChange = update.newSalePrice !== undefined && update.newSalePrice !== currentProduct.salePrice;
-
-            console.log(`Work Order Price Change Check:`, {
-              productId: update.productId,
-              hasRegularPriceChange,
-              hasSalePriceChange,
-              currentRegularPrice: currentProduct.regularPrice,
-              newRegularPrice: update.newRegularPrice,
-              currentSalePrice: currentProduct.salePrice,
-              newSalePrice: update.newSalePrice
-            });
-
-            if (hasRegularPriceChange || hasSalePriceChange) {
-              console.log(`Work Order - Creating price history entry for product ${update.productId}`);
-              await storage.createPriceHistory(workOrder.createdBy, {
-                productId: update.productId,
-                companyId: workOrder.companyId,
-                oldRegularPrice: hasRegularPriceChange ? currentProduct.regularPrice : undefined,
-                newRegularPrice: hasRegularPriceChange ? update.newRegularPrice : undefined,
-                oldSalePrice: hasSalePriceChange ? (currentProduct.salePrice || null) : undefined,
-                newSalePrice: hasSalePriceChange ? (update.newSalePrice || null) : undefined,
-                changeType: 'work_order',
-                workOrderId: workOrder.id,
+          if (update.variantId) {
+            // Handle variant price tracking and history
+            const currentVariant = await storage.getProductVariant(workOrder.createdBy, update.variantId);
+            if (currentVariant) {
+              // Update variant in our database
+              await storage.updateProductVariant(workOrder.createdBy, update.variantId, {
+                regularPrice: update.newRegularPrice || undefined,
+                salePrice: update.newSalePrice || undefined,
               });
-              console.log(`Work Order - Price history entry created for product ${update.productId}`);
-            } else {
-              console.log(`Work Order - No price changes detected for product ${update.productId}, skipping price history`);
+
+              // Create price history entry for variant
+              const hasRegularPriceChange = update.newRegularPrice && update.newRegularPrice !== currentVariant.regularPrice;
+              const hasSalePriceChange = update.newSalePrice !== undefined && update.newSalePrice !== currentVariant.salePrice;
+
+              if (hasRegularPriceChange || hasSalePriceChange) {
+                console.log(`Work Order - Creating price history entry for variant ${update.variantId}`);
+                await storage.createPriceHistory(workOrder.createdBy, {
+                  productId: update.productId,
+                  variantId: update.variantId,
+                  companyId: workOrder.companyId,
+                  oldRegularPrice: hasRegularPriceChange ? currentVariant.regularPrice : undefined,
+                  newRegularPrice: hasRegularPriceChange ? update.newRegularPrice : undefined,
+                  oldSalePrice: hasSalePriceChange ? (currentVariant.salePrice || null) : undefined,
+                  newSalePrice: hasSalePriceChange ? (update.newSalePrice || null) : undefined,
+                  changeType: 'work_order',
+                  workOrderId: workOrder.id,
+                });
+              }
+            }
+          } else {
+            // Handle product price tracking and history
+            const currentProduct = await storage.getProduct(workOrder.createdBy, update.productId);
+            if (currentProduct) {
+              // Update product in our database (skip automatic price history)
+              await storage.updateProduct(workOrder.createdBy, update.productId, {
+                regularPrice: update.newRegularPrice || undefined,
+                salePrice: update.newSalePrice || undefined,
+              }, true);
+
+              // Create price history entry specifically for work order
+              const hasRegularPriceChange = update.newRegularPrice && update.newRegularPrice !== currentProduct.regularPrice;
+              const hasSalePriceChange = update.newSalePrice !== undefined && update.newSalePrice !== currentProduct.salePrice;
+
+              if (hasRegularPriceChange || hasSalePriceChange) {
+                console.log(`Work Order - Creating price history entry for product ${update.productId}`);
+                await storage.createPriceHistory(workOrder.createdBy, {
+                  productId: update.productId,
+                  companyId: workOrder.companyId,
+                  oldRegularPrice: hasRegularPriceChange ? currentProduct.regularPrice : undefined,
+                  newRegularPrice: hasRegularPriceChange ? update.newRegularPrice : undefined,
+                  oldSalePrice: hasSalePriceChange ? (currentProduct.salePrice || null) : undefined,
+                  newSalePrice: hasSalePriceChange ? (update.newSalePrice || null) : undefined,
+                  changeType: 'work_order',
+                  workOrderId: workOrder.id,
+                });
+              }
             }
           }
 
