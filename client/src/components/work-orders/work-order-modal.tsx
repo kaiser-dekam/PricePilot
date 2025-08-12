@@ -426,8 +426,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                             checked={isProductSelected && !hasSelectedVariants}
                             onCheckedChange={(checked) => handleProductToggle(product.id, checked as boolean)}
                           />
-                          {/* Only show dropdown arrow if product has variants */}
-                          {variantCount > 0 ? (
+                          {/* Only show dropdown arrow if product has multiple variants */}
+                          {variantCount > 1 ? (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -451,7 +451,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                                 <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                                   <span>ID: {product.id}</span>
                                   {product.category && <span>Category: {product.category}</span>}
-                                  {variantCount > 0 && (
+                                  {variantCount > 1 && (
                                     <span className="text-blue-600">{variantCount} variants</span>
                                   )}
                                 </div>
@@ -470,8 +470,8 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                           </div>
                         </div>
 
-                        {/* Variants Section */}
-                        {isExpanded && (
+                        {/* Variants Section - only show when expanded and has multiple variants */}
+                        {isExpanded && variantCount > 1 && (
                           <div className="border-t bg-gray-50 p-3">
                             {variants.length === 0 ? (
                               <div className="text-center text-gray-500 py-4">
