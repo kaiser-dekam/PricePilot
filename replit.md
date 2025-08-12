@@ -57,6 +57,12 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 - **Colors**: Applied brand color palette - Primary: #6792FF (blue), Accent: #53E590 (green), Destructive: #FD7572 (coral)
 - **Typography**: Updated all branding to use "Catalog Pilot" consistently
 
+### Sync Process Optimization (August 12, 2025)
+- **Progress Bar**: Added real-time progress tracking with Server-Sent Events streaming
+- **API Efficiency**: Optimized BigCommerce API calls by fetching variants with products (reduced from ~N+3 calls to ~3 calls for N products)
+- **Performance**: Eliminated individual product variant API requests by including variants in product response
+- **User Experience**: Progress bar shows detailed stages (fetching, processing, completing) with percentage and status messages
+
 ## External Dependencies
 
 - **BigCommerce Integration**: Utilizes the BigCommerce V3 REST API for all product management operations, including retrieval, updates, and category management. Requires BigCommerce store hash, access token, and client ID for authentication.

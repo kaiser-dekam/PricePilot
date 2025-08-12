@@ -69,7 +69,7 @@ export class BigCommerceService {
     }
   }
 
-  async getProducts(page = 1, limit = 50): Promise<{ products: BigCommerceProductType[]; total: number }> {
+  async getProducts(page = 1, limit = 50): Promise<{ products: BigCommerceProductType[]; total: number; variants: any[] }> {
     try {
       console.log(`Fetching products from BigCommerce (page: ${page}, limit: ${limit})`);
       
@@ -78,7 +78,7 @@ export class BigCommerceService {
           params: {
             page,
             limit,
-            include: 'variants,images,custom_fields',
+            include: 'variants,images',
           },
         }),
         this.api.get('/catalog/categories'),
@@ -88,22 +88,50 @@ export class BigCommerceService {
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat.name])
       );
 
-      const products: BigCommerceProductType[] = productsResponse.data.data.map((bcProduct: any) => ({
-        id: bcProduct.id.toString(),
-        name: bcProduct.name,
-        sku: bcProduct.sku || '',
-        description: bcProduct.description || '',
-        category: bcProduct.categories.map((catId: number) => categories.get(catId)).filter(Boolean).join(' > '),
-        regularPrice: bcProduct.price || '0',
-        salePrice: bcProduct.sale_price || null,
-        stock: bcProduct.inventory_level || 0,
-        weight: bcProduct.weight || '0',
-        status: bcProduct.is_visible ? 'published' : 'draft',
-        lastUpdated: new Date(),
-      }));
+      const products: BigCommerceProductType[] = [];
+      const variants: any[] = [];
+
+      for (const bcProduct of productsResponse.data.data) {
+        const product = {
+          id: bcProduct.id.toString(),
+          name: bcProduct.name,
+          sku: bcProduct.sku || '',
+          description: bcProduct.description || '',
+          category: bcProduct.categories.map((catId: number) => categories.get(catId)).filter(Boolean).join(' > '),
+          regularPrice: bcProduct.price || '0',
+          salePrice: bcProduct.sale_price || null,
+          stock: bcProduct.inventory_level || 0,
+          weight: bcProduct.weight || '0',
+          status: bcProduct.is_visible ? 'published' : 'draft',
+          lastUpdated: new Date(),
+        };
+        
+        products.push(product);
+
+        // Process variants if included in response
+        if (bcProduct.variants && bcProduct.variants.length > 0) {
+          const productVariants = bcProduct.variants.map((variant: any) => ({
+            id: variant.id.toString(),
+            productId: bcProduct.id.toString(),
+            variantSku: variant.sku || '',
+            regularPrice: variant.price || '0',
+            salePrice: variant.sale_price || null,
+            stock: variant.inventory_level || 0,
+            weight: variant.weight || '0',
+            optionValues: variant.option_values?.reduce((acc: any, opt: any) => {
+              acc[opt.option_display_name] = opt.label;
+              return acc;
+            }, {}) || {},
+            lastUpdated: new Date(),
+          }));
+          
+          variants.push(...productVariants);
+        }
+      }
 
       return {
         products,
+        variants,
         total: productsResponse.data.meta.pagination.total,
       };
     } catch (error: any) {

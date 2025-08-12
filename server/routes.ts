@@ -157,19 +157,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       sendProgress('fetching', 10, 100, `Found ${totalAvailable} products in BigCommerce`);
       
+      let allVariants: any[] = [];
+
       while (hasMorePages && allProducts.length < productLimit) {
         console.log(`Fetching page ${page} of products...`);
         const productsResponse = await bigcommerce.getProducts(page, 50);
         const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
+        const pageVariants = productsResponse.variants || [];
         
         // Only add products up to the limit
         const remainingSlots = productLimit - allProducts.length;
         const productsToAdd = pageProducts.slice(0, remainingSlots);
         allProducts.push(...productsToAdd);
         
+        // Add corresponding variants
+        const addedProductIds = new Set(productsToAdd.map(p => p.id));
+        const correspondingVariants = pageVariants.filter((v: any) => addedProductIds.has(v.productId));
+        allVariants.push(...correspondingVariants);
+        
         // Update fetching progress
         const fetchProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
-        sendProgress('fetching', fetchProgress, 100, `Fetched ${allProducts.length}/${effectiveLimit} products`);
+        sendProgress('fetching', fetchProgress, 100, `Fetched ${allProducts.length}/${effectiveLimit} products with variants`);
         
         // Check if there are more pages and we haven't hit our limit
         const total = productsResponse.total || 0;
@@ -190,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       sendProgress('processing', 50, 100, 'Cleared existing products');
 
-      // Store products and their variants in database
+      // Store products in database
       for (let i = 0; i < allProducts.length; i++) {
         const product = allProducts[i];
         
@@ -207,36 +215,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
             weight: product.weight || '0',
             status: product.status || 'draft',
           });
-
-          // Fetch and store variants for this product
-          try {
-            const variants = await bigcommerce.getProductVariants(product.id);
-            console.log(`Found ${variants.length} variants for product ${product.id}`);
-            
-            for (const variant of variants) {
-              await storage.createProductVariant(userId, {
-                id: variant.id,
-                productId: variant.productId,
-                variantSku: variant.variantSku,
-                regularPrice: variant.regularPrice,
-                salePrice: variant.salePrice,
-                stock: variant.stock,
-                optionValues: variant.optionValues,
-              });
-            }
-          } catch (variantError) {
-            console.error(`Error fetching/storing variants for product ${product.id}:`, variantError);
-            // Don't fail the entire sync if variants fail
-          }
           
           // Update progress
-          const processProgress = 50 + Math.round(((i + 1) / allProducts.length) * 40);
+          const processProgress = 50 + Math.round(((i + 1) / allProducts.length) * 25);
           sendProgress('processing', processProgress, 100, `Processed ${i + 1}/${allProducts.length} products`);
           
         } catch (productError) {
           console.error(`Error storing product ${product.id}:`, productError);
         }
       }
+
+      sendProgress('processing', 75, 100, `Storing ${allVariants.length} product variants...`);
+
+      // Store all variants in database
+      for (let i = 0; i < allVariants.length; i++) {
+        const variant = allVariants[i];
+        
+        try {
+          await storage.createProductVariant(userId, {
+            id: variant.id,
+            productId: variant.productId,
+            variantSku: variant.variantSku,
+            regularPrice: variant.regularPrice,
+            salePrice: variant.salePrice,
+            stock: variant.stock,
+            optionValues: variant.optionValues,
+          });
+          
+          // Update progress for variants
+          if (i % 10 === 0 || i === allVariants.length - 1) {
+            const variantProgress = 75 + Math.round(((i + 1) / allVariants.length) * 15);
+            sendProgress('processing', variantProgress, 100, `Stored ${i + 1}/${allVariants.length} variants`);
+          }
+          
+        } catch (variantError) {
+          console.error(`Error storing variant ${variant.id}:`, variantError);
+        }
+      }
+
+      console.log(`Successfully stored ${allProducts.length} products and ${allVariants.length} variants`);
+
+      sendProgress('processing', 90, 100, 'Finalizing database updates...');
 
       // Update lastSyncAt in API settings
       await storage.updateApiSettingsLastSync(userId, new Date());
