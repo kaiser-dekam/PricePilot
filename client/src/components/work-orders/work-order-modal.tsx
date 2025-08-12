@@ -42,6 +42,12 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const [loadedVariants, setLoadedVariants] = useState<Record<string, ProductVariant[]>>({});
   const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  
+  // Bulk discount states
+  const [discountType, setDiscountType] = useState("percentage"); // "percentage" or "amount"
+  const [discountValue, setDiscountValue] = useState("");
+  const [priceType, setPriceType] = useState("regular"); // "regular" or "sale"
+  
   const { toast } = useToast();
 
   // Fetch variants for a specific product
@@ -166,7 +172,54 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     setLoadedVariants({});
     setVariantCounts({});
     setShowValidationErrors(false);
+    setDiscountType("percentage");
+    setDiscountValue("");
+    setPriceType("regular");
     onClose();
+  };
+
+  // Apply bulk discount to all selected products/variants
+  const applyBulkDiscount = () => {
+    if (!discountValue || isNaN(parseFloat(discountValue))) {
+      toast({
+        title: "Invalid Discount",
+        description: "Please enter a valid discount value",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const discount = parseFloat(discountValue);
+    
+    setProductUpdates(prev => prev.map(update => {
+      const currentPrice = priceType === "regular" 
+        ? parseFloat(update.newRegularPrice) || 0
+        : parseFloat(update.newSalePrice) || 0;
+      
+      let newPrice: number;
+      
+      if (discountType === "percentage") {
+        newPrice = currentPrice * (1 - discount / 100);
+      } else {
+        newPrice = currentPrice - discount;
+      }
+      
+      // Ensure price doesn't go negative
+      newPrice = Math.max(0, newPrice);
+      
+      return {
+        ...update,
+        [priceType === "regular" ? "newRegularPrice" : "newSalePrice"]: newPrice.toFixed(2)
+      };
+    }));
+    
+    toast({
+      title: "Bulk Discount Applied",
+      description: `Applied ${discount}${discountType === "percentage" ? "%" : " amount"} discount to ${priceType} prices`,
+    });
+    
+    // Clear discount inputs
+    setDiscountValue("");
   };
 
   const handleProductToggle = (productId: string, checked: boolean) => {
@@ -418,6 +471,72 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                 </Button>
               )}
             </div>
+
+            {/* Bulk Discount Controls */}
+            {productUpdates.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                <div className="flex items-center gap-4 mb-3">
+                  <Label className="text-sm font-semibold text-blue-800">Bulk Discount</Label>
+                  <div className="text-xs text-blue-600">Apply discount to {productUpdates.length} selected items</div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                  {/* Price Type Selection */}
+                  <div>
+                    <Label className="text-sm">Price Type</Label>
+                    <Select value={priceType} onValueChange={setPriceType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="regular">Regular Price</SelectItem>
+                        <SelectItem value="sale">Sale Price</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Discount Type Selection */}
+                  <div>
+                    <Label className="text-sm">Discount Type</Label>
+                    <Select value={discountType} onValueChange={setDiscountType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
+                        <SelectItem value="amount">Fixed Amount ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Discount Value Input */}
+                  <div>
+                    <Label className="text-sm">
+                      {discountType === "percentage" ? "Percentage" : "Amount"}
+                    </Label>
+                    <Input
+                      type="number"
+                      placeholder={discountType === "percentage" ? "10" : "5.00"}
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(e.target.value)}
+                      className="h-9"
+                      min="0"
+                      step={discountType === "percentage" ? "1" : "0.01"}
+                    />
+                  </div>
+
+                  {/* Apply Button */}
+                  <Button
+                    type="button"
+                    onClick={applyBulkDiscount}
+                    className="h-9"
+                    disabled={!discountValue || productUpdates.length === 0}
+                  >
+                    Apply Discount
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Product Selection with Variants */}
             <ScrollArea className="border rounded-lg h-72 mt-2">
