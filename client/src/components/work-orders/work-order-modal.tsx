@@ -440,22 +440,27 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                       });
                     }
                     
-                    // Fetch and add all variants for this product
+                    // Fetch and add variants only for products with multiple variants
                     try {
                       const variants = await fetchProductVariants(product.id);
-                      variants.forEach(variant => {
-                        // Check if this variant is already in updates
-                        if (!productUpdates.find(u => u.productId === product.id && u.variantId === variant.id)) {
-                          newUpdates.push({
-                            productId: product.id,
-                            productName: product.name,
-                            variantId: variant.id,
-                            variantSku: variant.variantSku || '',
-                            newRegularPrice: variant.regularPrice || "",
-                            newSalePrice: variant.salePrice || "",
-                          });
-                        }
-                      });
+                      const variantCount = variants.length;
+                      
+                      // Only add variants if product has multiple variants (2+)
+                      if (variantCount > 1) {
+                        variants.forEach(variant => {
+                          // Check if this variant is already in updates
+                          if (!productUpdates.find(u => u.productId === product.id && u.variantId === variant.id)) {
+                            newUpdates.push({
+                              productId: product.id,
+                              productName: product.name,
+                              variantId: variant.id,
+                              variantSku: variant.variantSku || '',
+                              newRegularPrice: variant.regularPrice || "",
+                              newSalePrice: variant.salePrice || "",
+                            });
+                          }
+                        });
+                      }
                     } catch (error) {
                       console.error(`Error fetching variants for product ${product.id}:`, error);
                     }
