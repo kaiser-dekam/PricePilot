@@ -13,8 +13,11 @@ import logoPath from "@assets/Artboard 1_1754940868643.png";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -29,22 +32,67 @@ export default function Login() {
     }
   }, [isAuthenticated, authLoading, setLocation]);
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { signInWithEmail } = await import("@/lib/firebase");
-      await signInWithEmail(email, password);
-      toast({
-        title: "Success",
-        description: "Successfully signed in with email",
-      });
+      if (isSignUp) {
+        // Validate password confirmation
+        if (password !== confirmPassword) {
+          toast({
+            title: "Error",
+            description: "Passwords do not match",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        if (password.length < 6) {
+          toast({
+            title: "Error", 
+            description: "Password must be at least 6 characters long",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const { signUpWithEmail } = await import("@/lib/firebase");
+        await signUpWithEmail(email, password);
+        toast({
+          title: "Success",
+          description: "Account created successfully! Welcome to Catalog Pilot",
+        });
+      } else {
+        const { signInWithEmail } = await import("@/lib/firebase");
+        await signInWithEmail(email, password);
+        toast({
+          title: "Success",
+          description: "Successfully signed in with email",
+        });
+      }
       // Redirect will happen via useEffect when auth state changes
     } catch (error: any) {
+      let errorMessage = error.message || `Failed to ${isSignUp ? 'create account' : 'sign in'}`;
+      
+      // Provide user-friendly error messages
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists. Try signing in instead.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email. Try creating an account instead.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -99,15 +147,39 @@ export default function Login() {
               className="h-16 object-contain"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {isSignUp ? 'Create Account' : 'Sign In'}
+          </CardTitle>
           <p className="text-gray-600 dark:text-gray-300">
-            Access your BigCommerce management dashboard
+            {isSignUp 
+              ? 'Start managing your BigCommerce products today' 
+              : 'Access your BigCommerce management dashboard'
+            }
           </p>
         </CardHeader>
         
         <CardContent className="space-y-6">
-          {/* Email Login Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          {/* Toggle between Sign In and Sign Up */}
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              {' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setPassword('');
+                  setConfirmPassword('');
+                }}
+                className="text-primary hover:underline font-medium"
+              >
+                {isSignUp ? 'Sign in' : 'Create one'}
+              </button>
+            </p>
+          </div>
+
+          {/* Email Auth Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -149,13 +221,47 @@ export default function Login() {
               </div>
             </div>
             
+            {/* Confirm Password field for signup */}
+            {isSignUp && (
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative mt-1">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <Button 
               type="submit" 
               className="w-full" 
               disabled={isLoading}
             >
               <Mail className="w-4 h-4 mr-2" />
-              {isLoading ? "Signing in..." : "Sign in with Email"}
+              {isLoading 
+                ? (isSignUp ? "Creating account..." : "Signing in...") 
+                : (isSignUp ? "Create Account" : "Sign in with Email")
+              }
             </Button>
           </form>
           
@@ -195,7 +301,7 @@ export default function Login() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            {isLoading ? "Signing in..." : "Sign in with Google"}
+            {isLoading ? "Signing in..." : `${isSignUp ? 'Sign up' : 'Sign in'} with Google`}
           </Button>
         </CardContent>
       </Card>
