@@ -23,3 +23,12 @@ export const signOutUser = () => signOut(auth);
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
+
+// Get current user token
+export const getCurrentUserToken = async (): Promise<string | null> => {
+  const user = auth.currentUser;
+  if (user) {
+    return await user.getIdToken();
+  }
+  return null;
+};

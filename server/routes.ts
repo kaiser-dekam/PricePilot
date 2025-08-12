@@ -123,10 +123,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bigcommerce = new BigCommerceService(apiSettings);
       
+      // Send initial progress using Server-Sent Events
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+      
+      const sendProgress = (stage: string, current: number, total: number, message?: string) => {
+        const progress = {
+          stage,
+          current,
+          total,
+          percentage: Math.round((current / total) * 100),
+          message
+        };
+        res.write(`data: ${JSON.stringify(progress)}\n\n`);
+      };
+
+      // Start sync process
+      sendProgress('fetching', 0, 100, 'Starting product sync...');
+      
       // Fetch all products by paginating through all pages
       let allProducts: any[] = [];
       let page = 1;
       let hasMorePages = true;
+      
+      // Get total count first for accurate progress
+      const totalAvailable = await bigcommerce.getProductCount();
+      const effectiveLimit = Math.min(productLimit, totalAvailable);
+      
+      sendProgress('fetching', 10, 100, `Found ${totalAvailable} products in BigCommerce`);
       
       while (hasMorePages && allProducts.length < productLimit) {
         console.log(`Fetching page ${page} of products...`);
@@ -138,6 +167,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const productsToAdd = pageProducts.slice(0, remainingSlots);
         allProducts.push(...productsToAdd);
         
+        // Update fetching progress
+        const fetchProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
+        sendProgress('fetching', fetchProgress, 100, `Fetched ${allProducts.length}/${effectiveLimit} products`);
+        
         // Check if there are more pages and we haven't hit our limit
         const total = productsResponse.total || 0;
         const currentCount = page * 50;
@@ -147,16 +180,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if user was limited
       const isLimited = allProducts.length >= productLimit;
-      const totalAvailable = await bigcommerce.getProductCount();
 
       console.log(`Syncing ${allProducts.length} products for user ${userId} (limited by ${subscriptionPlan} plan)`);
 
+      sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
+
       // Clear existing products for this user before syncing new ones
-      // This ensures we don't have duplicates and handles deleted products
       await storage.clearUserProducts(userId);
+      
+      sendProgress('processing', 50, 100, 'Cleared existing products');
 
       // Store products and their variants in database
-      for (const product of allProducts) {
+      for (let i = 0; i < allProducts.length; i++) {
+        const product = allProducts[i];
+        
         try {
           await storage.createProduct(userId, {
             id: product.id,
@@ -191,6 +228,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`Error fetching/storing variants for product ${product.id}:`, variantError);
             // Don't fail the entire sync if variants fail
           }
+          
+          // Update progress
+          const processProgress = 50 + Math.round(((i + 1) / allProducts.length) * 40);
+          sendProgress('processing', processProgress, 100, `Processed ${i + 1}/${allProducts.length} products`);
+          
         } catch (productError) {
           console.error(`Error storing product ${product.id}:`, productError);
         }
@@ -198,6 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update lastSyncAt in API settings
       await storage.updateApiSettingsLastSync(userId, new Date());
+      
+      sendProgress('completing', 95, 100, 'Finalizing sync...');
 
       // Create appropriate response message
       let message = `Successfully synced ${allProducts.length} products`;
@@ -208,7 +252,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         warning = `Your ${subscriptionPlan} plan allows up to ${productLimit} products. You have ${totalAvailable} products in your BigCommerce store. Upgrade your plan to sync more products.`;
       }
 
-      res.json({ 
+      // Send final progress
+      sendProgress('complete', 100, 100, message);
+      
+      // End the stream with the final result
+      res.write(`result: ${JSON.stringify({ 
         message,
         warning,
         count: allProducts.length,
@@ -216,10 +264,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productLimit,
         subscriptionPlan,
         isLimited
-      });
+      })}\n\n`);
+      
+      res.end();
+      
     } catch (error: any) {
       console.error("Error in /api/sync:", error);
-      res.status(500).json({ message: error.message });
+      res.write(`error: ${JSON.stringify({ message: error.message })}\n\n`);
+      res.end();
     }
   });
 

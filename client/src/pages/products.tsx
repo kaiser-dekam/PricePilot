@@ -4,6 +4,7 @@ import { Search, Plus, RefreshCw, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import ProductCard from "@/components/products/product-card";
 import ProductDetailPanel from "@/components/products/product-detail-panel";
 import WorkOrderModal from "@/components/work-orders/work-order-modal";
@@ -17,6 +18,12 @@ export default function Products() {
   const [page, setPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    stage: string;
+    percentage: number;
+    message: string;
+    isActive: boolean;
+  }>({ stage: '', percentage: 0, message: '', isActive: false });
   const { toast } = useToast();
 
   const { data: productsData, isLoading } = useQuery({
@@ -38,18 +45,77 @@ export default function Products() {
   const showStockStatus = (apiSettings as any)?.showStockStatus || false;
 
   const syncMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/sync"),
+    mutationFn: async () => {
+      // Reset progress
+      setSyncProgress({ stage: '', percentage: 0, message: '', isActive: true });
+      
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${await import("@/lib/firebase").then(m => m.getCurrentUserToken())}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to start sync");
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response stream available");
+      }
+
+      let result: any = null;
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const progressData = JSON.parse(line.slice(6));
+              setSyncProgress({
+                stage: progressData.stage,
+                percentage: progressData.percentage,
+                message: progressData.message || '',
+                isActive: progressData.stage !== 'complete'
+              });
+            } else if (line.startsWith('result: ')) {
+              result = JSON.parse(line.slice(8));
+            } else if (line.startsWith('error: ')) {
+              const errorData = JSON.parse(line.slice(7));
+              throw new Error(errorData.message);
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      return result;
+    },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      
+      // Reset progress after a brief delay
+      setTimeout(() => {
+        setSyncProgress({ stage: '', percentage: 0, message: '', isActive: false });
+      }, 1000);
       
       // Show success message
       toast({
         title: "Success",
-        description: data.message || "Products synced successfully from BigCommerce",
+        description: data?.message || "Products synced successfully from BigCommerce",
       });
 
       // Show warning if user hit plan limits
-      if (data.warning) {
+      if (data?.warning) {
         setTimeout(() => {
           toast({
             title: "Plan Limit Reached",
@@ -61,6 +127,7 @@ export default function Products() {
       }
     },
     onError: (error: any) => {
+      setSyncProgress({ stage: '', percentage: 0, message: '', isActive: false });
       toast({
         title: "Error",
         description: error.message || "Failed to sync products",
@@ -122,12 +189,12 @@ export default function Products() {
             <div className="flex space-x-2">
               <Button
                 onClick={handleSync}
-                disabled={syncMutation.isPending}
+                disabled={syncMutation.isPending || syncProgress.isActive}
                 variant={isApiConnected ? "default" : "outline"}
                 className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Sync</span>
+                <RefreshCw className={`w-4 h-4 mr-2 ${(syncMutation.isPending || syncProgress.isActive) ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{syncMutation.isPending || syncProgress.isActive ? "Syncing..." : "Sync"}</span>
               </Button>
               
               <Button onClick={() => setShowWorkOrderModal(true)}>
@@ -138,6 +205,26 @@ export default function Products() {
             </div>
           </div>
         </div>
+        
+        {/* Sync Progress Bar */}
+        {syncProgress.isActive && (
+          <div className="bg-blue-50 border-b border-blue-200 px-4 sm:px-6 py-3">
+            <div className="max-w-7xl">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-blue-900">
+                  {syncProgress.message || 'Syncing products...'}
+                </div>
+                <div className="text-sm text-blue-700">
+                  {syncProgress.percentage}%
+                </div>
+              </div>
+              <Progress 
+                value={syncProgress.percentage} 
+                className="w-full h-2 bg-blue-200"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
