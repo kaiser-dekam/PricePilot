@@ -14,6 +14,7 @@ import Subscription from "@/pages/subscription";
 import Team from "@/pages/team";
 import AcceptInvitation from "@/pages/accept-invitation";
 import Feedback from "@/pages/feedback";
+import CreateWorkOrder from "@/pages/create-work-order";
 import Sidebar from "@/components/layout/sidebar";
 import Walkthrough from "@/components/onboarding/walkthrough";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,7 @@ function Router() {
             <Route path="/" component={Home} />
             <Route path="/products" component={Products} />
             <Route path="/work-orders" component={WorkOrders} />
+            <Route path="/work-orders/create" component={CreateWorkOrder} />
             <Route path="/settings" component={Settings} />
             <Route path="/subscription" component={Subscription} />
             <Route path="/team" component={Team} />

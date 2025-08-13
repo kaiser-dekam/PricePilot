@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, Eye, EyeOff, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { format } from "date-fns";
 
 export default function WorkOrders() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [showArchived, setShowArchived] = useState(false);
 
   const { data: workOrders, isLoading, refetch } = useQuery({
@@ -150,9 +152,9 @@ export default function WorkOrders() {
               Refresh
             </Button>
             <Button
-              onClick={() => window.location.href = '/products'}
+              onClick={() => setLocation('/work-orders/create')}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-[#6792FF] hover:bg-[#5577DD] text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Work Order
