@@ -48,6 +48,28 @@ export default function Products() {
   const isApiConnected = !!apiSettings;
   const showStockStatus = (apiSettings as any)?.showStockStatus || false;
 
+  // Cancel sync mutation
+  const cancelSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/sync/cancel");
+      return response;
+    },
+    onSuccess: () => {
+      setSyncProgress({ stage: '', percentage: 0, message: '', isActive: false });
+      toast({
+        title: "Sync Cancelled",
+        description: "The product sync has been cancelled.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cancel Failed",
+        description: error.message || "Failed to cancel sync",
+        variant: "destructive",
+      });
+    }
+  });
+
   const syncMutation = useMutation({
     mutationFn: async () => {
       // Reset progress
@@ -88,8 +110,13 @@ export default function Products() {
                 stage: progressData.stage,
                 percentage: progressData.percentage,
                 message: progressData.message || '',
-                isActive: progressData.stage !== 'complete'
+                isActive: progressData.stage !== 'complete' && progressData.stage !== 'cancelled'
               });
+              
+              // If sync was cancelled, break out of the loop
+              if (progressData.stage === 'cancelled') {
+                break;
+              }
             } else if (line.startsWith('result: ')) {
               result = JSON.parse(line.slice(8));
             } else if (line.startsWith('error: ')) {
@@ -218,8 +245,19 @@ export default function Products() {
                 <div className="text-sm font-medium text-blue-900">
                   {syncProgress.message || 'Syncing products...'}
                 </div>
-                <div className="text-sm text-blue-700">
-                  {syncProgress.percentage}%
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm text-blue-700">
+                    {syncProgress.percentage}%
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => cancelSyncMutation.mutate()}
+                    disabled={cancelSyncMutation.isPending}
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    {cancelSyncMutation.isPending ? "Cancelling..." : "Cancel"}
+                  </Button>
                 </div>
               </div>
               <Progress 

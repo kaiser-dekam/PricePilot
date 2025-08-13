@@ -250,8 +250,14 @@ export class DbStorage implements IStorage {
       );
     }
     if (filters?.search) {
+      // Make search more flexible - search in name, sku, and description
+      const searchTerm = `%${filters.search}%`;
       conditions.push(
-        ilike(products.name, `%${filters.search}%`)
+        or(
+          ilike(products.name, searchTerm),
+          ilike(products.sku, searchTerm),
+          ilike(products.description, searchTerm)
+        )
       );
     }
     

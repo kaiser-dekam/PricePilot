@@ -14,6 +14,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-07-30.basil",
 });
 
+// Track active sync operations
+const activeSyncs = new Map<string, { controller: AbortController; response: any }>();
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes - simplified for Firebase
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -124,9 +127,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dedicated sync endpoint for frontend
+  // Cancel sync endpoint
+  app.post("/api/sync/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const activeSync = activeSyncs.get(userId);
+      
+      if (activeSync) {
+        activeSync.controller.abort();
+        activeSyncs.delete(userId);
+        
+        // Send cancellation message and close the response
+        try {
+          activeSync.response.write(`data: ${JSON.stringify({
+            stage: 'cancelled',
+            current: 0,
+            total: 100,
+            percentage: 0,
+            message: 'Sync cancelled by user'
+          })}\n\n`);
+          activeSync.response.end();
+        } catch (e) {
+          // Response may already be closed
+        }
+        
+        res.json({ success: true, message: "Sync cancelled" });
+      } else {
+        res.status(400).json({ success: false, message: "No active sync found" });
+      }
+    } catch (error) {
+      console.error("Error cancelling sync:", error);
+      res.status(500).json({ success: false, message: "Failed to cancel sync" });
+    }
+  });
+
   app.post("/api/sync", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
+      
+      // Check if there's already an active sync for this user
+      if (activeSyncs.has(userId)) {
+        return res.status(409).json({ message: "Sync already in progress. Please cancel the current sync first." });
+      }
+      
+      // Create abort controller for this sync
+      const controller = new AbortController();
       
       const apiSettings = await storage.getApiSettings(userId);
       if (!apiSettings) {
@@ -154,6 +199,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Cache-Control'
       });
+      
+      // Register this sync as active
+      activeSyncs.set(userId, { controller, response: res });
       
       const sendProgress = (stage: string, current: number, total: number, message?: string) => {
         const progress = {
@@ -183,6 +231,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let allVariants: any[] = [];
 
       while (hasMorePages && allProducts.length < productLimit) {
+        // Check if sync was cancelled
+        if (controller.signal.aborted) {
+          console.log('Sync cancelled during fetch phase');
+          activeSyncs.delete(userId);
+          return;
+        }
+        
         console.log(`Fetching page ${page} of products (current count: ${allProducts.length}/${productLimit})...`);
         
         try {
@@ -271,6 +326,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store products in database
       for (let i = 0; i < allProducts.length; i++) {
+        // Check if sync was cancelled
+        if (controller.signal.aborted) {
+          console.log('Sync cancelled during product storage phase');
+          activeSyncs.delete(userId);
+          return;
+        }
+        
         const product = allProducts[i];
         
         try {
@@ -300,6 +362,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store all variants in database
       for (let i = 0; i < allVariants.length; i++) {
+        // Check if sync was cancelled
+        if (controller.signal.aborted) {
+          console.log('Sync cancelled during variant storage phase');
+          activeSyncs.delete(userId);
+          return;
+        }
+        
         const variant = allVariants[i];
         
         try {
@@ -358,10 +427,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.end();
       
+      // Clean up active sync
+      activeSyncs.delete(userId);
+      
     } catch (error: any) {
       console.error("Error in /api/sync:", error);
-      res.write(`error: ${JSON.stringify({ message: error.message })}\n\n`);
-      res.end();
+      
+      // Clean up active sync on error
+      activeSyncs.delete(userId);
+      
+      try {
+        res.write(`error: ${JSON.stringify({ message: error.message })}\n\n`);
+        res.end();
+      } catch (writeError) {
+        // Response may already be closed
+        console.error("Error writing to response:", writeError);
+      }
+    } finally {
+      // Ensure cleanup happens
+      activeSyncs.delete(userId);
     }
   });
 
