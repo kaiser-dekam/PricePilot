@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, Plus, RefreshCw, Package } from "lucide-react";
+import { Search, Plus, RefreshCw, Package, Grid3X3, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,6 +19,7 @@ export default function Products() {
   const [limit, setLimit] = useState(20);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [syncProgress, setSyncProgress] = useState<{
     stage: string;
     percentage: number;
@@ -260,7 +261,26 @@ export default function Products() {
                 </Button>
               </div>
               
-              <div className="flex items-center justify-center sm:justify-end space-x-4 text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-600">
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="rounded-none border-r px-3 py-1"
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="rounded-none px-3 py-1"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
+                
                 <div className="flex items-center space-x-2">
                   <span>{total}</span>
                   <span>products found</span>
@@ -304,16 +324,96 @@ export default function Products() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onClick={() => handleProductClick(product)}
-                    showStockStatus={showStockStatus}
-                  />
-                ))}
-              </div>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  {products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onClick={() => handleProductClick(product)}
+                      showStockStatus={showStockStatus}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Product
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            SKU
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Regular Price
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sale Price
+                          </th>
+                          {showStockStatus && (
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Stock
+                            </th>
+                          )}
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {products.map((product) => (
+                          <tr 
+                            key={product.id} 
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => handleProductClick(product)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                                    {product.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500 truncate max-w-xs">
+                                    {product.category || 'Uncategorized'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {product.sku || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {product.regularPrice ? `$${product.regularPrice}` : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {product.salePrice ? `$${product.salePrice}` : 'N/A'}
+                            </td>
+                            {showStockStatus && (
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {product.stock ?? 'N/A'}
+                              </td>
+                            )}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                product.status === 'published' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : product.status === 'draft'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {product.status || 'Unknown'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Pagination */}
               {totalPages > 1 && (

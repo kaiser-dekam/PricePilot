@@ -687,6 +687,24 @@ export class DbStorage implements IStorage {
         eq(productVariants.productId, productId)
       ));
   }
+
+  // Additional methods for undo functionality
+
+  async getPriceHistoryByWorkOrder(userId: string, workOrderId: string): Promise<PriceHistory[]> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return [];
+    
+    const result = await this.db
+      .select()
+      .from(priceHistory)
+      .where(and(
+        eq(priceHistory.companyId, user.companyId),
+        eq(priceHistory.workOrderId, workOrderId)
+      ))
+      .orderBy(priceHistory.createdAt);
+    
+    return result;
+  }
 }
 
 // Use database storage

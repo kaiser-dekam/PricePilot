@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, Eye, EyeOff } from "lucide-react";
+import { Plus, Calendar, Clock, Trash2, RefreshCw, Archive, Eye, EyeOff, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,25 @@ export default function WorkOrders() {
     },
   });
 
+  const undoMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/work-orders/${id}/undo`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Work order undone successfully - all price changes have been reverted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to undo work order",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -69,6 +88,8 @@ export default function WorkOrders() {
         return <Badge variant="default">Completed</Badge>;
       case "failed":
         return <Badge variant="destructive">Failed</Badge>;
+      case "undone":
+        return <Badge className="bg-orange-500">Undone</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -83,6 +104,12 @@ export default function WorkOrders() {
   const handleArchive = (id: string) => {
     if (confirm("Are you sure you want to archive this work order?")) {
       archiveMutation.mutate(id);
+    }
+  };
+
+  const handleUndo = (id: string, title: string) => {
+    if (confirm(`Are you sure you want to undo the work order "${title}"? This will revert all price changes made by this work order.`)) {
+      undoMutation.mutate(id);
     }
   };
 
@@ -121,6 +148,13 @@ export default function WorkOrders() {
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/products'}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Work Order
             </Button>
           </div>
         </div>
@@ -164,6 +198,17 @@ export default function WorkOrders() {
                         {getStatusBadge(workOrder.status || "pending")}
                         {workOrder.archived && <Badge variant="outline">Archived</Badge>}
                         <div className="flex space-x-1">
+                          {workOrder.status === "completed" && !workOrder.archived && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleUndo(workOrder.id!, workOrder.title)}
+                              disabled={undoMutation.isPending}
+                              title="Undo work order - revert all price changes"
+                            >
+                              <Undo2 className="w-4 h-4" />
+                            </Button>
+                          )}
                           {!workOrder.archived && workOrder.status !== "executing" && (
                             <Button
                               variant="ghost"
@@ -270,6 +315,18 @@ export default function WorkOrders() {
                         <h4 className="font-medium text-green-800 mb-1">Completed</h4>
                         <p className="text-sm text-green-600">
                           Executed on {format(new Date(workOrder.executedAt), "MMM d, yyyy 'at' h:mm a")}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {workOrder.status === "undone" && workOrder.undoneAt && (
+                      <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                        <h4 className="font-medium text-orange-800 mb-1">Undone</h4>
+                        <p className="text-sm text-orange-600">
+                          Undone on {format(new Date(workOrder.undoneAt), "MMM d, yyyy 'at' h:mm a")}
+                        </p>
+                        <p className="text-sm text-orange-600 mt-1">
+                          All price changes have been reverted to their original values.
                         </p>
                       </div>
                     )}

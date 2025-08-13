@@ -119,7 +119,7 @@ export const workOrders = pgTable("work_orders", {
   }>>(),
   scheduledAt: timestamp("scheduled_at"),
   executeImmediately: boolean("execute_immediately").default(false),
-  status: text("status").default("pending"), // pending, executing, completed, failed
+  status: text("status").default("pending"), // pending, executing, completed, failed, undone
   archived: boolean("archived").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   executedAt: timestamp("executed_at"),

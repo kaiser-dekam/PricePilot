@@ -550,6 +550,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/work-orders/:id/undo", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const workOrderId = req.params.id;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get the work order
+      const workOrder = await storage.getWorkOrder(userId, workOrderId);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+
+      if (workOrder.status !== "completed") {
+        return res.status(400).json({ message: "Can only undo completed work orders" });
+      }
+
+      // Get price history entries created by this work order
+      const priceHistories = await storage.getPriceHistoryByWorkOrder(userId, workOrderId);
+      if (!priceHistories || priceHistories.length === 0) {
+        return res.status(400).json({ message: "No price changes found for this work order" });
+      }
+
+      // Revert each price change
+      let revertedCount = 0;
+      for (const history of priceHistories) {
+        try {
+          const product = await storage.getProduct(userId, history.productId);
+          if (!product) {
+            console.log(`Product ${history.productId} not found, skipping revert`);
+            continue;
+          }
+
+          // Revert to old prices
+          const updateData: any = {};
+          if (history.oldRegularPrice !== undefined) {
+            updateData.regularPrice = history.oldRegularPrice;
+          }
+          if (history.oldSalePrice !== undefined) {
+            updateData.salePrice = history.oldSalePrice;
+          }
+
+          await storage.updateProduct(userId, history.productId, updateData, true);
+
+          // Create a new price history entry for the revert
+          await storage.createPriceHistory(userId, {
+            productId: history.productId,
+            companyId: user.companyId,
+            oldRegularPrice: history.newRegularPrice,
+            newRegularPrice: history.oldRegularPrice,
+            oldSalePrice: history.newSalePrice,
+            newSalePrice: history.oldSalePrice,
+            changeType: 'undo',
+            workOrderId: undefined, // This is a revert, not from a work order
+          });
+
+          revertedCount++;
+        } catch (error: any) {
+          console.error(`Error reverting product ${history.productId}:`, error);
+        }
+      }
+
+      // Mark the work order as undone
+      await storage.updateWorkOrder(userId, workOrderId, { 
+        status: 'undone',
+        error: null,
+        undoneAt: new Date()
+      });
+
+      res.json({ 
+        message: `Successfully reverted ${revertedCount} products`,
+        revertedCount 
+      });
+
+    } catch (error: any) {
+      console.error("Error undoing work order:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Delete all products route
   app.delete("/api/products/all", isAuthenticated, async (req: any, res) => {
     try {
@@ -635,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const session = await stripe.checkout.sessions.create(sessionConfig);
 
-      res.json({ checkoutUrl: session.url });
+      res.json({ checkoutUrl: session.url || '' });
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
       res.status(500).json({ message: error.message });
