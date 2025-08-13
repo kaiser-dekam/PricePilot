@@ -18,6 +18,7 @@ export default function Login() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -100,6 +101,45 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { resetPassword } = await import("@/lib/firebase");
+      await resetPassword(email);
+      toast({
+        title: "Success",
+        description: "Password reset email sent! Check your inbox.",
+      });
+      setShowForgotPassword(false);
+    } catch (error: any) {
+      let errorMessage = error.message || "Failed to send password reset email";
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
@@ -148,38 +188,78 @@ export default function Login() {
             />
           </div>
           <CardTitle className="text-2xl font-bold">
-            {isSignUp ? 'Create Account' : 'Sign In'}
+            {showForgotPassword ? 'Reset Password' : (isSignUp ? 'Create Account' : 'Sign In')}
           </CardTitle>
           <p className="text-gray-600 dark:text-gray-300">
-            {isSignUp 
-              ? 'Start managing your BigCommerce products today' 
-              : 'Access your BigCommerce management dashboard'
+            {showForgotPassword 
+              ? 'Enter your email to receive a password reset link'
+              : (isSignUp 
+                ? 'Start managing your BigCommerce products today' 
+                : 'Access your BigCommerce management dashboard'
+              )
             }
           </p>
         </CardHeader>
         
         <CardContent className="space-y-6">
-          {/* Toggle between Sign In and Sign Up */}
-          <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-              {' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setPassword('');
-                  setConfirmPassword('');
-                }}
-                className="text-primary hover:underline font-medium"
-              >
-                {isSignUp ? 'Sign in' : 'Create one'}
-              </button>
-            </p>
-          </div>
+          {/* Toggle between Sign In and Sign Up - hide during forgot password */}
+          {!showForgotPassword && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                {' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {isSignUp ? 'Sign in' : 'Create one'}
+                </button>
+              </p>
+            </div>
+          )}
 
           {/* Email Auth Form */}
-          <form onSubmit={handleEmailAuth} className="space-y-4">
+          {showForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {isLoading ? "Sending..." : "Send Reset Email"}
+              </Button>
+              
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(false)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleEmailAuth} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -263,9 +343,26 @@ export default function Login() {
                 : (isSignUp ? "Create Account" : "Sign in with Email")
               }
             </Button>
+            
+            {/* Forgot Password Link - only show for sign in */}
+            {!isSignUp && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
           </form>
+          )}
           
-          <div className="relative">
+          {/* Only show separator and Google login if not in forgot password mode */}
+          {!showForgotPassword && (
+            <>
+              <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <Separator className="w-full" />
             </div>
@@ -303,6 +400,8 @@ export default function Login() {
             </svg>
             {isLoading ? "Signing in..." : `${isSignUp ? 'Sign up' : 'Sign in'} with Google`}
           </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
