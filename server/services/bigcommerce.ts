@@ -96,6 +96,12 @@ export class BigCommerceService {
       const buildCategoryPath = (categoryIds: number[]): string => {
         if (!categoryIds || categoryIds.length === 0) return '';
         
+        // Known missing parent categories and their presumed names
+        const missingParents = new Map([
+          [129, 'Universal Quick Attach'], // Missing parent of Buckets, Grapples, etc.
+          [180, 'Excavator Attachments']   // Missing parent of other attachment categories
+        ]);
+        
         // Function to build path for a single category by walking up the parent chain
         const buildPathForCategory = (catId: number): string => {
           const path: string[] = [];
@@ -106,10 +112,18 @@ export class BigCommerceService {
             visited.add(currentId);
             const category = categoryMap.get(currentId) as BigCommerceCategory | undefined;
             
-            if (!category) break;
-            
-            path.unshift(category.name); // Add to beginning to build path from root
-            currentId = category.parent_id; // Move to parent
+            if (category) {
+              path.unshift(category.name); // Add to beginning to build path from root
+              currentId = category.parent_id; // Move to parent
+            } else if (missingParents.has(currentId)) {
+              // Handle missing parent categories
+              path.unshift(missingParents.get(currentId)!);
+              // For missing category 129, assume it belongs under Attachments (24)
+              currentId = currentId === 129 ? 24 : null;
+            } else {
+              // Unknown missing category, stop here
+              break;
+            }
           }
           
           return path.join(' > ');
@@ -209,6 +223,12 @@ export class BigCommerceService {
       const buildCategoryPath = (categoryIds: number[]): string => {
         if (!categoryIds || categoryIds.length === 0) return '';
         
+        // Known missing parent categories and their presumed names
+        const missingParents = new Map([
+          [129, 'Universal Quick Attach'], // Missing parent of Buckets, Grapples, etc.
+          [180, 'Excavator Attachments']   // Missing parent of other attachment categories
+        ]);
+        
         // Function to build path for a single category by walking up the parent chain
         const buildPathForCategory = (catId: number): string => {
           const path: string[] = [];
@@ -219,10 +239,18 @@ export class BigCommerceService {
             visited.add(currentId);
             const category = categoryMap.get(currentId) as BigCommerceCategory | undefined;
             
-            if (!category) break;
-            
-            path.unshift(category.name); // Add to beginning to build path from root
-            currentId = category.parent_id; // Move to parent
+            if (category) {
+              path.unshift(category.name); // Add to beginning to build path from root
+              currentId = category.parent_id; // Move to parent
+            } else if (missingParents.has(currentId)) {
+              // Handle missing parent categories
+              path.unshift(missingParents.get(currentId)!);
+              // For missing category 129, assume it belongs under Attachments (24)
+              currentId = currentId === 129 ? 24 : null;
+            } else {
+              // Unknown missing category, stop here
+              break;
+            }
           }
           
           return path.join(' > ');

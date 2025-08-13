@@ -45,14 +45,14 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 
 ## Recent Improvements (August 13, 2025)
 
-### BigCommerce Category System Redesign (August 13, 2025)
-- **Critical Issue Resolved**: Fixed duplicate `/api/categories` endpoints causing data confusion and TypeScript errors
-- **BigCommerce Integration**: Redesigned category path building to use proper BigCommerce hierarchy with `parent_category_list` field
-- **Hierarchy Logic**: Replaced flawed category joining with authentic BigCommerce hierarchical paths (e.g., "Shop All > Attachments > Land Maintenance > Rakes")
-- **Data Integrity**: Category paths now built from authentic BigCommerce API data instead of incorrect manual concatenation
-- **Endpoint Cleanup**: Removed duplicate category endpoint, now using single reliable source from `storage.getAllCategories()`
-- **Breadcrumb Navigation**: Integrated breadcrumb selectors across Products and Create Work Order pages with proper hierarchical data
-- **User Experience**: File explorer-like navigation with search functionality, showing actual BigCommerce category structures
+### BigCommerce Category System Final Fix (August 13, 2025)
+- **Root Cause Identified**: BigCommerce API doesn't provide `parent_category_list` field and has orphaned categories (missing parent IDs 129, 180)
+- **Missing Parent Handling**: Implemented fallback logic to handle missing category parents (129 → "Universal Quick Attach", 180 → "Excavator Attachments")
+- **Hierarchy Reconstruction**: Fixed category path building to traverse `parent_id` relationships while gracefully handling missing parents
+- **Data Validation**: Discovered category 129 is referenced by Buckets/Grapples but missing from API response
+- **Test Confirmation**: ES-STSB-0066 now correctly shows "Attachments > Universal Quick Attach > Buckets > Smooth Buckets" instead of "Shop All"
+- **Sync Process**: Fixed hanging sync issues and duplicate key errors with proper upsert logic
+- **API Debugging**: Comprehensive debugging revealed actual BigCommerce category structure and API limitations
 
 ### Interactive User Walkthrough (August 13, 2025)
 - **Onboarding System**: Created comprehensive guided tour for new users appearing only once after registration
