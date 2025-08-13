@@ -151,8 +151,9 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
   const categories = useMemo(() => {
     if (!categoriesData) return [];
     
-    const categoryMap = new Map<string, { fullPath: string; level: number; parent?: string }>();
+    const categorySet = new Set<string>();
     
+    // First, collect all unique category paths and their parent paths
     categoriesData.forEach((categoryPath: string) => {
       if (categoryPath && categoryPath.trim()) {
         const parts = categoryPath.split(' > ').map(p => p.trim());
@@ -160,30 +161,68 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
         // Add each level of the category hierarchy
         for (let i = 0; i < parts.length; i++) {
           const currentPath = parts.slice(0, i + 1).join(' > ');
-          const currentName = parts[i];
-          const parentPath = i > 0 ? parts.slice(0, i).join(' > ') : undefined;
-          
-          if (!categoryMap.has(currentPath)) {
-            categoryMap.set(currentPath, {
-              fullPath: currentPath,
-              level: i,
-              parent: parentPath
-            });
-          }
+          categorySet.add(currentPath);
         }
       }
     });
     
-    // Convert to array and sort hierarchically
-    const categoryArray = Array.from(categoryMap.values());
+    // Convert to array and create hierarchical structure
+    const categoryPaths = Array.from(categorySet);
     
-    // Sort by level first, then alphabetically within each level
-    return categoryArray.sort((a, b) => {
-      if (a.level !== b.level) {
-        return a.level - b.level;
-      }
-      return a.fullPath.localeCompare(b.fullPath);
-    });
+    // Build tree structure
+    const buildHierarchy = (paths: string[]): Array<{ fullPath: string; level: number; displayName: string }> => {
+      const result: Array<{ fullPath: string; level: number; displayName: string }> = [];
+      
+      // Group by parent
+      const pathsByParent = new Map<string, string[]>();
+      const rootPaths: string[] = [];
+      
+      paths.forEach(path => {
+        const parts = path.split(' > ');
+        if (parts.length === 1) {
+          rootPaths.push(path);
+        } else {
+          const parentPath = parts.slice(0, -1).join(' > ');
+          if (!pathsByParent.has(parentPath)) {
+            pathsByParent.set(parentPath, []);
+          }
+          pathsByParent.get(parentPath)!.push(path);
+        }
+      });
+      
+      // Recursive function to add categories in hierarchy order
+      const addCategory = (path: string, level: number) => {
+        const parts = path.split(' > ');
+        const displayName = parts[parts.length - 1];
+        
+        result.push({
+          fullPath: path,
+          level,
+          displayName
+        });
+        
+        // Add children
+        const children = pathsByParent.get(path) || [];
+        children.sort((a, b) => {
+          const aName = a.split(' > ').pop() || '';
+          const bName = b.split(' > ').pop() || '';
+          return aName.localeCompare(bName);
+        });
+        
+        children.forEach(childPath => {
+          addCategory(childPath, level + 1);
+        });
+      };
+      
+      // Sort root categories and add them with their children
+      rootPaths.sort().forEach(rootPath => {
+        addCategory(rootPath, 0);
+      });
+      
+      return result;
+    };
+    
+    return buildHierarchy(categoryPaths);
   }, [categoriesData]);
 
   // Use allProducts directly since they're already filtered by the API
@@ -472,7 +511,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                     <SelectItem key={category.fullPath} value={category.fullPath}>
                       <span style={{ paddingLeft: `${category.level * 16}px` }}>
                         {category.level > 0 && "└ "}
-                        {category.fullPath.split(' > ').pop()}
+                        {category.displayName}
                       </span>
                     </SelectItem>
                   ))}
