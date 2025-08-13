@@ -45,10 +45,12 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 
 ## Recent Improvements (January 27, 2025)
 
-### Google Analytics Integration (August 13, 2025)
-- **Analytics Tracking**: Added Google Analytics (G-YTPSTTPY9H) to track user behavior and application usage
-- **Implementation**: Integrated gtag.js script in main HTML template for comprehensive page tracking across all routes
+### Analytics Integration (August 13, 2025)
+- **Google Analytics**: Added Google Analytics (G-YTPSTTPY9H) with gtag.js for comprehensive user behavior tracking
+- **Google Tag Manager**: Integrated Google Tag Manager (GTM-NFSKFSGL) for advanced event tracking and marketing analytics
+- **Implementation**: Both tracking scripts added to main HTML template with proper noscript fallbacks
 - **Coverage**: Analytics now active on all pages including landing, authentication, dashboard, products, work orders, team management, and subscription pages
+- **Dual Tracking**: Combines GA4 direct implementation with GTM for maximum tracking flexibility and marketing integration
 
 ### Mobile Responsiveness Implementation
 - **Navigation**: Implemented responsive sidebar with hamburger menu and mobile overlay
