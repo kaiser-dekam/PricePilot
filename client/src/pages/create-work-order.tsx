@@ -273,10 +273,33 @@ export default function CreateWorkOrder() {
   };
 
   const applyBulkAdjustment = () => {
-    if (!bulkAdjustmentValue.trim() || selectedProducts.length === 0) {
+    if (selectedProducts.length === 0) {
       toast({
         title: "Error",
-        description: "Please enter an adjustment value and select products",
+        description: "Please select products first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Handle remove sale prices option
+    if (bulkPriceType === "salePrice" && bulkAdjustmentType === "remove") {
+      selectedProducts.forEach(productId => {
+        updateProductPrice(productId, "salePrice", "");
+      });
+
+      toast({
+        title: "Success",
+        description: `Removed sale prices from ${selectedProducts.length} products`,
+      });
+      return;
+    }
+
+    // Handle regular adjustments
+    if (!bulkAdjustmentValue.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an adjustment value",
         variant: "destructive",
       });
       return;
@@ -767,32 +790,53 @@ export default function CreateWorkOrder() {
                             <SelectContent>
                               <SelectItem value="percentage">Percentage</SelectItem>
                               <SelectItem value="amount">Fixed Amount</SelectItem>
+                              {bulkPriceType === "salePrice" && (
+                                <SelectItem value="remove">Remove All Sale Prices</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
                         
                         <div>
-                          <Label className="text-xs">
-                            {bulkAdjustmentType === "percentage" ? "Percentage (%)" : "Amount ($)"}
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="number"
-                              step={bulkAdjustmentType === "percentage" ? "1" : "0.01"}
-                              placeholder={bulkAdjustmentType === "percentage" ? "10" : "5.00"}
-                              value={bulkAdjustmentValue}
-                              onChange={(e) => setBulkAdjustmentValue(e.target.value)}
-                              className="text-sm"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={applyBulkAdjustment}
-                              className="whitespace-nowrap"
-                            >
-                              Apply
-                            </Button>
-                          </div>
+                          {bulkPriceType === "salePrice" && bulkAdjustmentType === "remove" ? (
+                            <div className="text-center py-2">
+                              <p className="text-xs text-gray-600 mb-2">
+                                This will remove all sale prices from selected products
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={applyBulkAdjustment}
+                                className="whitespace-nowrap text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                Remove Sale Prices
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <Label className="text-xs">
+                                {bulkAdjustmentType === "percentage" ? "Percentage (%)" : "Amount ($)"}
+                              </Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="number"
+                                  step={bulkAdjustmentType === "percentage" ? "1" : "0.01"}
+                                  placeholder={bulkAdjustmentType === "percentage" ? "10" : "5.00"}
+                                  value={bulkAdjustmentValue}
+                                  onChange={(e) => setBulkAdjustmentValue(e.target.value)}
+                                  className="text-sm"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={applyBulkAdjustment}
+                                  className="whitespace-nowrap"
+                                >
+                                  Apply
+                                </Button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
