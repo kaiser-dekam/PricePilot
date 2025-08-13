@@ -43,7 +43,7 @@ export default function CreateWorkOrder() {
   const [allProducts, setAllProducts] = useState<any[]>([]);
   
   // Bulk adjustment states
-  const [bulkAdjustmentType, setBulkAdjustmentType] = useState<"percentage" | "amount">("percentage");
+  const [bulkAdjustmentType, setBulkAdjustmentType] = useState<"percentage" | "amount" | "remove">("percentage");
   const [bulkAdjustmentValue, setBulkAdjustmentValue] = useState("");
   const [bulkPriceType, setBulkPriceType] = useState<"regularPrice" | "salePrice">("regularPrice");
   const [lastPercentageValue, setLastPercentageValue] = useState("");
@@ -414,6 +414,45 @@ export default function CreateWorkOrder() {
       return;
     }
 
+    // Transform productUpdates to match the work order schema format
+    const formattedProductUpdates = relevantUpdates.map(update => {
+      const product = allProducts.find(p => p.id === update.productId);
+      const result: any = {
+        productId: update.productId,
+        productName: product?.name || "Unknown Product",
+      };
+
+      // Add price updates if they exist
+      if (update.regularPrice !== undefined) {
+        result.newRegularPrice = update.regularPrice.toString();
+      }
+      if (update.salePrice !== undefined) {
+        result.newSalePrice = update.salePrice.toString();
+      }
+
+      // Handle variants if they exist
+      if (update.variants && update.variants.length > 0) {
+        // For now, just include the first variant's data in the main update
+        // TODO: Handle multiple variants properly
+        const firstVariant = update.variants[0];
+        const variant = loadedVariants[update.productId]?.find(v => v.id === firstVariant.variantId);
+        
+        if (variant) {
+          result.variantId = firstVariant.variantId;
+          result.variantSku = variant.variantSku;
+          
+          if (firstVariant.regularPrice !== undefined) {
+            result.newRegularPrice = firstVariant.regularPrice.toString();
+          }
+          if (firstVariant.salePrice !== undefined) {
+            result.newSalePrice = firstVariant.salePrice.toString();
+          }
+        }
+      }
+
+      return result;
+    });
+
     let scheduledAt = null;
     if (scheduleType === "scheduled") {
       if (!scheduleDate || !scheduleTime) {
@@ -429,8 +468,9 @@ export default function CreateWorkOrder() {
 
     createMutation.mutate({
       title,
-      productUpdates: relevantUpdates,
+      productUpdates: formattedProductUpdates,
       scheduledAt,
+      executeImmediately: scheduleType === "immediate",
     });
   };
 
@@ -450,7 +490,7 @@ export default function CreateWorkOrder() {
   // Select all visible products
   const selectAllVisible = () => {
     const visibleProductIds = allProducts.map(product => product.id);
-    const newSelected = [...new Set([...selectedProducts, ...visibleProductIds])];
+    const newSelected = Array.from(new Set([...selectedProducts, ...visibleProductIds]));
     setSelectedProducts(newSelected);
   };
 
@@ -459,7 +499,7 @@ export default function CreateWorkOrder() {
     const saleProductIds = allProducts
       .filter(product => product.salePrice && parseFloat(product.salePrice) > 0)
       .map(product => product.id);
-    const newSelected = [...new Set([...selectedProducts, ...saleProductIds])];
+    const newSelected = Array.from(new Set([...selectedProducts, ...saleProductIds]));
     setSelectedProducts(newSelected);
   };
 
@@ -808,7 +848,7 @@ export default function CreateWorkOrder() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <Label className="text-xs">Price Type</Label>
-                          <Select value={bulkPriceType} onValueChange={setBulkPriceType}>
+                          <Select value={bulkPriceType} onValueChange={(value: "regularPrice" | "salePrice") => setBulkPriceType(value)}>
                             <SelectTrigger className="text-sm">
                               <SelectValue />
                             </SelectTrigger>
@@ -821,7 +861,7 @@ export default function CreateWorkOrder() {
                         
                         <div>
                           <Label className="text-xs">Adjustment Type</Label>
-                          <Select value={bulkAdjustmentType} onValueChange={setBulkAdjustmentType}>
+                          <Select value={bulkAdjustmentType} onValueChange={(value: "percentage" | "amount" | "remove") => setBulkAdjustmentType(value)}>
                             <SelectTrigger className="text-sm">
                               <SelectValue />
                             </SelectTrigger>
