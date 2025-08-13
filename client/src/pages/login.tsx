@@ -115,19 +115,26 @@ export default function Login() {
     setIsLoading(true);
     try {
       const { resetPassword } = await import("@/lib/firebase");
+      console.log('Attempting to send password reset email to:', email);
       await resetPassword(email);
+      
       toast({
-        title: "Success",
-        description: "Password reset email sent! Check your inbox.",
+        title: "Password Reset Email Sent!",
+        description: `Check your inbox at ${email}. If you don't see it in a few minutes, check your spam folder.`,
       });
       setShowForgotPassword(false);
     } catch (error: any) {
+      console.error('Password reset error:', error);
       let errorMessage = error.message || "Failed to send password reset email";
       
       if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email address.';
+        errorMessage = 'No account found with this email address. Try creating an account instead.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many reset attempts. Please wait a few minutes before trying again.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
       }
       
       toast({

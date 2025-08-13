@@ -20,7 +20,19 @@ export const signInWithEmail = (email: string, password: string) =>
 export const signUpWithEmail = (email: string, password: string) => 
   createUserWithEmailAndPassword(auth, email, password);
 export const signOutUser = () => signOut(auth);
-export const resetPassword = (email: string) => sendPasswordResetEmail(auth, email);
+export const resetPassword = async (email: string) => {
+  try {
+    await sendPasswordResetEmail(auth, email, {
+      url: window.location.origin + '/login',
+      handleCodeInApp: false,
+    });
+    console.log('Password reset email sent successfully to:', email);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to send password reset email:', error);
+    throw error;
+  }
+};
 
 // Auth state listener
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
