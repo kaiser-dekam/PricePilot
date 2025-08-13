@@ -57,7 +57,7 @@ export default function Landing() {
             </div>
             
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              No credit card required · 14‑day Trial
+              Trial Plan Available • No credit card required
             </p>
           </div>
 
@@ -94,7 +94,7 @@ export default function Landing() {
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 dark:text-white">Price History</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Track trends & accountability</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Track changes & accountability</div>
                 </div>
               </div>
 
@@ -145,7 +145,7 @@ export default function Landing() {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Catalog Browsing</h3>
               </div>
               <p className="text-gray-600 dark:text-gray-300">
-                Filter by brand, category, SKU, price rules, and change history. Save custom views for your team.
+                Filter by brand, category, SKU, and change history. 
               </p>
             </div>
 
@@ -157,7 +157,7 @@ export default function Landing() {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Scheduled Work Orders</h3>
               </div>
               <p className="text-gray-600 dark:text-gray-300">
-                Queue and approve bulk price updates with guardrails, approvals, and audit logs.
+                Queue and approve bulk price updates with guardrails, and audit logs.
               </p>
             </div>
 
@@ -169,7 +169,7 @@ export default function Landing() {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Variant‑level Pricing</h3>
               </div>
               <p className="text-gray-600 dark:text-gray-300">
-                Update individual variant prices, compare against MSRP/MAP, and apply differential rules.
+                Update individual variant prices and apply easy discounts across regular and sale prices. 
               </p>
             </div>
 
@@ -181,7 +181,7 @@ export default function Landing() {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Teams & Permissions</h3>
               </div>
               <p className="text-gray-600 dark:text-gray-300">
-                Invite teammates, assign roles (Admin/Editor/Viewer), and restrict sensitive actions.
+                Invite teammates, assign roles (Admin/Member), and restrict sensitive access.
               </p>
             </div>
 
@@ -225,7 +225,7 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Plan updates</h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Create a Work Order for price changes, choose products/variants, schedule, and set approvers.
+                Create a Work Order for price changes, choose products/variants, and schedule for hands off updates.
               </p>
             </div>
 
@@ -249,7 +249,7 @@ export default function Landing() {
             Ready to take control of your catalog?
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            Join thousands of merchants who trust Catalog Pilot for their BigCommerce operations.
+            Get started today for free with our trial plan.
           </p>
           <Link href="/login">
             <button className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-primary to-blue-600 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
@@ -258,7 +258,7 @@ export default function Landing() {
             </button>
           </Link>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-            14-day free trial · No credit card required · Cancel anytime
+            Free trial plan available · No credit card required · Cancel anytime
           </p>
         </div>
       </section>

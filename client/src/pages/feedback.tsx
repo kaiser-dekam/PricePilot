@@ -30,7 +30,7 @@ export default function Feedback() {
               <iframe 
                 src="https://ultra-mistake-4c3.notion.site/ebd/24e09468acb0801081d4d5dc3e1e8491" 
                 width="100%" 
-                height="800" 
+                height="1000" 
                 frameBorder="0" 
                 allowFullScreen
                 className="rounded-lg border border-gray-200 dark:border-gray-700"
