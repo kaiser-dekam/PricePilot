@@ -676,8 +676,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Define plan prices and limits
       const planDetails = {
-        starter: { priceId: 'price_starter', amount: 1000, limit: 100 }, // $10.00
-        premium: { priceId: 'price_premium', amount: 2000, limit: 1000 } // $20.00
+        starter: { priceId: 'price_1RvINwCQT46XbXAbXRC4YdQz', amount: 1000, limit: 100 }, // $10.00
+        premium: { priceId: 'price_1RvIOWCQT46XbXAb4c0bniaE', amount: 2000, limit: 1000 } // $20.00
       };
 
       const selectedPlan = planDetails[plan.toLowerCase() as keyof typeof planDetails];

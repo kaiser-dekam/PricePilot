@@ -45,6 +45,19 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 
 ## Recent Improvements (January 27, 2025)
 
+### Interactive User Walkthrough (August 13, 2025)
+- **Onboarding System**: Created comprehensive guided tour for new users appearing only once after registration
+- **Database Integration**: Added hasSeenWalkthrough field to users table with API endpoint for completion tracking
+- **Step-by-Step Guide**: Multi-step walkthrough covering Products, Work Orders, Team management, and Settings
+- **Visual Highlighting**: Overlay system with element targeting and smooth transitions between steps
+- **User Experience**: Auto-triggers after 1-second delay with skip/complete options and progress indicators
+
+### Stripe Pricing Update (August 13, 2025)
+- **Price Configuration**: Updated Stripe price IDs for subscription plans
+- **Standard Plan**: Updated to price_1RvINwCQT46XbXAbXRC4YdQz
+- **Premium Plan**: Updated to price_1RvIOWCQT46XbXAb4c0bniaE
+- **Integration**: Modified server/routes.ts planDetails object for proper Stripe checkout processing
+
 ### User Feedback Collection (August 13, 2025)
 - **Feedback Page**: Created dedicated feedback collection page with embedded Notion form
 - **Navigation Access**: Added "Feedback" button to sidebar navigation with MessageSquare icon
