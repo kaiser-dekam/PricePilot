@@ -142,27 +142,16 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
 
   // Get unique categories for filter dropdown - include all category levels
   const categories = useMemo(() => {
-    const allCategoryParts = new Set<string>();
+    const uniqueCategories = new Set<string>();
     
     allProducts.forEach(product => {
-      if (product.category) {
-        // Split the category path and add all parts
-        const parts = product.category.split(' > ');
-        // Add the full path
-        allCategoryParts.add(product.category);
-        // Add each individual part and partial paths
-        for (let i = 0; i < parts.length; i++) {
-          // Add individual category names
-          allCategoryParts.add(parts[i]);
-          // Add partial paths (e.g., "Parent", "Parent > Child")
-          if (i > 0) {
-            allCategoryParts.add(parts.slice(0, i + 1).join(' > '));
-          }
-        }
+      if (product.category && product.category.trim()) {
+        uniqueCategories.add(product.category);
       }
     });
     
-    return Array.from(allCategoryParts).sort();
+    // Sort categories alphabetically
+    return Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b));
   }, [allProducts]);
 
   // Use allProducts directly since they're already filtered by the API
