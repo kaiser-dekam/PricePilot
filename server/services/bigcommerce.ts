@@ -85,55 +85,65 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
-      // Debug: Log the first few categories to understand the structure
-      console.log('Sample categories from BigCommerce API:', 
-        JSON.stringify(categoriesResponse.data.data.slice(0, 3), null, 2));
+
 
       // Build a proper category hierarchy map
       const categoryMap = new Map(
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat])
       );
       
-      // Helper function to build full category path using BigCommerce hierarchy
+      // Helper function to build full category path by traversing parent_id relationships
       const buildCategoryPath = (categoryIds: number[]): string => {
         if (!categoryIds || categoryIds.length === 0) return '';
         
-        // For products with multiple categories, we'll use the first one with a hierarchy
-        // or just join them if no hierarchy is available
-        const categoryPaths: string[] = [];
+        // Function to build path for a single category by walking up the parent chain
+        const buildPathForCategory = (catId: number): string => {
+          const path: string[] = [];
+          let currentId = catId;
+          const visited = new Set<number>(); // Prevent infinite loops
+          
+          while (currentId && !visited.has(currentId)) {
+            visited.add(currentId);
+            const category = categoryMap.get(currentId) as BigCommerceCategory | undefined;
+            
+            if (!category) break;
+            
+            path.unshift(category.name); // Add to beginning to build path from root
+            currentId = category.parent_id; // Move to parent
+          }
+          
+          return path.join(' > ');
+        };
+        
+        // Find the best category path (prefer non-"Shop All" categories with hierarchy)
+        const categoryPaths: { path: string; depth: number; isShopAll: boolean }[] = [];
         
         for (const catId of categoryIds) {
           const category = categoryMap.get(catId) as BigCommerceCategory | undefined;
-          if (category?.parent_category_list && category.parent_category_list.length > 0) {
-            // Use parent_category_list for full hierarchy
-            const fullPath = category.parent_category_list
-              .map((id: number) => (categoryMap.get(id) as BigCommerceCategory | undefined)?.name)
-              .filter(Boolean);
-            if (fullPath.length > 0) {
-              categoryPaths.push(fullPath.join(' > '));
-            }
-          } else if (category) {
-            // Fallback to just category name for root categories
-            categoryPaths.push(category.name);
+          if (category) {
+            const path = buildPathForCategory(catId);
+            const depth = path.split(' > ').length;
+            const isShopAll = category.name === 'Shop All';
+            categoryPaths.push({ path, depth, isShopAll });
           }
         }
         
-        // Return the first (typically primary) category path, or join multiple paths
-        return categoryPaths.length > 0 ? categoryPaths[0] : '';
+        if (categoryPaths.length === 0) return '';
+        
+        // Sort by preference: non-"Shop All" first, then by depth (deeper is better)
+        categoryPaths.sort((a, b) => {
+          if (a.isShopAll !== b.isShopAll) return a.isShopAll ? 1 : -1;
+          return b.depth - a.depth;
+        });
+        
+        return categoryPaths[0].path;
       };
 
       const products: BigCommerceProductType[] = [];
       const variants: any[] = [];
 
       for (const bcProduct of productsResponse.data.data) {
-        // Debug: Log category building for specific product
-        if (bcProduct.sku === 'ES-STSB-0066') {
-          console.log('=== DEBUGGING ES-STSB-0066 ===');
-          console.log('Product categories (IDs):', bcProduct.categories);
-          console.log('Available category objects:', bcProduct.categories.map((id: number) => categoryMap.get(id)));
-          console.log('Built category path:', buildCategoryPath(bcProduct.categories));
-          console.log('=============================');
-        }
+
         
         const product = {
           id: bcProduct.id.toString(),
@@ -195,29 +205,51 @@ export class BigCommerceService {
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat])
       );
       
-      // Helper function to build full category path using BigCommerce hierarchy
+      // Helper function to build full category path by traversing parent_id relationships
       const buildCategoryPath = (categoryIds: number[]): string => {
         if (!categoryIds || categoryIds.length === 0) return '';
         
-        const categoryPaths: string[] = [];
+        // Function to build path for a single category by walking up the parent chain
+        const buildPathForCategory = (catId: number): string => {
+          const path: string[] = [];
+          let currentId = catId;
+          const visited = new Set<number>(); // Prevent infinite loops
+          
+          while (currentId && !visited.has(currentId)) {
+            visited.add(currentId);
+            const category = categoryMap.get(currentId) as BigCommerceCategory | undefined;
+            
+            if (!category) break;
+            
+            path.unshift(category.name); // Add to beginning to build path from root
+            currentId = category.parent_id; // Move to parent
+          }
+          
+          return path.join(' > ');
+        };
+        
+        // Find the best category path (prefer non-"Shop All" categories with hierarchy)
+        const categoryPaths: { path: string; depth: number; isShopAll: boolean }[] = [];
         
         for (const catId of categoryIds) {
           const category = categoryMap.get(catId) as BigCommerceCategory | undefined;
-          if (category?.parent_category_list && category.parent_category_list.length > 0) {
-            // Use parent_category_list for full hierarchy
-            const fullPath = category.parent_category_list
-              .map((id: number) => (categoryMap.get(id) as BigCommerceCategory | undefined)?.name)
-              .filter(Boolean);
-            if (fullPath.length > 0) {
-              categoryPaths.push(fullPath.join(' > '));
-            }
-          } else if (category) {
-            // Fallback to just category name for root categories
-            categoryPaths.push(category.name);
+          if (category) {
+            const path = buildPathForCategory(catId);
+            const depth = path.split(' > ').length;
+            const isShopAll = category.name === 'Shop All';
+            categoryPaths.push({ path, depth, isShopAll });
           }
         }
         
-        return categoryPaths.length > 0 ? categoryPaths[0] : '';
+        if (categoryPaths.length === 0) return '';
+        
+        // Sort by preference: non-"Shop All" first, then by depth (deeper is better)
+        categoryPaths.sort((a, b) => {
+          if (a.isShopAll !== b.isShopAll) return a.isShopAll ? 1 : -1;
+          return b.depth - a.depth;
+        });
+        
+        return categoryPaths[0].path;
       };
 
       const bcProduct: BigCommerceProduct = productResponse.data.data;
