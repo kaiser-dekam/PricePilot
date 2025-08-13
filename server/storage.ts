@@ -232,16 +232,12 @@ export class DbStorage implements IStorage {
       return { products: [], total: 0 };
     }
     
-    console.log('Getting products for company:', user.companyId);
-    
     const page = filters?.page || 1;
     const limit = filters?.limit || 50;
-    console.log('getProducts called with filters:', filters);
     const offset = (page - 1) * limit;
 
     // Get API settings to check visibility setting
     const apiSettings = await this.getApiSettings(userId);
-    console.log('API Settings showInvisibleProducts:', apiSettings?.showInvisibleProducts);
     
     // Build where conditions
     const conditions = [eq(products.companyId, user.companyId)];
@@ -260,40 +256,27 @@ export class DbStorage implements IStorage {
     }
     
     // Filter by visibility if setting is disabled
-    console.log('Visibility filter check:', !apiSettings?.showInvisibleProducts);
     if (!apiSettings?.showInvisibleProducts) {
-      console.log('Adding published-only filter');
       conditions.push(eq(products.status, 'published'));
-    } else {
-      console.log('Showing all products (published and draft)');
     }
 
-    const whereClause = and(...conditions);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
     const totalResult = await this.db
       .select({ count: count() })
       .from(products)
-      .where(whereClause);
+      .where(whereClause!);
     const total = totalResult[0].count;
     
-    console.log(`Total products in DB for company ${user.companyId}:`, total);
-
     // Get products
-    console.log('Executing query with whereClause conditions:', conditions.length);
     const result = await this.db
       .select()
       .from(products)
-      .where(whereClause)
+      .where(whereClause!)
       .orderBy(desc(products.lastUpdated))
       .limit(limit)
       .offset(offset);
-    
-    console.log(`Query returned ${result.length} products, total count: ${total}, limit: ${limit}, offset: ${offset}, page: ${page}`);
-    
-    if (result.length === 0 && total > 0) {
-      console.log('No products returned but total > 0. This might indicate a pagination issue.');
-    }
 
     // Fetch variants for each product
     const productsWithVariants = await Promise.all(

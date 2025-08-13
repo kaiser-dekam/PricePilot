@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Search, Plus, RefreshCw, Package, Grid3X3, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -7,18 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import ProductCard from "@/components/products/product-card";
 import ProductDetailPanel from "@/components/products/product-detail-panel";
-import WorkOrderModal from "@/components/work-orders/work-order-modal";
+
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Product } from "@shared/schema";
 
 export default function Products() {
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [syncProgress, setSyncProgress] = useState<{
     stage: string;
@@ -199,7 +201,7 @@ export default function Products() {
                 <span className="hidden sm:inline">{syncMutation.isPending || syncProgress.isActive ? "Syncing..." : "Sync"}</span>
               </Button>
               
-              <Button onClick={() => setShowWorkOrderModal(true)}>
+              <Button onClick={() => setLocation('/work-orders/create')}>
                 <Plus className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Create Work Order</span>
                 <span className="sm:hidden">Create</span>
@@ -492,12 +494,7 @@ export default function Products() {
         onClose={handleClosePanel}
       />
 
-      {/* Work Order Modal */}
-      <WorkOrderModal
-        isOpen={showWorkOrderModal}
-        onClose={() => setShowWorkOrderModal(false)}
-        products={products}
-      />
+
     </>
   );
 }
