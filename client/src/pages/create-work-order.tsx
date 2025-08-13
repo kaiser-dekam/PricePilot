@@ -386,6 +386,22 @@ export default function CreateWorkOrder() {
     setAllProducts([]);
   };
 
+  // Select all visible products
+  const selectAllVisible = () => {
+    const visibleProductIds = allProducts.map(product => product.id);
+    const newSelected = [...new Set([...selectedProducts, ...visibleProductIds])];
+    setSelectedProducts(newSelected);
+  };
+
+  // Select all products with sale prices
+  const selectAllSaleItems = () => {
+    const saleProductIds = allProducts
+      .filter(product => product.salePrice && parseFloat(product.salePrice) > 0)
+      .map(product => product.id);
+    const newSelected = [...new Set([...selectedProducts, ...saleProductIds])];
+    setSelectedProducts(newSelected);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -506,6 +522,23 @@ export default function CreateWorkOrder() {
                 <div className="flex items-center justify-between">
                   <CardTitle>Select Products</CardTitle>
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllVisible}
+                      disabled={isLoadingProducts || allProducts.length === 0}
+                    >
+                      Select All Visible
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllSaleItems}
+                      disabled={isLoadingProducts}
+                      className="text-green-600 border-green-200 hover:bg-green-50"
+                    >
+                      Select All Sale Items
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
