@@ -320,12 +320,28 @@ export default function CreateWorkOrder() {
       if (!product) return;
 
       let newPrice: number;
-      const currentPrice = parseFloat(product[bulkPriceType]) || 0;
+      let currentPrice = parseFloat(product[bulkPriceType]) || 0;
+      
+      // For sale price, if no current sale price, use regular price as base
+      if (bulkPriceType === "salePrice" && currentPrice === 0) {
+        currentPrice = parseFloat(product.regularPrice) || 0;
+      }
 
       if (bulkAdjustmentType === "percentage") {
-        newPrice = currentPrice * (1 + adjustmentValue / 100);
+        // For sale prices, percentage should be a discount (reduction)
+        // For regular prices, percentage could be an increase or decrease based on context
+        if (bulkPriceType === "salePrice") {
+          newPrice = currentPrice * (1 - adjustmentValue / 100); // Apply discount
+        } else {
+          newPrice = currentPrice * (1 + adjustmentValue / 100); // Apply increase for regular price
+        }
       } else {
-        newPrice = currentPrice + adjustmentValue;
+        // For amount adjustments, subtract for sale prices (discount), add for regular prices
+        if (bulkPriceType === "salePrice") {
+          newPrice = currentPrice - adjustmentValue; // Apply discount
+        } else {
+          newPrice = currentPrice + adjustmentValue; // Apply increase for regular price
+        }
       }
 
       // Ensure price is not negative
@@ -334,9 +350,25 @@ export default function CreateWorkOrder() {
       updateProductPrice(productId, bulkPriceType, newPrice.toFixed(2));
     });
 
+    // Create appropriate success message
+    let adjustmentDescription = "";
+    if (bulkAdjustmentType === "percentage") {
+      if (bulkPriceType === "salePrice") {
+        adjustmentDescription = `${adjustmentValue}% discount`;
+      } else {
+        adjustmentDescription = `${adjustmentValue}% increase`;
+      }
+    } else {
+      if (bulkPriceType === "salePrice") {
+        adjustmentDescription = `$${adjustmentValue} discount`;
+      } else {
+        adjustmentDescription = `$${adjustmentValue} increase`;
+      }
+    }
+
     toast({
       title: "Success",
-      description: `Applied ${bulkAdjustmentType === "percentage" ? adjustmentValue + "%" : "$" + adjustmentValue} adjustment to ${selectedProducts.length} products`,
+      description: `Applied ${adjustmentDescription} to ${selectedProducts.length} products`,
     });
 
     setBulkAdjustmentValue("");
