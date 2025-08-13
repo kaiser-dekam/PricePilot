@@ -46,6 +46,7 @@ export default function CreateWorkOrder() {
   const [bulkAdjustmentType, setBulkAdjustmentType] = useState<"percentage" | "amount">("percentage");
   const [bulkAdjustmentValue, setBulkAdjustmentValue] = useState("");
   const [bulkPriceType, setBulkPriceType] = useState<"regularPrice" | "salePrice">("regularPrice");
+  const [lastPercentageValue, setLastPercentageValue] = useState("");
 
   const { toast } = useToast();
 
@@ -371,6 +372,11 @@ export default function CreateWorkOrder() {
       description: `Applied ${adjustmentDescription} to ${selectedProducts.length} products`,
     });
 
+    // Remember the last percentage value if it was a percentage adjustment
+    if (bulkAdjustmentType === "percentage") {
+      setLastPercentageValue(bulkAdjustmentValue);
+    }
+    
     setBulkAdjustmentValue("");
   };
 
@@ -853,7 +859,7 @@ export default function CreateWorkOrder() {
                                 <Input
                                   type="number"
                                   step={bulkAdjustmentType === "percentage" ? "1" : "0.01"}
-                                  placeholder={bulkAdjustmentType === "percentage" ? "10" : "5.00"}
+                                  placeholder={bulkAdjustmentType === "percentage" ? (lastPercentageValue || "10") : "5.00"}
                                   value={bulkAdjustmentValue}
                                   onChange={(e) => setBulkAdjustmentValue(e.target.value)}
                                   className="text-sm"
