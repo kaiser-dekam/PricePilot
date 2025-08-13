@@ -140,18 +140,41 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     },
   });
 
-  // Get unique categories for filter dropdown - include all category levels
+  // Get hierarchical categories for filter dropdown
   const categories = useMemo(() => {
-    const uniqueCategories = new Set<string>();
+    const categoryMap = new Map<string, { fullPath: string; level: number; parent?: string }>();
     
     allProducts.forEach(product => {
       if (product.category && product.category.trim()) {
-        uniqueCategories.add(product.category);
+        const parts = product.category.split(' > ').map(p => p.trim());
+        
+        // Add each level of the category hierarchy
+        for (let i = 0; i < parts.length; i++) {
+          const currentPath = parts.slice(0, i + 1).join(' > ');
+          const currentName = parts[i];
+          const parentPath = i > 0 ? parts.slice(0, i).join(' > ') : undefined;
+          
+          if (!categoryMap.has(currentPath)) {
+            categoryMap.set(currentPath, {
+              fullPath: currentPath,
+              level: i,
+              parent: parentPath
+            });
+          }
+        }
       }
     });
     
-    // Sort categories alphabetically
-    return Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b));
+    // Convert to array and sort hierarchically
+    const categoryArray = Array.from(categoryMap.values());
+    
+    // Sort by level first, then alphabetically within each level
+    return categoryArray.sort((a, b) => {
+      if (a.level !== b.level) {
+        return a.level - b.level;
+      }
+      return a.fullPath.localeCompare(b.fullPath);
+    });
   }, [allProducts]);
 
   // Use allProducts directly since they're already filtered by the API
@@ -437,8 +460,11 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category} value={category || ""}>
-                      {category}
+                    <SelectItem key={category.fullPath} value={category.fullPath}>
+                      <span style={{ paddingLeft: `${category.level * 16}px` }}>
+                        {category.level > 0 && "└ "}
+                        {category.fullPath.split(' > ').pop()}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
