@@ -687,17 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payment_method_types: ['card'],
         line_items: [
           {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `Catalog Pilot ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-                description: `Up to ${selectedPlan.limit} products`,
-              },
-              unit_amount: selectedPlan.amount,
-              recurring: {
-                interval: 'month',
-              },
-            },
+            price: selectedPlan.priceId,
             quantity: 1,
           },
         ],
