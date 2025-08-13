@@ -8,6 +8,7 @@ import {
   Users,
   Menu,
   X,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -62,6 +63,12 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       href: "/subscription",
       icon: Crown,
       current: location === "/subscription",
+    },
+    {
+      name: "Feedback",
+      href: "/feedback",
+      icon: MessageSquare,
+      current: location === "/feedback",
     },
     {
       name: "Settings",

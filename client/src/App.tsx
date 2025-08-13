@@ -14,6 +14,7 @@ import Settings from "@/pages/settings";
 import Subscription from "@/pages/subscription";
 import Team from "@/pages/team";
 import AcceptInvitation from "@/pages/accept-invitation";
+import Feedback from "@/pages/feedback";
 import Sidebar from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
@@ -83,6 +84,7 @@ function Router() {
             <Route path="/settings" component={Settings} />
             <Route path="/subscription" component={Subscription} />
             <Route path="/team" component={Team} />
+            <Route path="/feedback" component={Feedback} />
             <Route path="/login" component={() => <div />} />
             <Route component={NotFound} />
           </Switch>

@@ -45,6 +45,13 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 
 ## Recent Improvements (January 27, 2025)
 
+### User Feedback Collection (August 13, 2025)
+- **Feedback Page**: Created dedicated feedback collection page with embedded Notion form
+- **Navigation Access**: Added "Feedback" button to sidebar navigation with MessageSquare icon
+- **Embedded Form**: Integrated iframe with Notion feedback form for streamlined user input collection
+- **User Experience**: Clean, professional interface with explanatory content about feedback types needed
+- **Accessibility**: Full route integration in React Router with proper responsive design
+
 ### Analytics Integration (August 13, 2025)
 - **Google Analytics**: Added Google Analytics (G-YTPSTTPY9H) with gtag.js for comprehensive user behavior tracking
 - **Google Tag Manager**: Integrated Google Tag Manager (GTM-NFSKFSGL) for advanced event tracking and marketing analytics
