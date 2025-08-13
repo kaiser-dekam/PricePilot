@@ -53,10 +53,10 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 - **User Experience**: Auto-triggers after 1-second delay with skip/complete options and progress indicators
 
 ### Stripe Pricing Update (August 13, 2025)
-- **Price Configuration**: Updated Stripe price IDs for subscription plans
-- **Standard Plan**: Updated to price_1RvINwCQT46XbXAbXRC4YdQz
-- **Premium Plan**: Updated to price_1RvIOWCQT46XbXAb4c0bniaE
-- **Integration**: Modified server/routes.ts planDetails object for proper Stripe checkout processing
+- **Price Configuration**: Updated Stripe price IDs and amounts for subscription plans
+- **Starter Plan**: Updated to price_1RvINwCQT46XbXAbXRC4YdQz ($5/month, 100 products)
+- **Premium Plan**: Updated to price_1RvIOWCQT46XbXAb4c0bniaE ($10/month, 1000 products)
+- **Integration**: Modified server/routes.ts planDetails object and frontend display pricing
 
 ### User Feedback Collection (August 13, 2025)
 - **Feedback Page**: Created dedicated feedback collection page with embedded Notion form

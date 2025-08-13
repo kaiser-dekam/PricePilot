@@ -51,9 +51,9 @@ const PLANS = [
     price: "$10",
     period: "per month",
     description: "Best for growing businesses",
-    productLimit: 2000,
+    productLimit: 1000,
     features: [
-      "Up to 2,000 products",
+      "Up to 1,000 products",
       "Bulk price updates",
       "Scheduled price updates",
       "Catalog pricing backups",
