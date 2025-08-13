@@ -429,148 +429,78 @@ export default function CreateWorkOrder() {
       </div>
 
       <div className="flex-1 p-4 sm:p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Work Order Settings */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Work Order Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        {/* Work Order Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Work Order Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="lg:col-span-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter work order title"
+                  className={showValidationErrors && !title.trim() ? "border-red-500" : ""}
+                />
+              </div>
+
+              <div>
+                <Label>Schedule</Label>
+                <Select value={scheduleType} onValueChange={setScheduleType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="immediate">Execute Immediately</SelectItem>
+                    <SelectItem value="scheduled">Schedule for Later</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Selected Products</Label>
+                <div className="h-10 flex items-center">
+                  <Badge variant="secondary" className="text-sm">
+                    {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {scheduleType === "scheduled" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="title">Title *</Label>
+                  <Label htmlFor="scheduleDate">Date *</Label>
                   <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter work order title"
-                    className={showValidationErrors && !title.trim() ? "border-red-500" : ""}
+                    id="scheduleDate"
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    className={showValidationErrors && scheduleType === "scheduled" && !scheduleDate ? "border-red-500" : ""}
                   />
                 </div>
-
                 <div>
-                  <Label>Schedule</Label>
-                  <Select value={scheduleType} onValueChange={setScheduleType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="immediate">Execute Immediately</SelectItem>
-                      <SelectItem value="scheduled">Schedule for Later</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="scheduleTime">Time *</Label>
+                  <Input
+                    id="scheduleTime"
+                    type="time"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                    className={showValidationErrors && scheduleType === "scheduled" && !scheduleTime ? "border-red-500" : ""}
+                  />
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                {scheduleType === "scheduled" && (
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="scheduleDate">Date *</Label>
-                      <Input
-                        id="scheduleDate"
-                        type="date"
-                        value={scheduleDate}
-                        onChange={(e) => setScheduleDate(e.target.value)}
-                        className={showValidationErrors && scheduleType === "scheduled" && !scheduleDate ? "border-red-500" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="scheduleTime">Time *</Label>
-                      <Input
-                        id="scheduleTime"
-                        type="time"
-                        value={scheduleTime}
-                        onChange={(e) => setScheduleTime(e.target.value)}
-                        className={showValidationErrors && scheduleType === "scheduled" && !scheduleTime ? "border-red-500" : ""}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Price Type</Label>
-                  <Select value={priceType} onValueChange={setPriceType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="regular">Regular Price</SelectItem>
-                      <SelectItem value="sale">Sale Price</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedProducts.length > 0 && (
-                  <>
-                    <div className="pt-3 border-t">
-                      <Label>Selected Products</Label>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
-                      </p>
-                    </div>
-                    
-                    {/* Bulk Price Adjustment */}
-                    <div className="pt-3 border-t space-y-3">
-                      <Label>Bulk Price Adjustment</Label>
-                      <div className="space-y-3">
-                        <div>
-                          <Label className="text-xs">Price Type</Label>
-                          <Select value={bulkPriceType} onValueChange={setBulkPriceType}>
-                            <SelectTrigger className="text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="regularPrice">Regular Price</SelectItem>
-                              <SelectItem value="salePrice">Sale Price</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-xs">Adjustment Type</Label>
-                          <Select value={bulkAdjustmentType} onValueChange={setBulkAdjustmentType}>
-                            <SelectTrigger className="text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="percentage">Percentage</SelectItem>
-                              <SelectItem value="amount">Fixed Amount</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-xs">
-                            {bulkAdjustmentType === "percentage" ? "Percentage (%)" : "Amount ($)"}
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="number"
-                              step={bulkAdjustmentType === "percentage" ? "1" : "0.01"}
-                              placeholder={bulkAdjustmentType === "percentage" ? "10" : "5.00"}
-                              value={bulkAdjustmentValue}
-                              onChange={(e) => setBulkAdjustmentValue(e.target.value)}
-                              className="text-sm"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={applyBulkAdjustment}
-                              className="whitespace-nowrap"
-                            >
-                              Apply
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Product Selection */}
-          <div className="lg:col-span-2">
+          <div>
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -704,33 +634,6 @@ export default function CreateWorkOrder() {
                                 )}
                               </div>
 
-                              {selectedProducts.includes(product.id) && (
-                                <div className="mt-3 grid grid-cols-2 gap-3">
-                                  <div>
-                                    <Label className="text-xs">Regular Price</Label>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      placeholder={product.price || "0.00"}
-                                      value={getProductUpdate(product.id)?.regularPrice || ""}
-                                      onChange={(e) => updateProductPrice(product.id, "regularPrice", e.target.value)}
-                                      className="text-sm"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className="text-xs">Sale Price</Label>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      placeholder={product.salePrice || "0.00"}
-                                      value={getProductUpdate(product.id)?.salePrice || ""}
-                                      onChange={(e) => updateProductPrice(product.id, "salePrice", e.target.value)}
-                                      className="text-sm"
-                                    />
-                                  </div>
-                                </div>
-                              )}
-
                               {/* Variants */}
                               {expandedProducts.includes(product.id) && loadedVariants[product.id] && (
                                 <div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-2">
@@ -756,32 +659,6 @@ export default function CreateWorkOrder() {
                                           )}
                                         </div>
                                       </div>
-                                      {selectedProducts.includes(product.id) && (
-                                        <div className="mt-2 grid grid-cols-2 gap-2">
-                                          <div>
-                                            <Label className="text-xs">Regular Price</Label>
-                                            <Input
-                                              type="number"
-                                              step="0.01"
-                                              placeholder={variant.price || "0.00"}
-                                              value={getVariantUpdate(product.id, variant.id)?.regularPrice || ""}
-                                              onChange={(e) => updateVariantPrice(product.id, variant.id, "regularPrice", e.target.value)}
-                                              className="text-sm"
-                                            />
-                                          </div>
-                                          <div>
-                                            <Label className="text-xs">Sale Price</Label>
-                                            <Input
-                                              type="number"
-                                              step="0.01"
-                                              placeholder={variant.salePrice || "0.00"}
-                                              value={getVariantUpdate(product.id, variant.id)?.salePrice || ""}
-                                              onChange={(e) => updateVariantPrice(product.id, variant.id, "salePrice", e.target.value)}
-                                              className="text-sm"
-                                            />
-                                          </div>
-                                        </div>
-                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -806,6 +683,208 @@ export default function CreateWorkOrder() {
                     </>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Price Changes Section */}
+          <div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Price Changes</CardTitle>
+                  {selectedProducts.length > 0 && (
+                    <Badge variant="secondary" className="text-sm">
+                      {selectedProducts.length} selected
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {selectedProducts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500">Select products to set price changes</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Bulk Price Adjustment */}
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                      <Label className="text-sm font-medium">Bulk Price Adjustment</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs">Price Type</Label>
+                          <Select value={bulkPriceType} onValueChange={setBulkPriceType}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="regularPrice">Regular Price</SelectItem>
+                              <SelectItem value="salePrice">Sale Price</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs">Adjustment Type</Label>
+                          <Select value={bulkAdjustmentType} onValueChange={setBulkAdjustmentType}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">Percentage</SelectItem>
+                              <SelectItem value="amount">Fixed Amount</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs">
+                            {bulkAdjustmentType === "percentage" ? "Percentage (%)" : "Amount ($)"}
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              step={bulkAdjustmentType === "percentage" ? "1" : "0.01"}
+                              placeholder={bulkAdjustmentType === "percentage" ? "10" : "5.00"}
+                              value={bulkAdjustmentValue}
+                              onChange={(e) => setBulkAdjustmentValue(e.target.value)}
+                              className="text-sm"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={applyBulkAdjustment}
+                              className="whitespace-nowrap"
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Individual Product Price Settings */}
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {selectedProducts.map(productId => {
+                        const product = allProducts.find(p => p.id === productId);
+                        if (!product) return null;
+
+                        return (
+                          <div key={productId} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h4 className="font-medium text-gray-900 text-sm">
+                                  {product.name}
+                                </h4>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                  <span>Current: ${parseFloat(product.regularPrice || "0").toFixed(2)}</span>
+                                  {product.salePrice && (
+                                    <>
+                                      <span>|</span>
+                                      <span>Sale: ${parseFloat(product.salePrice).toFixed(2)}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              {variantCounts[product.id] > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleProductExpansion(product.id)}
+                                  className="text-gray-600 hover:text-gray-900"
+                                >
+                                  {expandedProducts.includes(product.id) ? (
+                                    <ChevronDown className="w-4 h-4" />
+                                  ) : (
+                                    <ChevronRight className="w-4 h-4" />
+                                  )}
+                                  <span className="ml-1 text-xs">
+                                    {variantCounts[product.id]} variant{variantCounts[product.id] !== 1 ? 's' : ''}
+                                  </span>
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Product Base Price Inputs */}
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                              <div>
+                                <Label className="text-xs">New Regular Price</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder={product.regularPrice || "0.00"}
+                                  value={getProductUpdate(product.id)?.regularPrice || ""}
+                                  onChange={(e) => updateProductPrice(product.id, "regularPrice", e.target.value)}
+                                  className="text-sm"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">New Sale Price</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder={product.salePrice || "0.00"}
+                                  value={getProductUpdate(product.id)?.salePrice || ""}
+                                  onChange={(e) => updateProductPrice(product.id, "salePrice", e.target.value)}
+                                  className="text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Variant Price Inputs */}
+                            {expandedProducts.includes(product.id) && loadedVariants[product.id] && (
+                              <div className="pl-4 border-l-2 border-gray-200 space-y-2">
+                                {loadedVariants[product.id].map((variant: any) => (
+                                  <div key={variant.id} className="bg-gray-50 p-2 rounded">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-sm font-medium text-gray-800">
+                                        {variant.skuText}
+                                      </p>
+                                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <span>Current: ${parseFloat(variant.price || "0").toFixed(2)}</span>
+                                        {variant.salePrice && (
+                                          <>
+                                            <span>|</span>
+                                            <span>Sale: ${parseFloat(variant.salePrice).toFixed(2)}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <Label className="text-xs">New Regular Price</Label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder={variant.price || "0.00"}
+                                          value={getVariantUpdate(product.id, variant.id)?.regularPrice || ""}
+                                          onChange={(e) => updateVariantPrice(product.id, variant.id, "regularPrice", e.target.value)}
+                                          className="text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs">New Sale Price</Label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder={variant.salePrice || "0.00"}
+                                          value={getVariantUpdate(product.id, variant.id)?.salePrice || ""}
+                                          onChange={(e) => updateVariantPrice(product.id, variant.id, "salePrice", e.target.value)}
+                                          className="text-sm"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
