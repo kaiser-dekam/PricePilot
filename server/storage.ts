@@ -272,14 +272,14 @@ export class DbStorage implements IStorage {
     const totalResult = await this.db
       .select({ count: count() })
       .from(products)
-      .where(whereClause!);
+      .where(whereClause);
     const total = totalResult[0].count;
     
     // Get products
     const result = await this.db
       .select()
       .from(products)
-      .where(whereClause!)
+      .where(whereClause)
       .orderBy(desc(products.lastUpdated))
       .limit(limit)
       .offset(offset);

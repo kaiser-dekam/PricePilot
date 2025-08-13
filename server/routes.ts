@@ -336,18 +336,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const product = allProducts[i];
         
         try {
-          await storage.createProduct(userId, {
-            id: product.id,
-            name: product.name,
-            sku: product.sku || '',
-            description: product.description || '',
-            category: product.category || null,
-            regularPrice: product.regularPrice || '0',
-            salePrice: product.salePrice || null,
-            stock: product.stock || 0,
-            weight: product.weight || '0',
-            status: product.status || 'draft',
-          });
+          // Use upsert logic to either create or update existing products
+          const existingProduct = await storage.getProduct(userId, product.id);
+          if (existingProduct) {
+            // Update existing product
+            await storage.updateProduct(userId, product.id, {
+              name: product.name,
+              sku: product.sku || '',
+              description: product.description || '',
+              category: product.category || null,
+              regularPrice: product.regularPrice || '0',
+              salePrice: product.salePrice || null,
+              stock: product.stock || 0,
+              weight: product.weight || '0',
+              status: product.status || 'draft',
+            });
+          } else {
+            // Create new product
+            await storage.createProduct(userId, {
+              id: product.id,
+              name: product.name,
+              sku: product.sku || '',
+              description: product.description || '',
+              category: product.category || null,
+              regularPrice: product.regularPrice || '0',
+              salePrice: product.salePrice || null,
+              stock: product.stock || 0,
+              weight: product.weight || '0',
+              status: product.status || 'draft',
+            });
+          }
           
           // Update progress
           const processProgress = 50 + Math.round(((i + 1) / allProducts.length) * 25);
@@ -372,15 +390,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const variant = allVariants[i];
         
         try {
-          await storage.createProductVariant(userId, {
-            id: variant.id,
-            productId: variant.productId,
-            variantSku: variant.variantSku,
-            regularPrice: variant.regularPrice,
-            salePrice: variant.salePrice,
-            stock: variant.stock,
-            optionValues: variant.optionValues,
-          });
+          // Use upsert logic for variants too
+          const existingVariant = await storage.getProductVariant(userId, variant.id);
+          if (existingVariant) {
+            // Update existing variant
+            await storage.updateProductVariant(userId, variant.id, {
+              variantSku: variant.variantSku,
+              regularPrice: variant.regularPrice,
+              salePrice: variant.salePrice,
+              stock: variant.stock,
+              optionValues: variant.optionValues,
+            });
+          } else {
+            // Create new variant
+            await storage.createProductVariant(userId, {
+              id: variant.id,
+              productId: variant.productId,
+              variantSku: variant.variantSku,
+              regularPrice: variant.regularPrice,
+              salePrice: variant.salePrice,
+              stock: variant.stock,
+              optionValues: variant.optionValues,
+            });
+          }
           
           // Update progress for variants
           if (i % 10 === 0 || i === allVariants.length - 1) {
@@ -428,13 +460,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.end();
       
       // Clean up active sync
-      activeSyncs.delete(userId);
+      activeSyncs.delete(req.user.uid);
       
     } catch (error: any) {
       console.error("Error in /api/sync:", error);
       
       // Clean up active sync on error
-      activeSyncs.delete(userId);
+      activeSyncs.delete(req.user.uid);
       
       try {
         res.write(`error: ${JSON.stringify({ message: error.message })}\n\n`);
@@ -445,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } finally {
       // Ensure cleanup happens
-      activeSyncs.delete(userId);
+      activeSyncs.delete(req.user.uid);
     }
   });
 
@@ -894,7 +926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Update company to reflect the cancellation pending status - only update supported fields
-          await storage.updateCompanySubscription(user.companyId, {
+          await storage.updateCompanySubscription(user.companyId!, {
             subscriptionPlan: company.subscriptionPlan, // Keep current plan until cancellation is effective
             productLimit: company.productLimit || 5
           });
