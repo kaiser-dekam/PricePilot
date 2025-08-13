@@ -26,11 +26,11 @@ export default function Feedback() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative w-full" style={{ minHeight: '600px' }}>
+            <div className="relative w-full" style={{ minHeight: '800px' }}>
               <iframe 
                 src="https://ultra-mistake-4c3.notion.site/ebd/24e09468acb0801081d4d5dc3e1e8491" 
                 width="100%" 
-                height="600" 
+                height="800" 
                 frameBorder="0" 
                 allowFullScreen
                 className="rounded-lg border border-gray-200 dark:border-gray-700"
