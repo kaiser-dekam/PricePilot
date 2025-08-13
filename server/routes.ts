@@ -112,6 +112,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/categories", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const categories = await storage.getAllCategories(userId);
+      res.json(categories);
+    } catch (error: any) {
+      console.error("Error in /api/categories:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Dedicated sync endpoint for frontend
   app.post("/api/sync", isAuthenticated, async (req: any, res) => {
     try {

@@ -67,6 +67,13 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     staleTime: 0, // Always refetch when query changes
   });
 
+  // Fetch all categories separately - always includes all categories regardless of product visibility
+  const { data: categoriesData } = useQuery({
+    queryKey: ["/api/categories"],
+    enabled: isOpen,
+    staleTime: 60000, // Cache for 1 minute
+  });
+
   // Update modal products and total when data changes
   useEffect(() => {
     if (modalProductsData) {
@@ -140,13 +147,15 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
     },
   });
 
-  // Get hierarchical categories for filter dropdown
+  // Get hierarchical categories for filter dropdown from API
   const categories = useMemo(() => {
+    if (!categoriesData) return [];
+    
     const categoryMap = new Map<string, { fullPath: string; level: number; parent?: string }>();
     
-    allProducts.forEach(product => {
-      if (product.category && product.category.trim()) {
-        const parts = product.category.split(' > ').map(p => p.trim());
+    categoriesData.forEach((categoryPath: string) => {
+      if (categoryPath && categoryPath.trim()) {
+        const parts = categoryPath.split(' > ').map(p => p.trim());
         
         // Add each level of the category hierarchy
         for (let i = 0; i < parts.length; i++) {
@@ -175,7 +184,7 @@ export default function WorkOrderModal({ isOpen, onClose, products }: WorkOrderM
       }
       return a.fullPath.localeCompare(b.fullPath);
     });
-  }, [allProducts]);
+  }, [categoriesData]);
 
   // Use allProducts directly since they're already filtered by the API
   const filteredProducts = allProducts;

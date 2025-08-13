@@ -15,6 +15,7 @@ export default function Settings() {
   const [accessToken, setAccessToken] = useState("");
   const [clientId, setClientId] = useState("");
   const [showStockStatus, setShowStockStatus] = useState(false);
+  const [showInvisibleProducts, setShowInvisibleProducts] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -65,6 +66,7 @@ export default function Settings() {
       setAccessToken((settings as any).accessToken || "");
       setClientId((settings as any).clientId || "");
       setShowStockStatus((settings as any).showStockStatus || false);
+      setShowInvisibleProducts((settings as any).showInvisibleProducts || false);
     }
   }, [settings]);
 
@@ -85,6 +87,7 @@ export default function Settings() {
       accessToken: accessToken.trim(),
       clientId: clientId.trim(),
       showStockStatus,
+      showInvisibleProducts,
     });
   };
 
@@ -194,7 +197,7 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <Label htmlFor="showStockStatus">
@@ -209,6 +212,22 @@ export default function Settings() {
                       id="showStockStatus"
                       checked={showStockStatus}
                       onCheckedChange={setShowStockStatus}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="showInvisibleProducts">
+                        Show Hidden Products
+                      </Label>
+                      <p className="text-xs text-gray-500">
+                        Include products that are not visible on your BigCommerce store
+                      </p>
+                    </div>
+                    <Switch
+                      id="showInvisibleProducts"
+                      checked={showInvisibleProducts}
+                      onCheckedChange={setShowInvisibleProducts}
                     />
                   </div>
                 </div>

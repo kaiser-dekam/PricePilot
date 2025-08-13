@@ -12,7 +12,7 @@ import {
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, ilike, and, desc, count } from "drizzle-orm";
+import { eq, ilike, and, desc, count, or, like } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -32,6 +32,7 @@ export interface IStorage {
   
   // Products
   getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }>;
+  getAllCategories(userId: string): Promise<string[]>;
   getProduct(userId: string, id: string): Promise<Product | undefined>;
   createProduct(userId: string, product: InsertProduct & { id: string }): Promise<Product>;
   updateProduct(userId: string, id: string, updates: Partial<Product>): Promise<Product | undefined>;
@@ -237,15 +238,28 @@ export class DbStorage implements IStorage {
     const limit = filters?.limit || 50;
     const offset = (page - 1) * limit;
 
+    // Get API settings to check visibility setting
+    const apiSettings = await this.getApiSettings(userId);
+    
     // Build where conditions
     const conditions = [eq(products.companyId, user.companyId)];
     if (filters?.category && filters.category !== "all") {
-      conditions.push(eq(products.category, filters.category));
+      conditions.push(
+        or(
+          eq(products.category, filters.category),
+          like(products.category, `${filters.category} > %`)
+        )
+      );
     }
     if (filters?.search) {
       conditions.push(
         ilike(products.name, `%${filters.search}%`)
       );
+    }
+    
+    // Filter by visibility if setting is disabled
+    if (!apiSettings?.showInvisibleProducts) {
+      conditions.push(eq(products.status, 'published'));
     }
 
     const whereClause = and(...conditions);
@@ -286,6 +300,26 @@ export class DbStorage implements IStorage {
     );
 
     return { products: productsWithVariants, total };
+  }
+
+  async getAllCategories(userId: string): Promise<string[]> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) {
+      return [];
+    }
+    
+    // Get all unique categories regardless of product visibility
+    const result = await this.db
+      .selectDistinct({ category: products.category })
+      .from(products)
+      .where(and(
+        eq(products.companyId, user.companyId)
+      ));
+    
+    return result
+      .map(r => r.category)
+      .filter((cat): cat is string => Boolean(cat)) // Remove any null/empty categories with type guard
+      .sort();
   }
 
   async getProduct(userId: string, id: string): Promise<Product | undefined> {

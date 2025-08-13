@@ -66,6 +66,7 @@ export const apiSettings = pgTable("api_settings", {
   clientId: text("client_id").notNull(),
   showStock: boolean("show_stock").default(false),
   showStockStatus: boolean("show_stock_status").default(false),
+  showInvisibleProducts: boolean("show_invisible_products").default(false),
   lastSyncAt: timestamp("last_sync_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -156,6 +157,7 @@ export const insertApiSettingsSchema = createInsertSchema(apiSettings).pick({
   clientId: true,
   showStock: true,
   showStockStatus: true,
+  showInvisibleProducts: true,
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
