@@ -81,74 +81,7 @@ export default function CreateWorkOrder() {
     }
   }, [products, page]);
 
-  // Get hierarchical categories for filter dropdown from API
-  const categories = useMemo(() => {
-    if (!categoriesData) return [];
-    
-    const categorySet = new Set<string>();
-    
-    (categoriesData as string[]).forEach((categoryPath: string) => {
-      if (categoryPath && categoryPath.trim()) {
-        const parts = categoryPath.split(' > ').map(p => p.trim());
-        for (let i = 0; i < parts.length; i++) {
-          const currentPath = parts.slice(0, i + 1).join(' > ');
-          categorySet.add(currentPath);
-        }
-      }
-    });
-    
-    const categoryPaths = Array.from(categorySet);
-    
-    const buildHierarchy = (paths: string[]): Array<{ fullPath: string; level: number; displayName: string }> => {
-      const result: Array<{ fullPath: string; level: number; displayName: string }> = [];
-      
-      const pathsByParent = new Map<string, string[]>();
-      const rootPaths: string[] = [];
-      
-      paths.forEach(path => {
-        const parts = path.split(' > ');
-        if (parts.length === 1) {
-          rootPaths.push(path);
-        } else {
-          const parentPath = parts.slice(0, -1).join(' > ');
-          if (!pathsByParent.has(parentPath)) {
-            pathsByParent.set(parentPath, []);
-          }
-          pathsByParent.get(parentPath)!.push(path);
-        }
-      });
-      
-      const addCategory = (path: string, level: number) => {
-        const parts = path.split(' > ');
-        const displayName = parts[parts.length - 1];
-        
-        result.push({
-          fullPath: path,
-          level,
-          displayName
-        });
-        
-        const children = pathsByParent.get(path) || [];
-        children.sort((a, b) => {
-          const aName = a.split(' > ').pop() || '';
-          const bName = b.split(' > ').pop() || '';
-          return aName.localeCompare(bName);
-        });
-        
-        children.forEach(childPath => {
-          addCategory(childPath, level + 1);
-        });
-      };
-      
-      rootPaths.sort().forEach(rootPath => {
-        addCategory(rootPath, 0);
-      });
-      
-      return result;
-    };
-    
-    return buildHierarchy(categoryPaths);
-  }, [categoriesData]);
+
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/work-orders", data),
@@ -672,7 +605,7 @@ export default function CreateWorkOrder() {
                   </div>
                   <div className="w-full sm:w-48">
                     <BreadcrumbCategorySelector
-                      categories={categories.map(c => c.fullPath)}
+                      categories={(categoriesData as string[]) || []}
                       value={categoryFilter}
                       onChange={(value) => {
                         setCategoryFilter(value);

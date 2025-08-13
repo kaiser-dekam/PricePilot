@@ -47,10 +47,12 @@ export default function Products() {
   });
 
   // Fetch all categories
-  const { data: categoriesData } = useQuery({
+  const { data: categoriesData, isLoading: categoriesLoading, error: categoriesError } = useQuery({
     queryKey: ["/api/categories"],
     staleTime: 60000,
   });
+
+
 
   const isApiConnected = !!apiSettings;
   const showStockStatus = (apiSettings as any)?.showStockStatus || false;
@@ -284,7 +286,7 @@ export default function Products() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <BreadcrumbCategorySelector
-                  categories={categoriesData || []}
+                  categories={(categoriesData as string[]) || []}
                   value={category}
                   onChange={handleCategoryChange}
                   placeholder="All Categories"
