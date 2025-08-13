@@ -41,6 +41,11 @@ export default function CreateWorkOrder() {
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [allProducts, setAllProducts] = useState<any[]>([]);
+  
+  // Bulk adjustment states
+  const [bulkAdjustmentType, setBulkAdjustmentType] = useState<"percentage" | "amount">("percentage");
+  const [bulkAdjustmentValue, setBulkAdjustmentValue] = useState("");
+  const [bulkPriceType, setBulkPriceType] = useState<"regularPrice" | "salePrice">("regularPrice");
 
   const { toast } = useToast();
 
@@ -267,6 +272,53 @@ export default function CreateWorkOrder() {
     return productUpdate?.variants?.find(v => v.variantId === variantId);
   };
 
+  const applyBulkAdjustment = () => {
+    if (!bulkAdjustmentValue.trim() || selectedProducts.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please enter an adjustment value and select products",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const adjustmentValue = parseFloat(bulkAdjustmentValue);
+    if (isNaN(adjustmentValue)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    selectedProducts.forEach(productId => {
+      const product = allProducts.find(p => p.id === productId);
+      if (!product) return;
+
+      let newPrice: number;
+      const currentPrice = parseFloat(product[bulkPriceType]) || 0;
+
+      if (bulkAdjustmentType === "percentage") {
+        newPrice = currentPrice * (1 + adjustmentValue / 100);
+      } else {
+        newPrice = currentPrice + adjustmentValue;
+      }
+
+      // Ensure price is not negative
+      newPrice = Math.max(0, newPrice);
+      
+      updateProductPrice(productId, bulkPriceType, newPrice.toFixed(2));
+    });
+
+    toast({
+      title: "Success",
+      description: `Applied ${bulkAdjustmentType === "percentage" ? adjustmentValue + "%" : "$" + adjustmentValue} adjustment to ${selectedProducts.length} products`,
+    });
+
+    setBulkAdjustmentValue("");
+  };
+
   const handleSubmit = () => {
     setShowValidationErrors(true);
 
@@ -448,12 +500,70 @@ export default function CreateWorkOrder() {
                 </div>
 
                 {selectedProducts.length > 0 && (
-                  <div className="pt-3 border-t">
-                    <Label>Selected Products</Label>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
-                    </p>
-                  </div>
+                  <>
+                    <div className="pt-3 border-t">
+                      <Label>Selected Products</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+                      </p>
+                    </div>
+                    
+                    {/* Bulk Price Adjustment */}
+                    <div className="pt-3 border-t space-y-3">
+                      <Label>Bulk Price Adjustment</Label>
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs">Price Type</Label>
+                          <Select value={bulkPriceType} onValueChange={setBulkPriceType}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="regularPrice">Regular Price</SelectItem>
+                              <SelectItem value="salePrice">Sale Price</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs">Adjustment Type</Label>
+                          <Select value={bulkAdjustmentType} onValueChange={setBulkAdjustmentType}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">Percentage</SelectItem>
+                              <SelectItem value="amount">Fixed Amount</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs">
+                            {bulkAdjustmentType === "percentage" ? "Percentage (%)" : "Amount ($)"}
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              step={bulkAdjustmentType === "percentage" ? "1" : "0.01"}
+                              placeholder={bulkAdjustmentType === "percentage" ? "10" : "5.00"}
+                              value={bulkAdjustmentValue}
+                              onChange={(e) => setBulkAdjustmentValue(e.target.value)}
+                              className="text-sm"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={applyBulkAdjustment}
+                              className="whitespace-nowrap"
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -551,11 +661,28 @@ export default function CreateWorkOrder() {
                                   <h4 className="font-medium text-gray-900 truncate">
                                     {product.name}
                                   </h4>
-                                  {product.category && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {product.category}
-                                    </p>
-                                  )}
+                                  <div className="flex items-center gap-4 mt-1">
+                                    {product.category && (
+                                      <p className="text-xs text-gray-500">
+                                        {product.category}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <span className="text-gray-500">Current:</span>
+                                      <span className="font-medium text-gray-700">
+                                        ${parseFloat(product.regularPrice || "0").toFixed(2)}
+                                      </span>
+                                      {product.salePrice && (
+                                        <>
+                                          <span className="text-gray-400">|</span>
+                                          <span className="text-gray-500">Sale:</span>
+                                          <span className="font-medium text-green-600">
+                                            ${parseFloat(product.salePrice).toFixed(2)}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                                 
                                 {variantCounts[product.id] > 0 && (
@@ -609,9 +736,26 @@ export default function CreateWorkOrder() {
                                 <div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-2">
                                   {loadedVariants[product.id].map((variant: any) => (
                                     <div key={variant.id} className="bg-gray-50 p-2 rounded">
-                                      <p className="text-sm font-medium text-gray-800">
-                                        {variant.skuText}
-                                      </p>
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-sm font-medium text-gray-800">
+                                          {variant.skuText}
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs">
+                                          <span className="text-gray-500">Current:</span>
+                                          <span className="font-medium text-gray-700">
+                                            ${parseFloat(variant.price || "0").toFixed(2)}
+                                          </span>
+                                          {variant.salePrice && (
+                                            <>
+                                              <span className="text-gray-400">|</span>
+                                              <span className="text-gray-500">Sale:</span>
+                                              <span className="font-medium text-green-600">
+                                                ${parseFloat(variant.salePrice).toFixed(2)}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
                                       {selectedProducts.includes(product.id) && (
                                         <div className="mt-2 grid grid-cols-2 gap-2">
                                           <div>
