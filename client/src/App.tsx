@@ -15,6 +15,7 @@ import Team from "@/pages/team";
 import AcceptInvitation from "@/pages/accept-invitation";
 import Feedback from "@/pages/feedback";
 import CreateWorkOrder from "@/pages/create-work-order";
+import CategoryDemo from "@/pages/category-demo";
 import Sidebar from "@/components/layout/sidebar";
 import Walkthrough from "@/components/onboarding/walkthrough";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,7 @@ function Router() {
             <Route path="/subscription" component={Subscription} />
             <Route path="/team" component={Team} />
             <Route path="/feedback" component={Feedback} />
+            <Route path="/category-demo" component={CategoryDemo} />
             <Route path="/login" component={() => <div />} />
             <Route component={NotFound} />
           </Switch>

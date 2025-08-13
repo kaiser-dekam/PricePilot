@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { BreadcrumbCategorySelector } from "@/components/ui/category-selectors";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -670,29 +671,16 @@ export default function CreateWorkOrder() {
                     </div>
                   </div>
                   <div className="w-full sm:w-48">
-                    <Select 
-                      value={categoryFilter} 
-                      onValueChange={(value) => {
+                    <BreadcrumbCategorySelector
+                      categories={categories.map(c => c.fullPath)}
+                      value={categoryFilter}
+                      onChange={(value) => {
                         setCategoryFilter(value);
                         setPage(1);
                         setAllProducts([]);
                       }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category.fullPath} value={category.fullPath}>
-                            <span style={{ paddingLeft: `${category.level * 16}px` }}>
-                              {category.level > 0 && "└ "}
-                              {category.displayName}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Filter by category"
+                    />
                   </div>
                 </div>
 

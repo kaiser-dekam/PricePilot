@@ -12,6 +12,7 @@ import ProductDetailPanel from "@/components/products/product-detail-panel";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Product } from "@shared/schema";
+import { BreadcrumbCategorySelector } from "@/components/ui/category-selectors";
 
 export default function Products() {
   const [, setLocation] = useLocation();
@@ -43,6 +44,12 @@ export default function Products() {
 
   const { data: apiSettings } = useQuery({
     queryKey: ["/api/settings"],
+  });
+
+  // Fetch all categories
+  const { data: categoriesData } = useQuery({
+    queryKey: ["/api/categories"],
+    staleTime: 60000,
   });
 
   const isApiConnected = !!apiSettings;
@@ -276,17 +283,12 @@ export default function Products() {
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <Select value={category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="electronics">Electronics</SelectItem>
-                    <SelectItem value="clothing">Clothing</SelectItem>
-                    <SelectItem value="home">Home & Garden</SelectItem>
-                  </SelectContent>
-                </Select>
+                <BreadcrumbCategorySelector
+                  categories={categoriesData || []}
+                  value={category}
+                  onChange={handleCategoryChange}
+                  placeholder="All Categories"
+                />
                 
                 <Button
                   variant="outline"
@@ -298,6 +300,15 @@ export default function Products() {
                   className="w-full sm:w-auto"
                 >
                   Clear Filters
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/category-demo")}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Compare Category Selectors
                 </Button>
               </div>
               
