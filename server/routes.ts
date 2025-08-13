@@ -46,6 +46,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark walkthrough as complete
+  app.post("/api/auth/user/walkthrough-complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      await storage.markWalkthroughComplete(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking walkthrough complete:", error);
+      res.status(500).json({ message: "Failed to update walkthrough status" });
+    }
+  });
+
   // API Settings routes
   app.get("/api/settings", isAuthenticated, async (req: any, res) => {
     try {

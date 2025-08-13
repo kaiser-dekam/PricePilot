@@ -1,5 +1,4 @@
 import { Switch, Route, Link } from "wouter";
-import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,16 +15,55 @@ import Team from "@/pages/team";
 import AcceptInvitation from "@/pages/accept-invitation";
 import Feedback from "@/pages/feedback";
 import Sidebar from "@/components/layout/sidebar";
+import Walkthrough from "@/components/onboarding/walkthrough";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
   
   console.log("Auth state:", { isAuthenticated, isLoading, user: user?.email });
+
+  // Fetch user profile to check walkthrough status
+  const { data: userProfile } = useQuery({
+    queryKey: ["/api/auth/user"],
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
+  // Mark walkthrough as completed
+  const markWalkthroughCompleteMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/user/walkthrough-complete"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setShowWalkthrough(false);
+    },
+  });
+
+  // Check if user should see walkthrough
+  useEffect(() => {
+    if (userProfile && !(userProfile as any).hasSeenWalkthrough && isAuthenticated) {
+      // Show walkthrough after a brief delay to let the page load
+      const timer = setTimeout(() => {
+        setShowWalkthrough(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [userProfile, isAuthenticated]);
+
+  const handleWalkthroughComplete = () => {
+    markWalkthroughCompleteMutation.mutate();
+  };
+
+  const handleWalkthroughSkip = () => {
+    markWalkthroughCompleteMutation.mutate();
+  };
 
   if (isLoading) {
     return (
@@ -90,6 +128,13 @@ function Router() {
           </Switch>
         </div>
       </div>
+
+      {/* Walkthrough for new users */}
+      <Walkthrough
+        isVisible={showWalkthrough}
+        onComplete={handleWalkthroughComplete}
+        onSkip={handleWalkthroughSkip}
+      />
     </div>
   );
 }

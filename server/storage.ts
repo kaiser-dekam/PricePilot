@@ -18,6 +18,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<(User & { company?: Company }) | undefined>;
   upsertUser(user: UpsertUser & { companyId?: string }): Promise<User>;
+  markWalkthroughComplete(userId: string): Promise<void>;
   
   // Company operations
   createCompany(company: InsertCompany): Promise<Company>;
@@ -144,6 +145,16 @@ export class DbStorage implements IStorage {
     
     console.log('User upserted successfully');
     return result[0];
+  }
+
+  async markWalkthroughComplete(userId: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({
+        hasSeenWalkthrough: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   // Company operations

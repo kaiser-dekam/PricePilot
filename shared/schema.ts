@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: text("role").default("member"), // owner, admin, member
   isActive: boolean("is_active").default(true),
+  hasSeenWalkthrough: boolean("has_seen_walkthrough").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

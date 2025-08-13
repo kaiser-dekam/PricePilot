@@ -43,6 +43,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       href: "/products",
       icon: Package,
       current: location === "/" || location === "/products",
+      dataWalkthrough: "products-nav",
     },
     {
       name: "Work Orders",
@@ -51,12 +52,14 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       current: location === "/work-orders",
       badge:
         pendingWorkOrders.length > 0 ? pendingWorkOrders.length : undefined,
+      dataWalkthrough: "work-orders-nav",
     },
     {
       name: "Team",
       href: "/team",
       icon: Users,
       current: location === "/team",
+      dataWalkthrough: "team-nav",
     },
     {
       name: "Subscription",
@@ -75,6 +78,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       href: "/settings",
       icon: Settings,
       current: location === "/settings",
+      dataWalkthrough: "settings-nav",
     },
   ];
 
@@ -132,6 +136,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                         ? "text-white bg-primary"
                         : "text-gray-700 hover:bg-gray-100",
                     )}
+                    data-walkthrough={item.dataWalkthrough}
                     onClick={() => {
                       // Close mobile menu when item is clicked
                       if (onClose) onClose();
