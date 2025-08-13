@@ -24,6 +24,7 @@ export interface BigCommerceCategory {
   id: number;
   name: string;
   parent_id: number;
+  parent_category_list?: number[];
 }
 
 export class BigCommerceService {
@@ -84,9 +85,38 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
-      const categories = new Map(
-        categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat.name])
+      // Build a proper category hierarchy map
+      const categoryMap = new Map(
+        categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat])
       );
+      
+      // Helper function to build full category path using BigCommerce hierarchy
+      const buildCategoryPath = (categoryIds: number[]): string => {
+        if (!categoryIds || categoryIds.length === 0) return '';
+        
+        // For products with multiple categories, we'll use the first one with a hierarchy
+        // or just join them if no hierarchy is available
+        const categoryPaths: string[] = [];
+        
+        for (const catId of categoryIds) {
+          const category = categoryMap.get(catId);
+          if (category?.parent_category_list && category.parent_category_list.length > 0) {
+            // Use parent_category_list for full hierarchy
+            const fullPath = category.parent_category_list
+              .map(id => categoryMap.get(id)?.name)
+              .filter(Boolean);
+            if (fullPath.length > 0) {
+              categoryPaths.push(fullPath.join(' > '));
+            }
+          } else if (category) {
+            // Fallback to just category name for root categories
+            categoryPaths.push(category.name);
+          }
+        }
+        
+        // Return the first (typically primary) category path, or join multiple paths
+        return categoryPaths.length > 0 ? categoryPaths[0] : '';
+      };
 
       const products: BigCommerceProductType[] = [];
       const variants: any[] = [];
@@ -97,7 +127,7 @@ export class BigCommerceService {
           name: bcProduct.name,
           sku: bcProduct.sku || '',
           description: bcProduct.description || '',
-          category: bcProduct.categories.map((catId: number) => categories.get(catId)).filter(Boolean).join(' > '),
+          category: buildCategoryPath(bcProduct.categories),
           regularPrice: bcProduct.price || '0',
           salePrice: bcProduct.sale_price || null,
           stock: bcProduct.inventory_level || 0,
@@ -147,9 +177,35 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
-      const categories = new Map(
-        categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat.name])
+      // Build a proper category hierarchy map
+      const categoryMap = new Map(
+        categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat])
       );
+      
+      // Helper function to build full category path using BigCommerce hierarchy
+      const buildCategoryPath = (categoryIds: number[]): string => {
+        if (!categoryIds || categoryIds.length === 0) return '';
+        
+        const categoryPaths: string[] = [];
+        
+        for (const catId of categoryIds) {
+          const category = categoryMap.get(catId);
+          if (category?.parent_category_list && category.parent_category_list.length > 0) {
+            // Use parent_category_list for full hierarchy
+            const fullPath = category.parent_category_list
+              .map(id => categoryMap.get(id)?.name)
+              .filter(Boolean);
+            if (fullPath.length > 0) {
+              categoryPaths.push(fullPath.join(' > '));
+            }
+          } else if (category) {
+            // Fallback to just category name for root categories
+            categoryPaths.push(category.name);
+          }
+        }
+        
+        return categoryPaths.length > 0 ? categoryPaths[0] : '';
+      };
 
       const bcProduct: BigCommerceProduct = productResponse.data.data;
 
@@ -158,7 +214,7 @@ export class BigCommerceService {
         name: bcProduct.name,
         sku: bcProduct.sku || '',
         description: bcProduct.description || '',
-        category: bcProduct.categories.map((catId: number) => categories.get(catId)).filter(Boolean).join(' > '),
+        category: buildCategoryPath(bcProduct.categories),
         regularPrice: bcProduct.price || '0',
         salePrice: bcProduct.sale_price || null,
         stock: bcProduct.inventory_level || 0,

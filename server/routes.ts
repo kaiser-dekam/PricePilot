@@ -937,17 +937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Categories route for work order modal
-  app.get("/api/categories", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.uid;
-      const result = await storage.getProducts(userId, { limit: 1000 }); // Get all products to extract categories
-      const categories = Array.from(new Set(result.products.map(p => p.category).filter(Boolean)));
-      res.json(categories);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+
 
   // Company Invitation routes
   app.post("/api/invitations", isAuthenticated, async (req: any, res) => {

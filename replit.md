@@ -43,15 +43,16 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 - **Security**: Enhanced API security through Firebase token verification, replacing header-based authentication.
 - **Scalability**: Designed for deployment on Replit, leveraging Neon serverless PostgreSQL for database scalability.
 
-## Recent Improvements (January 27, 2025)
+## Recent Improvements (August 13, 2025)
 
-### Category Navigation Enhancement (August 13, 2025)
-- **Usability Problem Solved**: Replaced problematic category dropdowns with intuitive breadcrumb navigation system
-- **Four-Option Analysis**: Created comprehensive comparison of category selector approaches (Breadcrumb, Searchable Flat, Cascading, Tree View)
-- **Implementation**: Integrated breadcrumb navigation selector across Products and Create Work Order pages for handling complex nested categories
-- **User Experience**: File explorer-like navigation with search functionality, scalable to any category depth
-- **Demo Interface**: Added `/category-demo` route for comparing all 4 selector approaches with detailed pros/cons analysis
-- **Performance**: Optimized for large category hierarchies with search capabilities and path-aware navigation
+### BigCommerce Category System Redesign (August 13, 2025)
+- **Critical Issue Resolved**: Fixed duplicate `/api/categories` endpoints causing data confusion and TypeScript errors
+- **BigCommerce Integration**: Redesigned category path building to use proper BigCommerce hierarchy with `parent_category_list` field
+- **Hierarchy Logic**: Replaced flawed category joining with authentic BigCommerce hierarchical paths (e.g., "Shop All > Attachments > Land Maintenance > Rakes")
+- **Data Integrity**: Category paths now built from authentic BigCommerce API data instead of incorrect manual concatenation
+- **Endpoint Cleanup**: Removed duplicate category endpoint, now using single reliable source from `storage.getAllCategories()`
+- **Breadcrumb Navigation**: Integrated breadcrumb selectors across Products and Create Work Order pages with proper hierarchical data
+- **User Experience**: File explorer-like navigation with search functionality, showing actual BigCommerce category structures
 
 ### Interactive User Walkthrough (August 13, 2025)
 - **Onboarding System**: Created comprehensive guided tour for new users appearing only once after registration
