@@ -85,6 +85,10 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
+      // Debug: Log the first few categories to understand the structure
+      console.log('Sample categories from BigCommerce API:', 
+        JSON.stringify(categoriesResponse.data.data.slice(0, 3), null, 2));
+
       // Build a proper category hierarchy map
       const categoryMap = new Map(
         categoriesResponse.data.data.map((cat: BigCommerceCategory) => [cat.id, cat])
@@ -99,11 +103,11 @@ export class BigCommerceService {
         const categoryPaths: string[] = [];
         
         for (const catId of categoryIds) {
-          const category = categoryMap.get(catId);
+          const category = categoryMap.get(catId) as BigCommerceCategory | undefined;
           if (category?.parent_category_list && category.parent_category_list.length > 0) {
             // Use parent_category_list for full hierarchy
             const fullPath = category.parent_category_list
-              .map(id => categoryMap.get(id)?.name)
+              .map((id: number) => (categoryMap.get(id) as BigCommerceCategory | undefined)?.name)
               .filter(Boolean);
             if (fullPath.length > 0) {
               categoryPaths.push(fullPath.join(' > '));
@@ -122,6 +126,15 @@ export class BigCommerceService {
       const variants: any[] = [];
 
       for (const bcProduct of productsResponse.data.data) {
+        // Debug: Log category building for specific product
+        if (bcProduct.sku === 'ES-STSB-0066') {
+          console.log('=== DEBUGGING ES-STSB-0066 ===');
+          console.log('Product categories (IDs):', bcProduct.categories);
+          console.log('Available category objects:', bcProduct.categories.map((id: number) => categoryMap.get(id)));
+          console.log('Built category path:', buildCategoryPath(bcProduct.categories));
+          console.log('=============================');
+        }
+        
         const product = {
           id: bcProduct.id.toString(),
           name: bcProduct.name,
@@ -189,11 +202,11 @@ export class BigCommerceService {
         const categoryPaths: string[] = [];
         
         for (const catId of categoryIds) {
-          const category = categoryMap.get(catId);
+          const category = categoryMap.get(catId) as BigCommerceCategory | undefined;
           if (category?.parent_category_list && category.parent_category_list.length > 0) {
             // Use parent_category_list for full hierarchy
             const fullPath = category.parent_category_list
-              .map(id => categoryMap.get(id)?.name)
+              .map((id: number) => (categoryMap.get(id) as BigCommerceCategory | undefined)?.name)
               .filter(Boolean);
             if (fullPath.length > 0) {
               categoryPaths.push(fullPath.join(' > '));
