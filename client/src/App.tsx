@@ -17,6 +17,7 @@ import Feedback from "@/pages/feedback";
 import CreateWorkOrder from "@/pages/create-work-order";
 import CategoryDemo from "@/pages/category-demo";
 import ThankYou from "@/pages/thank-you";
+import Pricing from "@/pages/pricing";
 import Sidebar from "@/components/layout/sidebar";
 import Walkthrough from "@/components/onboarding/walkthrough";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/pricing" component={Pricing} />
         <Route path="/login" component={Login} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
         <Route component={Landing} />
@@ -129,6 +131,7 @@ function Router() {
             <Route path="/feedback" component={Feedback} />
             <Route path="/category-demo" component={CategoryDemo} />
             <Route path="/thank-you" component={ThankYou} />
+            <Route path="/pricing" component={Pricing} />
             <Route path="/login" component={() => <div />} />
             <Route component={NotFound} />
           </Switch>

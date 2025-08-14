@@ -12,13 +12,15 @@ import {
   Zap
 } from "lucide-react";
 import { Link } from "wouter";
+import Navbar from "@/components/layout/navbar";
 import logoPath from "@assets/Artboard 1_1754940868643.png";
 
 export default function Landing() {
   return (
     <div className="min-h-screen">
+      <Navbar />
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden" id="features">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-green-50/30 dark:from-blue-950/20 dark:to-green-950/10"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-transparent to-transparent"></div>
