@@ -255,7 +255,7 @@ export default function Landing() {
           </p>
           <Link href="/login">
             <button className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-primary to-blue-600 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              Start Your Free Trial
+              Start for Free
               <ArrowRight className="w-5 h-5" />
             </button>
           </Link>

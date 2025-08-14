@@ -31,7 +31,7 @@ export default function Pricing({}: PricingProps) {
         'No team collaboration',
         'Limited to 25 products',
       ],
-      buttonText: 'Start Free Trial',
+      buttonText: 'Start for Free',
       buttonStyle: 'outline',
       popular: false,
     },
@@ -266,7 +266,7 @@ export default function Pricing({}: PricingProps) {
                   size="lg"
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  Start Free Trial
+                  Start for Free
                 </Button>
               </div>
             </div>
