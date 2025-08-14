@@ -260,7 +260,7 @@ export default function Pricing({}: PricingProps) {
                 Join hundreds of businesses already using Catalog Pilot to automate 
                 their BigCommerce product pricing and save hours every week.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex justify-center">
                 <Button 
                   onClick={() => handlePlanSelect('Trial')}
                   size="lg"
@@ -268,11 +268,6 @@ export default function Pricing({}: PricingProps) {
                 >
                   Start Free Trial
                 </Button>
-                <Link href="/feedback">
-                  <Button variant="outline" size="lg">
-                    Contact Sales
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>
