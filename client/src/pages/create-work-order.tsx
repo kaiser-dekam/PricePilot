@@ -53,9 +53,8 @@ export default function CreateWorkOrder() {
 
   // Convert selected categories to filter format
   const categoryFilter = useMemo(() => {
-    console.log("Selected categories:", selectedCategories);
     if (selectedCategories.length === 0) return undefined;
-    return selectedCategories; // Always pass as array to backend
+    return selectedCategories;
   }, [selectedCategories]);
 
   // Fetch products with pagination

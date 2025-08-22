@@ -245,7 +245,6 @@ export class DbStorage implements IStorage {
     // Handle category filtering - support both single string and array of strings
     if (filters?.category) {
       const categories = Array.isArray(filters.category) ? filters.category : [filters.category];
-      console.log("Category filtering - received categories:", categories);
       if (categories.length > 0 && !categories.includes("all")) {
         // For category filtering, we want products that match ANY of the selected categories
         // OR are subcategories of the selected categories
@@ -253,10 +252,9 @@ export class DbStorage implements IStorage {
           eq(products.category, category),
           like(products.category, `${category} > %`)
         ]).filter((condition): condition is NonNullable<typeof condition> => condition != null);
-        console.log("Generated category conditions count:", categoryConditions.length);
         if (categoryConditions.length > 0) {
+          // Use OR for category conditions - products should match ANY selected category
           conditions.push(or(...categoryConditions));
-          console.log("Added category filter to conditions");
         }
       }
     }
