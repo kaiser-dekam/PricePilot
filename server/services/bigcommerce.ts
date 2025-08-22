@@ -97,14 +97,21 @@ export class BigCommerceService {
         ));
       } else {
         console.log('No Mini/Bobcat categories found in BigCommerce response');
-        // Log all attachment categories to help debug
-        const attachmentCategories = categoriesResponse.data.data.filter((cat: BigCommerceCategory) => 
-          cat.name.toLowerCase().includes('attachment') || cat.parent_id === 24
-        );
-        console.log('Attachment-related categories found:', attachmentCategories.map((cat: BigCommerceCategory) => 
-          `${cat.id}: ${cat.name} (parent: ${cat.parent_id})`
-        ));
       }
+      
+      // Log all attachment categories and their children to help debug hierarchy
+      const attachmentCategories = categoriesResponse.data.data.filter((cat: BigCommerceCategory) => 
+        cat.name.toLowerCase().includes('attachment') || cat.parent_id === 24
+      );
+      console.log('Attachment-related categories found:', attachmentCategories.map((cat: BigCommerceCategory) => 
+        `${cat.id}: ${cat.name} (parent: ${cat.parent_id})`
+      ));
+      
+      // Find categories that are children of Attachments (parent_id === 24)
+      const attachmentChildren = categoriesResponse.data.data.filter((cat: BigCommerceCategory) => cat.parent_id === 24);
+      console.log('Direct children of Attachments category (parent_id 24):', 
+        attachmentChildren.map((cat: BigCommerceCategory) => `${cat.id}: ${cat.name}`)
+      );
 
       // Build a proper category hierarchy map
       const categoryMap = new Map(
