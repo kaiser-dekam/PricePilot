@@ -239,9 +239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log(`Fetching page ${page} of products (current count: ${allProducts.length}/${productLimit})...`);
+        console.log('🚀 About to call bigcommerce.getProducts()');
         
         try {
           const productsResponse = await bigcommerce.getProducts(page, 50);
+          console.log('✅ getProducts() returned successfully');
           const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
           const pageVariants = productsResponse.variants || [];
           
