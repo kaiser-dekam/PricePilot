@@ -73,6 +73,7 @@ export class BigCommerceService {
   async getProducts(page = 1, limit = 50): Promise<{ products: BigCommerceProductType[]; total: number; variants: any[] }> {
     try {
       console.log(`Fetching products from BigCommerce (page: ${page}, limit: ${limit})`);
+      console.log('🔍 DEBUG: getProducts method called');
       
       const [productsResponse, categoriesResponse] = await Promise.all([
         this.api.get('/catalog/products', {
