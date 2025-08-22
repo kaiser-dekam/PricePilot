@@ -112,6 +112,11 @@ export class BigCommerceService {
       console.log('Direct children of Attachments category (parent_id 24):', 
         attachmentChildren.map((cat: BigCommerceCategory) => `${cat.id}: ${cat.name}`)
       );
+      
+      // Log all category names for complete debugging
+      console.log('All BigCommerce category names:', 
+        categoriesResponse.data.data.map((cat: BigCommerceCategory) => cat.name).sort().join(', ')
+      );
 
       // Build a proper category hierarchy map
       const categoryMap = new Map(
