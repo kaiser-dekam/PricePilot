@@ -620,6 +620,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to check BigCommerce categories
+  app.get('/api/debug-categories', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const settings = await storage.getApiSettings(user.companyId);
+      if (!settings) {
+        return res.status(400).json({ message: 'BigCommerce settings not configured' });
+      }
+
+      const bigCommerce = new BigCommerceService(
+        settings.storeHash,
+        settings.accessToken
+      );
+
+      // Get all categories from BigCommerce
+      const categoriesResponse = await bigCommerce.api.get('/catalog/categories');
+      const allCategories = categoriesResponse.data.data;
+      
+      // Filter for categories with "Mini" or "Bobcat"
+      const miniCategories = allCategories.filter((cat: any) => 
+        cat.name.toLowerCase().includes('mini') || cat.name.toLowerCase().includes('bobcat')
+      );
+      
+      // Filter for all attachment categories
+      const attachmentCategories = allCategories.filter((cat: any) => 
+        cat.name.toLowerCase().includes('attachment') || cat.parent_id === 24
+      );
+
+      res.json({
+        totalCategories: allCategories.length,
+        miniCategories: miniCategories.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          parent_id: cat.parent_id
+        })),
+        attachmentCategories: attachmentCategories.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          parent_id: cat.parent_id
+        })),
+        allCategoryNames: allCategories.map((cat: any) => cat.name).sort()
+      });
+    } catch (error: any) {
+      console.error('Debug categories error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch categories',
+        error: error.message 
+      });
+    }
+  });
+
   // Work Orders routes
   app.get("/api/work-orders", isAuthenticated, async (req: any, res) => {
     try {
