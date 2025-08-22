@@ -153,8 +153,8 @@ export class BigCommerceService {
         if (!categoryIds || categoryIds.length === 0) return '';
         
         // Known missing parent categories and their presumed names
-        const missingParents = new Map([
-          [129, 'Universal Quick Attach'], // Missing parent of Buckets, Grapples, etc.
+        const missingCategories = new Map([
+          [129, 'Universal Quick Attach'], [136, 'Mini Bobcat'], [141, 'Smooth Buckets'], // Missing categories found in product analysis
           [180, 'Excavator Attachments']   // Missing parent of other attachment categories
         ]);
         
@@ -171,11 +171,11 @@ export class BigCommerceService {
             if (category) {
               path.unshift(category.name); // Add to beginning to build path from root
               currentId = category.parent_id; // Move to parent
-            } else if (missingParents.has(currentId)) {
+            } else if (missingCategories.has(currentId)) {
               // Handle missing parent categories
-              path.unshift(missingParents.get(currentId)!);
+              path.unshift(missingCategories.get(currentId)!);
               // For missing category 129, assume it belongs under Attachments (24)
-              currentId = currentId === 129 ? 24 : 0;
+              currentId = currentId === 129 ? 24 : (currentId === 136 ? 24 : (currentId === 141 ? 136 : 0));
             } else {
               // Unknown missing category, stop here
               break;
@@ -280,8 +280,8 @@ export class BigCommerceService {
         if (!categoryIds || categoryIds.length === 0) return '';
         
         // Known missing parent categories and their presumed names
-        const missingParents = new Map([
-          [129, 'Universal Quick Attach'], // Missing parent of Buckets, Grapples, etc.
+        const missingCategories = new Map([
+          [129, 'Universal Quick Attach'], [136, 'Mini Bobcat'], [141, 'Smooth Buckets'], // Missing categories found in product analysis
           [180, 'Excavator Attachments']   // Missing parent of other attachment categories
         ]);
         
@@ -298,11 +298,11 @@ export class BigCommerceService {
             if (category) {
               path.unshift(category.name); // Add to beginning to build path from root
               currentId = category.parent_id; // Move to parent
-            } else if (missingParents.has(currentId)) {
+            } else if (missingCategories.has(currentId)) {
               // Handle missing parent categories
-              path.unshift(missingParents.get(currentId)!);
+              path.unshift(missingCategories.get(currentId)!);
               // For missing category 129, assume it belongs under Attachments (24)
-              currentId = currentId === 129 ? 24 : 0;
+              currentId = currentId === 129 ? 24 : (currentId === 136 ? 24 : (currentId === 141 ? 136 : 0));
             } else {
               // Unknown missing category, stop here
               break;
