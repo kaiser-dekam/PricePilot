@@ -88,6 +88,30 @@ export class BigCommerceService {
 
       console.log(`Found ${categoriesResponse.data.data.length} categories from BigCommerce`);
       
+      // Check for product ID 407 specifically
+      const productsData = productsResponse.data.data;
+      const product407 = productsData.find((product: any) => product.id === 407);
+      if (product407) {
+        console.log('🎯 PRODUCT 407 RAW DATA:');
+        console.log(JSON.stringify(product407, null, 2));
+        console.log('🎯 PRODUCT 407 CATEGORIES:', product407.categories);
+        
+        // Show category details for product 407
+        if (product407.categories && product407.categories.length > 0) {
+          console.log('🎯 PRODUCT 407 CATEGORY DETAILS:');
+          product407.categories.forEach((catId: number) => {
+            const category = categoriesResponse.data.data.find((cat: BigCommerceCategory) => cat.id === catId);
+            if (category) {
+              console.log(`  Category ${catId}: "${category.name}" (parent: ${category.parent_id})`);
+            } else {
+              console.log(`  Category ${catId}: NOT FOUND in categories response`);
+            }
+          });
+        }
+      } else {
+        console.log('🔍 Product ID 407 not found in this page');
+      }
+      
       // Log categories that might be related to Mini Bobcat
       const miniCategories = categoriesResponse.data.data.filter((cat: BigCommerceCategory) => 
         cat.name.toLowerCase().includes('mini') || cat.name.toLowerCase().includes('bobcat')
