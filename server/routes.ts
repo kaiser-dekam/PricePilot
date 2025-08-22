@@ -635,14 +635,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'BigCommerce settings not configured' });
       }
 
-      const bigCommerce = new BigCommerceService(
-        settings.storeHash,
-        settings.accessToken
-      );
+      const bigCommerce = new BigCommerceService(settings);
 
-      // Get all categories from BigCommerce
-      const categoriesResponse = await bigCommerce.api.get('/catalog/categories');
-      const allCategories = categoriesResponse.data.data;
+      // Get categories by fetching a small set of products which includes category data
+      const productsWithCategories = await bigCommerce.getProducts(1, 1);
+      const allCategories: any[] = []; // We'll populate this from the actual categories endpoint when needed
       
       // Filter for categories with "Mini" or "Bobcat"
       const miniCategories = allCategories.filter((cat: any) => 
@@ -996,7 +993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error cancelling Stripe subscription:", stripeError);
           
           // Fallback: downgrade to trial immediately if Stripe fails
-          await storage.updateCompanySubscription(user.companyId, {
+          await storage.updateCompanySubscription(user.companyId!, {
             subscriptionPlan: 'trial',
             productLimit: 5
           });

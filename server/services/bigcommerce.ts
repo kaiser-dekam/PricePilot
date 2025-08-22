@@ -175,7 +175,7 @@ export class BigCommerceService {
               // Handle missing parent categories
               path.unshift(missingParents.get(currentId)!);
               // For missing category 129, assume it belongs under Attachments (24)
-              currentId = currentId === 129 ? 24 : null;
+              currentId = currentId === 129 ? 24 : 0;
             } else {
               // Unknown missing category, stop here
               break;
@@ -302,7 +302,7 @@ export class BigCommerceService {
               // Handle missing parent categories
               path.unshift(missingParents.get(currentId)!);
               // For missing category 129, assume it belongs under Attachments (24)
-              currentId = currentId === 129 ? 24 : null;
+              currentId = currentId === 129 ? 24 : 0;
             } else {
               // Unknown missing category, stop here
               break;
