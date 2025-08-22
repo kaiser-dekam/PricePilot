@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { BreadcrumbCategorySelector } from "@/components/ui/category-selectors";
+import { SimpleCategorySelector } from "@/components/ui/simple-category-selector";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -63,7 +63,7 @@ export default function CreateWorkOrder() {
   });
 
   // Fetch all categories
-  const { data: categoriesData } = useQuery({
+  const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
     queryKey: ["/api/categories"],
     staleTime: 60000,
   });
@@ -603,17 +603,23 @@ export default function CreateWorkOrder() {
                       />
                     </div>
                   </div>
-                  <div className="w-full sm:w-48">
-                    <BreadcrumbCategorySelector
-                      categories={(categoriesData as string[]) || []}
-                      value={categoryFilter}
-                      onChange={(value) => {
-                        setCategoryFilter(value);
-                        setPage(1);
-                        setAllProducts([]);
-                      }}
-                      placeholder="Filter by category"
-                    />
+                  <div className="w-full sm:w-64">
+                    {isLoadingCategories ? (
+                      <div className="flex items-center justify-center h-10 border rounded bg-gray-50">
+                        <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full" />
+                      </div>
+                    ) : (
+                      <SimpleCategorySelector
+                        categories={(categoriesData as string[]) || []}
+                        value={categoryFilter}
+                        onChange={(value) => {
+                          setCategoryFilter(value);
+                          setPage(1);
+                          setAllProducts([]);
+                        }}
+                        placeholder="Filter by category"
+                      />
+                    )}
                   </div>
                 </div>
 

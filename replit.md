@@ -90,6 +90,13 @@ The application adopts a modern full-stack architecture, ensuring clear separati
 - **Mobile Responsive**: Full responsive design with mobile-optimized navigation and pricing cards
 - **Call-to-Action**: Integrated with authentication flow and subscription upgrade paths
 
+### Work Order Category System Rebuild (August 22, 2025)
+- **Issue Identified**: Complex BreadcrumbCategorySelector was causing UX issues and confusion in work order creation
+- **Solution Implemented**: Replaced with SimpleCategorySelector for cleaner, more reliable category filtering
+- **New Features**: Grouped categories by top-level parent, improved search functionality, loading states
+- **Architecture**: Categories are properly extracted from BigCommerce API and stored with full hierarchy paths
+- **User Experience**: Simplified dropdown with search, proper grouping, and clear visual hierarchy
+
 ### Analytics Integration (August 13, 2025)
 - **Google Analytics**: Added Google Analytics (G-YTPSTTPY9H) with gtag.js for comprehensive user behavior tracking
 - **Google Tag Manager**: Integrated Google Tag Manager (GTM-NFSKFSGL) for advanced event tracking and marketing analytics
