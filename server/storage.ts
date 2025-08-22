@@ -226,7 +226,7 @@ export class DbStorage implements IStorage {
   }
 
   // Products
-  async getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: (Product & { variants?: ProductVariant[] })[]; total: number }> {
+  async getProducts(userId: string, filters?: { category?: string | string[]; search?: string; page?: number; limit?: number }): Promise<{ products: (Product & { variants?: ProductVariant[] })[]; total: number }> {
     const user = await this.getUser(userId);
     if (!user?.companyId) {
       return { products: [], total: 0 };
@@ -241,13 +241,19 @@ export class DbStorage implements IStorage {
     
     // Build where conditions
     const conditions = [eq(products.companyId, user.companyId)];
-    if (filters?.category && filters.category !== "all") {
-      conditions.push(
-        or(
-          eq(products.category, filters.category),
-          like(products.category, `${filters.category} > %`)
-        )
-      );
+    
+    // Handle category filtering - support both single string and array of strings
+    if (filters?.category) {
+      const categories = Array.isArray(filters.category) ? filters.category : [filters.category];
+      if (categories.length > 0 && !categories.includes("all")) {
+        const categoryConditions = categories.map(category => 
+          or(
+            eq(products.category, category),
+            like(products.category, `${category} > %`)
+          )
+        );
+        conditions.push(or(...categoryConditions));
+      }
     }
     if (filters?.search) {
       // Make search more flexible - search in name, sku, and description

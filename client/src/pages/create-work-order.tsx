@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { SimpleCategorySelector } from "@/components/ui/simple-category-selector";
+import { NestedCategorySelector } from "@/components/ui/nested-category-selector";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -33,7 +33,7 @@ export default function CreateWorkOrder() {
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [expandedProducts, setExpandedProducts] = useState<string[]>([]);
   const [loadedVariants, setLoadedVariants] = useState<Record<string, any[]>>({});
   const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
@@ -51,11 +51,18 @@ export default function CreateWorkOrder() {
 
   const { toast } = useToast();
 
+  // Convert selected categories to filter format
+  const categoryFilter = useMemo(() => {
+    if (selectedCategories.length === 0) return undefined;
+    if (selectedCategories.length === 1) return selectedCategories[0];
+    return selectedCategories; // Will need to handle multiple categories in API
+  }, [selectedCategories]);
+
   // Fetch products with pagination
   const { data: productsData, isLoading: isLoadingProducts } = useQuery({
     queryKey: ["/api/products", { 
       search: searchTerm, 
-      category: categoryFilter === "all" ? undefined : categoryFilter, 
+      category: categoryFilter, 
       page, 
       limit 
     }],
@@ -416,7 +423,7 @@ export default function CreateWorkOrder() {
 
   const resetFilters = () => {
     setSearchTerm("");
-    setCategoryFilter("all");
+    setSelectedCategories([]);
     setPage(1);
     setAllProducts([]);
   };
@@ -603,21 +610,22 @@ export default function CreateWorkOrder() {
                       />
                     </div>
                   </div>
-                  <div className="w-full sm:w-64">
+                  <div className="w-full sm:w-80">
                     {isLoadingCategories ? (
                       <div className="flex items-center justify-center h-10 border rounded bg-gray-50">
                         <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full" />
                       </div>
                     ) : (
-                      <SimpleCategorySelector
+                      <NestedCategorySelector
                         categories={(categoriesData as string[]) || []}
-                        value={categoryFilter}
-                        onChange={(value) => {
-                          setCategoryFilter(value);
+                        selectedCategories={selectedCategories}
+                        onChange={(categories: string[]) => {
+                          setSelectedCategories(categories);
                           setPage(1);
                           setAllProducts([]);
                         }}
-                        placeholder="Filter by category"
+                        title="Filter by Categories"
+                        maxHeight="300px"
                       />
                     )}
                   </div>
