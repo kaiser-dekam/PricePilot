@@ -85,7 +85,19 @@ export class BigCommerceService {
         this.api.get('/catalog/categories'),
       ]);
 
-
+      console.log(`Found ${categoriesResponse.data.data.length} categories from BigCommerce`);
+      
+      // Log categories that might be related to Mini Bobcat
+      const miniCategories = categoriesResponse.data.data.filter((cat: BigCommerceCategory) => 
+        cat.name.toLowerCase().includes('mini') || cat.name.toLowerCase().includes('bobcat')
+      );
+      if (miniCategories.length > 0) {
+        console.log('Found Mini/Bobcat categories:', miniCategories.map((cat: BigCommerceCategory) => 
+          `${cat.id}: ${cat.name} (parent: ${cat.parent_id})`
+        ));
+      } else {
+        console.log('No Mini/Bobcat categories found in BigCommerce response');
+      }
 
       // Build a proper category hierarchy map
       const categoryMap = new Map(
