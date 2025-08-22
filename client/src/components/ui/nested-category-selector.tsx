@@ -113,18 +113,16 @@ export const NestedCategorySelector: React.FC<NestedCategorySelectorProps> = ({
   };
 
   const handleParentSelect = (node: CategoryNode, isSelected: boolean) => {
-    const descendantPaths = getAllDescendantPaths(node);
     let newSelected = [...selectedCategories];
     
     if (isSelected) {
-      // Add all descendants
-      descendantPaths.forEach(path => {
-        if (!newSelected.includes(path)) {
-          newSelected.push(path);
-        }
-      });
+      // For parent categories, just add the parent - the backend will handle matching subcategories
+      if (!newSelected.includes(node.fullPath)) {
+        newSelected.push(node.fullPath);
+      }
     } else {
-      // Remove all descendants
+      // Remove the parent and any selected children
+      const descendantPaths = getAllDescendantPaths(node);
       newSelected = newSelected.filter(path => !descendantPaths.includes(path));
     }
     
@@ -132,14 +130,23 @@ export const NestedCategorySelector: React.FC<NestedCategorySelectorProps> = ({
   };
 
   const isIndeterminate = (node: CategoryNode): boolean => {
-    const descendantPaths = getAllDescendantPaths(node);
-    const selectedDescendants = descendantPaths.filter(path => selectedCategories.includes(path));
-    return selectedDescendants.length > 0 && selectedDescendants.length < descendantPaths.length;
+    // Check if some but not all children are selected
+    if (selectedCategories.includes(node.fullPath)) return false; // Fully selected
+    const childrenSelected = node.children.some(child => 
+      selectedCategories.includes(child.fullPath) || 
+      selectedCategories.some(selected => child.fullPath.startsWith(selected + ' > '))
+    );
+    const allChildrenSelected = node.children.every(child => 
+      selectedCategories.includes(child.fullPath) || 
+      selectedCategories.some(selected => child.fullPath.startsWith(selected + ' > '))
+    );
+    return childrenSelected && !allChildrenSelected;
   };
 
   const isNodeSelected = (node: CategoryNode): boolean => {
-    const descendantPaths = getAllDescendantPaths(node);
-    return descendantPaths.every(path => selectedCategories.includes(path));
+    // Check if this node itself is selected, or if any parent is selected
+    return selectedCategories.includes(node.fullPath) || 
+           selectedCategories.some(selected => node.fullPath.startsWith(selected + ' > '));
   };
 
   const renderNode = (node: CategoryNode): React.ReactNode => {

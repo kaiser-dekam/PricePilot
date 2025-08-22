@@ -245,26 +245,32 @@ export class DbStorage implements IStorage {
     // Handle category filtering - support both single string and array of strings
     if (filters?.category) {
       const categories = Array.isArray(filters.category) ? filters.category : [filters.category];
+      console.log("Category filtering - received categories:", categories);
       if (categories.length > 0 && !categories.includes("all")) {
-        const categoryConditions = categories.map(category => 
-          or(
-            eq(products.category, category),
-            like(products.category, `${category} > %`)
-          )
-        );
-        conditions.push(or(...categoryConditions));
+        // For category filtering, we want products that match ANY of the selected categories
+        // OR are subcategories of the selected categories
+        const categoryConditions = categories.flatMap(category => [
+          eq(products.category, category),
+          like(products.category, `${category} > %`)
+        ]).filter((condition): condition is NonNullable<typeof condition> => condition != null);
+        console.log("Generated category conditions count:", categoryConditions.length);
+        if (categoryConditions.length > 0) {
+          conditions.push(or(...categoryConditions));
+          console.log("Added category filter to conditions");
+        }
       }
     }
     if (filters?.search) {
       // Make search more flexible - search in name, sku, and description
       const searchTerm = `%${filters.search}%`;
-      conditions.push(
-        or(
-          ilike(products.name, searchTerm),
-          ilike(products.sku, searchTerm),
-          ilike(products.description, searchTerm)
-        )
+      const searchCondition = or(
+        ilike(products.name, searchTerm),
+        ilike(products.sku, searchTerm),
+        ilike(products.description, searchTerm)
       );
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
     
     // Filter by visibility if setting is disabled
