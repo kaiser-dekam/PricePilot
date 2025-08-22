@@ -554,10 +554,8 @@ export default function CreateWorkOrder() {
           </CardContent>
         </Card>
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Product Selection */}
-          <div>
+        {/* Product Selection */}
+        <div>
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -753,10 +751,10 @@ export default function CreateWorkOrder() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+        </div>
 
-          {/* Price Changes Section */}
-          <div>
+        {/* Price Changes Section */}
+        <div>
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -976,7 +974,6 @@ export default function CreateWorkOrder() {
                 )}
               </CardContent>
             </Card>
-          </div>
         </div>
       </div>
     </div>
