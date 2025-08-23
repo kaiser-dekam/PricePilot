@@ -252,15 +252,28 @@ export class BigCommerceService {
         }
       }
 
-      // Prepare raw data for debugging (only on first page to avoid large payloads)
+      // Prepare safe raw data for debugging (only on first page to avoid large payloads)
       const rawData = page === 1 ? {
         page: page,
         totalProducts: products.length,
         totalVariants: variants.length,
-        sampleProducts: productsResponse.data.data.slice(0, 2), // First 2 raw products from API
-        sampleVariants: variants.slice(0, 2), // First 2 processed variants
+        sampleProducts: productsResponse.data.data.slice(0, 2).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          categories: p.categories,
+          price: p.price,
+          sale_price: p.sale_price,
+          inventory_level: p.inventory_level,
+          is_visible: p.is_visible
+        })),
+        sampleVariants: variants.slice(0, 2),
         categoriesCount: categoriesResponse.data.data.length,
-        sampleCategories: categoriesResponse.data.data.slice(0, 5), // First 5 categories
+        sampleCategories: categoriesResponse.data.data.slice(0, 5).map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          parent_id: cat.parent_id
+        })),
         product407Found: productsResponse.data.data.find((p: any) => p.id === 407) ? true : false
       } : undefined;
 

@@ -212,7 +212,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message,
           ...(rawData && { rawData })
         };
-        res.write(`data: ${JSON.stringify(progress)}\n\n`);
+        
+        try {
+          const jsonString = JSON.stringify(progress);
+          res.write(`data: ${jsonString}\n\n`);
+        } catch (error) {
+          console.error('Error serializing progress data:', error);
+          // Send progress without raw data if serialization fails
+          const safeProgress = {
+            stage,
+            current,
+            total,
+            percentage: Math.round((current / total) * 100),
+            message: message + ' (raw data omitted due to serialization error)'
+          };
+          res.write(`data: ${JSON.stringify(safeProgress)}\n\n`);
+        }
       };
 
       // Start sync process
