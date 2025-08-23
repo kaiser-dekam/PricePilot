@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, Plus, RefreshCw, Package, Grid3X3, List } from "lucide-react";
+import { Search, Plus, RefreshCw, Package, Grid3X3, List, ChevronDown, ChevronUp, Code } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +29,8 @@ export default function Products() {
     message: string;
     isActive: boolean;
   }>({ stage: '', percentage: 0, message: '', isActive: false });
+  const [rawSyncData, setRawSyncData] = useState<any>(null);
+  const [showRawData, setShowRawData] = useState(false);
   const { toast } = useToast();
 
   const { data: productsData, isLoading } = useQuery({
@@ -81,8 +83,10 @@ export default function Products() {
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      // Reset progress
+      // Reset progress and raw data
       setSyncProgress({ stage: '', percentage: 0, message: '', isActive: true });
+      setRawSyncData(null);
+      setShowRawData(false);
       
       const response = await fetch("/api/sync", {
         method: "POST",
@@ -121,6 +125,11 @@ export default function Products() {
                 message: progressData.message || '',
                 isActive: progressData.stage !== 'complete' && progressData.stage !== 'cancelled'
               });
+              
+              // Store raw data for debugging if available
+              if (progressData.rawData) {
+                setRawSyncData(progressData.rawData);
+              }
               
               // If sync was cancelled, break out of the loop
               if (progressData.stage === 'cancelled') {
@@ -273,6 +282,42 @@ export default function Products() {
                 value={syncProgress.percentage} 
                 className="w-full h-2 bg-blue-200"
               />
+              
+              {/* Raw Data Toggle Button */}
+              {rawSyncData && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowRawData(!showRawData)}
+                    className="text-blue-700 border-blue-300 hover:bg-blue-50"
+                  >
+                    <Code className="w-4 h-4 mr-2" />
+                    {showRawData ? "Hide" : "Show"} Raw JSON Data
+                    {showRawData ? (
+                      <ChevronUp className="w-4 h-4 ml-2" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 ml-2" />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Raw Data Display */}
+        {rawSyncData && showRawData && (
+          <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-4">
+            <div className="max-w-7xl">
+              <div className="text-sm font-medium text-gray-900 mb-2">
+                Raw BigCommerce API Data
+              </div>
+              <div className="bg-white rounded-lg border border-gray-200 p-4 max-h-96 overflow-auto">
+                <pre className="text-xs text-gray-800 whitespace-pre-wrap">
+                  {JSON.stringify(rawSyncData, null, 2)}
+                </pre>
+              </div>
             </div>
           </div>
         )}

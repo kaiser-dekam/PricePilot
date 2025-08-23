@@ -203,13 +203,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Register this sync as active
       activeSyncs.set(userId, { controller, response: res });
       
-      const sendProgress = (stage: string, current: number, total: number, message?: string) => {
+      const sendProgress = (stage: string, current: number, total: number, message?: string, rawData?: any) => {
         const progress = {
           stage,
           current,
           total,
           percentage: Math.round((current / total) * 100),
-          message
+          message,
+          ...(rawData && { rawData })
         };
         res.write(`data: ${JSON.stringify(progress)}\n\n`);
       };
@@ -248,6 +249,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const pageVariants = productsResponse.variants || [];
           
           console.log(`Page ${page}: Got ${pageProducts.length} products and ${pageVariants.length} variants from API`);
+          
+          // Send raw data for debugging on first page
+          if (page === 1) {
+            const sampleData = {
+              page: page,
+              totalProducts: pageProducts.length,
+              totalVariants: pageVariants.length,
+              sampleProducts: pageProducts.slice(0, 2), // Show first 2 products
+              sampleVariants: pageVariants.slice(0, 2)  // Show first 2 variants
+            };
+            sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page})`, sampleData);
+          }
           
           // Only add products up to the limit
           const remainingSlots = productLimit - allProducts.length;
