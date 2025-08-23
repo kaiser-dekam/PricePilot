@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Save, TestTube, LogOut, Trash2 } from "lucide-react";
+import { Save, TestTube, LogOut, Trash2, Code, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ export default function Settings() {
   const [clientId, setClientId] = useState("");
   const [showStockStatus, setShowStockStatus] = useState(false);
   const [showInvisibleProducts, setShowInvisibleProducts] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -303,6 +304,42 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Raw Sync Data */}
+          {settings && (settings as any).rawSyncData && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Last Sync Raw Data</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRawData(!showRawData)}
+                  >
+                    <Code className="w-4 h-4 mr-2" />
+                    {showRawData ? "Hide" : "Show"} Data
+                    {showRawData ? (
+                      <ChevronUp className="w-4 h-4 ml-2" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 ml-2" />
+                    )}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-gray-600 mb-3">
+                  Raw BigCommerce API response from your last sync. This data shows the exact structure and values returned from BigCommerce.
+                </div>
+                {showRawData && (
+                  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg max-h-96 overflow-auto">
+                    <pre className="text-xs whitespace-pre-wrap">
+                      {JSON.stringify((settings as any).rawSyncData, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Instructions */}
           <Card className="mt-6">

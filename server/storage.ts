@@ -29,6 +29,7 @@ export interface IStorage {
   getApiSettings(userId: string): Promise<ApiSettings | undefined>;
   saveApiSettings(userId: string, settings: InsertApiSettings): Promise<ApiSettings>;
   updateApiSettingsLastSync(userId: string, lastSyncAt: Date): Promise<void>;
+  saveRawSyncData(userId: string, rawData: any): Promise<void>;
   
   // Products
   getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }>;
@@ -222,6 +223,16 @@ export class DbStorage implements IStorage {
     await this.db
       .update(apiSettings)
       .set({ lastSyncAt })
+      .where(eq(apiSettings.companyId, user.companyId));
+  }
+
+  async saveRawSyncData(userId: string, rawData: any): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user?.companyId) return;
+    
+    await this.db
+      .update(apiSettings)
+      .set({ rawSyncData: rawData })
       .where(eq(apiSettings.companyId, user.companyId));
   }
 

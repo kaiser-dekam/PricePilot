@@ -68,6 +68,7 @@ export const apiSettings = pgTable("api_settings", {
   showStockStatus: boolean("show_stock_status").default(false),
   showInvisibleProducts: boolean("show_invisible_products").default(false),
   lastSyncAt: timestamp("last_sync_at"),
+  rawSyncData: json("raw_sync_data"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
