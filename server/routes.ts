@@ -250,16 +250,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`Page ${page}: Got ${pageProducts.length} products and ${pageVariants.length} variants from API`);
           
-          // Send raw data for debugging on first page
-          if (page === 1) {
-            const sampleData = {
-              page: page,
-              totalProducts: pageProducts.length,
-              totalVariants: pageVariants.length,
-              sampleProducts: pageProducts.slice(0, 2), // Show first 2 products
-              sampleVariants: pageVariants.slice(0, 2)  // Show first 2 variants
-            };
-            sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page})`, sampleData);
+          // Send raw data for debugging if available
+          if (productsResponse.rawData) {
+            sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page})`, productsResponse.rawData);
           }
           
           // Only add products up to the limit

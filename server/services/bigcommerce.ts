@@ -70,7 +70,7 @@ export class BigCommerceService {
     }
   }
 
-  async getProducts(page = 1, limit = 50): Promise<{ products: BigCommerceProductType[]; total: number; variants: any[] }> {
+  async getProducts(page = 1, limit = 50): Promise<{ products: BigCommerceProductType[]; total: number; variants: any[]; rawData?: any }> {
     try {
       console.log(`Fetching products from BigCommerce (page: ${page}, limit: ${limit})`);
       console.log('🔍 DEBUG: getProducts method called');
@@ -252,10 +252,23 @@ export class BigCommerceService {
         }
       }
 
+      // Prepare raw data for debugging (only on first page to avoid large payloads)
+      const rawData = page === 1 ? {
+        page: page,
+        totalProducts: products.length,
+        totalVariants: variants.length,
+        sampleProducts: productsResponse.data.data.slice(0, 2), // First 2 raw products from API
+        sampleVariants: variants.slice(0, 2), // First 2 processed variants
+        categoriesCount: categoriesResponse.data.data.length,
+        sampleCategories: categoriesResponse.data.data.slice(0, 5), // First 5 categories
+        product407Found: productsResponse.data.data.find((p: any) => p.id === 407) ? true : false
+      } : undefined;
+
       return {
         products,
         variants,
         total: productsResponse.data.meta.pagination.total,
+        rawData
       };
     } catch (error: any) {
       console.error('Error fetching products from BigCommerce:', error);
