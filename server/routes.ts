@@ -334,7 +334,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user was limited
       const isLimited = allProducts.length >= productLimit;
 
-      console.log(`Fetching complete. Got ${allProducts.length} products and ${allVariants.length} variants for user ${userId} (limit: ${productLimit}, plan: ${subscriptionPlan})`);
+      console.log(`🎯 CRITICAL DEBUG: Fetching complete. Got ${allProducts.length} products and ${allVariants.length} variants for user ${userId} (limit: ${productLimit}, plan: ${subscriptionPlan})`);
+      console.log(`🎯 FIRST 3 PRODUCTS:`, allProducts.slice(0, 3).map(p => ({ id: p.id, name: p.name })));
+      console.log(`🎯 LAST 3 PRODUCTS:`, allProducts.slice(-3).map(p => ({ id: p.id, name: p.name })));
       
       if (allProducts.length === 0) {
         sendProgress('completed', 100, 100, 'No products found to sync');
