@@ -73,9 +73,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Settings API - Has rawSyncData:', !!(settings && settings.rawSyncData));
       if (settings && settings.rawSyncData) {
         console.log('Settings API - Raw data keys:', Object.keys(settings.rawSyncData));
+        console.log('Settings API - Raw data sample:', JSON.stringify(settings.rawSyncData).substring(0, 200));
       }
       
-      res.json(settings || null);
+      const response = settings || null;
+      console.log('Settings API - Response has rawSyncData:', !!(response && response.rawSyncData));
+      
+      res.json(response);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
