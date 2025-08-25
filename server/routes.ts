@@ -268,9 +268,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Send raw data for debugging if available and save it
           if (productsResponse.rawData) {
-            sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page})`, productsResponse.rawData);
-            // Save raw data to database for later viewing in settings
-            await storage.saveRawSyncData(userId, productsResponse.rawData);
+            try {
+              // Sanitize raw data to prevent JSON parsing errors
+              const sanitizedRawData = JSON.parse(JSON.stringify(productsResponse.rawData).replace(/[\u0000-\u0019]+/g, ''));
+              sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page})`, sanitizedRawData);
+              // Save raw data to database for later viewing in settings
+              await storage.saveRawSyncData(userId, sanitizedRawData);
+            } catch (rawDataError) {
+              console.error('Error processing raw data:', rawDataError);
+              sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page}) - sanitization failed`);
+            }
           }
           
           // Only add products up to the limit
@@ -330,6 +337,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
       }
+
+      console.log(`🔍 LOOP EXIT: hasMorePages=${hasMorePages}, allProducts.length=${allProducts.length}, productLimit=${productLimit}`);
 
       // Check if user was limited
       const isLimited = allProducts.length >= productLimit;
