@@ -62,6 +62,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to check user data  
+  app.get('/api/debug/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      res.json({
+        userId: req.user.uid,
+        companyId: user?.companyId,
+        company: user?.company,
+        productLimit: user?.company?.productLimit || 'UNDEFINED',
+        subscriptionPlan: user?.company?.subscriptionPlan || 'UNDEFINED',
+        hasCompany: !!user?.company
+      });
+    } catch (error) {
+      console.error('Debug user error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // API Settings routes
   app.get("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
