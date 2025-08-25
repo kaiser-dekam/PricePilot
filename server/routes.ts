@@ -356,7 +356,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
 
-      // Store products in database
+      // Store products in database  
+      console.log(`🟢 BEFORE LOOP: About to process ${allProducts.length} products`);
       console.log(`🚀 SYNC: Starting to store ${allProducts.length} products`);
       for (let i = 0; i < allProducts.length; i++) {
         // Check if sync was cancelled
