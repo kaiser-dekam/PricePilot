@@ -198,6 +198,16 @@ export class DbStorage implements IStorage {
     if (!user?.companyId) return undefined;
     
     const result = await this.db.select().from(apiSettings).where(eq(apiSettings.companyId, user.companyId)).limit(1);
+    
+    // Debug logging
+    console.log('Storage getApiSettings - User ID:', userId);
+    console.log('Storage getApiSettings - Company ID:', user.companyId);
+    console.log('Storage getApiSettings - Found result:', !!result[0]);
+    if (result[0]) {
+      console.log('Storage getApiSettings - Has rawSyncData:', !!result[0].rawSyncData);
+      console.log('Storage getApiSettings - rawSyncData type:', typeof result[0].rawSyncData);
+    }
+    
     return result[0];
   }
 

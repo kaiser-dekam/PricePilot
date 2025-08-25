@@ -66,6 +66,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.uid;
       const settings = await storage.getApiSettings(userId);
+      
+      // Debug logging
+      console.log('Settings API - User ID:', userId);
+      console.log('Settings API - Settings found:', !!settings);
+      console.log('Settings API - Has rawSyncData:', !!(settings && settings.rawSyncData));
+      if (settings && settings.rawSyncData) {
+        console.log('Settings API - Raw data keys:', Object.keys(settings.rawSyncData));
+      }
+      
       res.json(settings || null);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
