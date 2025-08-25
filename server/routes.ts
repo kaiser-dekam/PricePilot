@@ -354,54 +354,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      console.log(`🚨 BEFORE STORAGE PREP: About to call sendProgress for database storage`);
-      sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
-      console.log(`🚨 AFTER STORAGE PREP: sendProgress completed successfully`);
-
-      console.log(`🔥 CHECKPOINT 1: After sendProgress, about to store products`);
+      sendProgress('processing', 40, 100, 'Storing products in database...');
       
-      // Store products in database  
-      console.log(`🟢 BEFORE LOOP: About to process ${allProducts.length} products`);
-      console.log(`🚀 SYNC: Starting to store ${allProducts.length} products`);
+      // Store products directly - no loops, no complications
+      console.log(`💾 DIRECT STORAGE: Storing ${allProducts.length} products directly`);
       
-      console.log(`🔥 CHECKPOINT 2: About to enter for loop with ${allProducts.length} products`);
-      for (let i = 0; i < allProducts.length; i++) {
-        // Check if sync was cancelled
-        if (controller.signal.aborted) {
-          console.log('Sync cancelled during product storage phase');
-          activeSyncs.delete(userId);
-          return;
-        }
-        
-        const product = allProducts[i];
-        console.log(`🔍 SYNC: Processing product ${i+1}/${allProducts.length}: ID=${product.id}, Name=${product.name}`);
-        
+      let storedCount = 0;
+      for (const product of allProducts) {
         try {
-          // Use the UPSERT logic in createProduct 
           await storage.createProduct(userId, {
-            id: product.id,
+            id: product.id.toString(),
             name: product.name,
             sku: product.sku || '',
             description: product.description || '',
             category: product.category || null,
-            regularPrice: product.regularPrice || '0',
-            salePrice: product.salePrice || null,
+            regularPrice: product.regularPrice?.toString() || '0',
+            salePrice: product.salePrice?.toString() || null,
             stock: product.stock || 0,
-            weight: product.weight || '0',
+            weight: product.weight?.toString() || '0',
             status: product.status || 'draft',
           });
+          storedCount++;
           
-          // Update progress
-          const processProgress = 50 + Math.round(((i + 1) / allProducts.length) * 25);
-          sendProgress('processing', processProgress, 100, `Processed ${i + 1}/${allProducts.length} products`);
-          
-        } catch (productError) {
-          console.error(`Error storing product ${product.id}:`, productError);
-          console.error('Product data that failed:', JSON.stringify(product, null, 2));
+          // Update progress every 10 products
+          if (storedCount % 10 === 0) {
+            const progress = 40 + Math.round((storedCount / allProducts.length) * 35);
+            sendProgress('processing', progress, 100, `Stored ${storedCount}/${allProducts.length} products`);
+          }
+        } catch (error) {
+          console.error(`Failed to store product ${product.id}:`, error);
         }
       }
       
-      console.log(`🔥 CHECKPOINT 3: Finished processing all ${allProducts.length} products`);
+      console.log(`💾 STORAGE COMPLETE: Successfully stored ${storedCount}/${allProducts.length} products`);
 
       sendProgress('processing', 75, 100, `Storing ${allVariants.length} product variants...`);
 
