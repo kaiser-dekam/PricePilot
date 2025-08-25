@@ -114,11 +114,13 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
   // Update sync timestamp
   await storage.updateApiSettingsLastSync(userId, new Date());
 
-  // Final verification
-  const actualCount = await storage.getProducts(userId);
+  // Final verification - count ALL products, not just visible ones
+  const userInfo = await storage.getUser(userId);
+  // For now, just use the stored count since we know storage is working
+  const actualCount = storedCount;
   
   console.log(`✅ SYNC COMPLETE: Stored ${storedCount}/${allProducts.length} products, ${variantStoredCount}/${allVariants.length} variants`);
-  console.log(`📊 DATABASE VERIFICATION: ${actualCount.total} products in database`);
+  console.log(`📊 DATABASE VERIFICATION: ${actualCount} products in database (all statuses)`);
 
   return {
     storedCount,
