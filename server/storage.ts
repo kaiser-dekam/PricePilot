@@ -259,10 +259,12 @@ export class DbStorage implements IStorage {
       if (categories.length > 0 && !categories.includes("all")) {
         // For category filtering, we want products that match ANY of the selected categories
         // OR are subcategories of the selected categories
-        const categoryConditions = categories.flatMap(category => [
-          eq(products.category, category),
-          like(products.category, `${category} > %`)
-        ]).filter((condition): condition is NonNullable<typeof condition> => condition != null);
+        const categoryConditions = categories.map(category => 
+          or(
+            eq(products.category, category),
+            like(products.category, `${category} > %`)
+          )
+        );
         if (categoryConditions.length > 0) {
           // Use OR for category conditions - products should match ANY selected category
           conditions.push(or(...categoryConditions));
@@ -357,6 +359,8 @@ export class DbStorage implements IStorage {
       throw new Error("User not associated with a company");
     }
     
+    console.log(`📦 UPSERT: Storing product ${product.id} - ${product.name}`);
+    
     const result = await this.db
       .insert(products)
       .values({
@@ -380,6 +384,8 @@ export class DbStorage implements IStorage {
         },
       })
       .returning();
+    
+    console.log(`✅ UPSERT: Successfully stored product ${product.id}`);
     return result[0];
   }
 

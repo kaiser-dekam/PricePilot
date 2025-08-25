@@ -971,7 +971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Update company to reflect the cancellation pending status - only update supported fields
-          await storage.updateCompanySubscription(user.companyId!, {
+          await storage.updateCompanySubscription(user.companyId || '', {
             subscriptionPlan: company.subscriptionPlan, // Keep current plan until cancellation is effective
             productLimit: company.productLimit || 5
           });
