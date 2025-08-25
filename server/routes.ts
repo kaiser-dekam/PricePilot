@@ -8,6 +8,7 @@ import { scheduler } from "./services/scheduler";
 import { isAuthenticated } from "./firebaseAuth";
 import { sendInvitationEmail } from "./services/email";
 import Stripe from "stripe";
+import { performSync } from './sync';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -163,335 +164,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/sync", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.uid;
+    
+    // Check if already syncing
+    if (activeSyncs.has(userId)) {
+      return res.status(409).json({ message: "Sync already in progress" });
+    }
+
+    // Setup streaming response
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    const controller = new AbortController();
+    activeSyncs.set(userId, { controller, response: res });
+
+    const sendProgress = (stage: string, current: number, total: number, message: string) => {
+      const progress = { stage, current, total, percentage: Math.round((current / total) * 100), message };
+      res.write(`data: ${JSON.stringify(progress)}\n\n`);
+    };
+
     try {
-      const userId = req.user.uid;
+      // Use the clean sync function
+      const result = await performSync(userId, sendProgress);
       
-      // Check if there's already an active sync for this user
-      if (activeSyncs.has(userId)) {
-        return res.status(409).json({ message: "Sync already in progress. Please cancel the current sync first." });
-      }
-      
-      // Create abort controller for this sync
-      const controller = new AbortController();
-      
-      const apiSettings = await storage.getApiSettings(userId);
-      if (!apiSettings) {
-        return res.status(400).json({ message: "API settings not configured" });
-      }
-
-      // Get user's company to check product limit
-      const user = await storage.getUser(userId);
-      if (!user || !user.company) {
-        return res.status(400).json({ message: "User company information not found" });
-      }
-
-      const productLimit = user.company.productLimit || 5; // Default to 5 if null
-      const subscriptionPlan = user.company.subscriptionPlan || 'trial';
-
-      console.log(`User ${userId} has ${subscriptionPlan} plan with limit of ${productLimit} products`);
-
-      const bigcommerce = new BigCommerceService(apiSettings);
-      
-      // Send initial progress using Server-Sent Events
-      res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control'
-      });
-      
-      // Register this sync as active
-      activeSyncs.set(userId, { controller, response: res });
-      
-      const sendProgress = (stage: string, current: number, total: number, message?: string, rawData?: any) => {
-        const progress = {
-          stage,
-          current,
-          total,
-          percentage: Math.round((current / total) * 100),
-          message,
-          ...(rawData && { rawData })
-        };
+      // Send final result
+      const message = result.isLimited 
+        ? `Synced ${result.storedCount} products (limited by ${result.subscriptionPlan} plan)`
+        : `Successfully synced ${result.storedCount} products`;
         
-        try {
-          const jsonString = JSON.stringify(progress);
-          res.write(`data: ${jsonString}\n\n`);
-        } catch (error) {
-          console.error('Error serializing progress data:', error);
-          // Send progress without raw data if serialization fails
-          const safeProgress = {
-            stage,
-            current,
-            total,
-            percentage: Math.round((current / total) * 100),
-            message: message + ' (raw data omitted due to serialization error)'
-          };
-          res.write(`data: ${JSON.stringify(safeProgress)}\n\n`);
-        }
-      };
+      const warning = result.isLimited 
+        ? `Your ${result.subscriptionPlan} plan allows ${result.productLimit} products. You have ${result.totalAvailable} available. Upgrade to sync more.`
+        : null;
 
-      // Start sync process
-      sendProgress('fetching', 0, 100, 'Starting product sync...');
-      
-      // Fetch all products by paginating through all pages
-      let allProducts: any[] = [];
-      let page = 1;
-      let hasMorePages = true;
-      
-      // Get total count first for accurate progress
-      const totalAvailable = await bigcommerce.getProductCount();
-      const effectiveLimit = Math.min(productLimit, totalAvailable);
-      
-      sendProgress('fetching', 10, 100, `Found ${totalAvailable} products in BigCommerce`);
-      
-      let allVariants: any[] = [];
-
-      while (hasMorePages && allProducts.length < productLimit) {
-        // Check if sync was cancelled
-        if (controller.signal.aborted) {
-          console.log('Sync cancelled during fetch phase');
-          activeSyncs.delete(userId);
-          return;
-        }
-        
-        console.log(`Fetching page ${page} of products (current count: ${allProducts.length}/${productLimit})...`);
-        console.log('🚀 About to call bigcommerce.getProducts()');
-        
-        try {
-          const productsResponse = await bigcommerce.getProducts(page, 50);
-          console.log('✅ getProducts() returned successfully');
-          const pageProducts = Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [];
-          const pageVariants = productsResponse.variants || [];
-          
-          console.log(`Page ${page}: Got ${pageProducts.length} products and ${pageVariants.length} variants from API`);
-          
-          // Send raw data for debugging if available and save it
-          if (productsResponse.rawData) {
-            try {
-              // Sanitize raw data to prevent JSON parsing errors
-              const sanitizedRawData = JSON.parse(JSON.stringify(productsResponse.rawData).replace(/[\u0000-\u0019]+/g, ''));
-              sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page})`, sanitizedRawData);
-              // Save raw data to database for later viewing in settings
-              await storage.saveRawSyncData(userId, sanitizedRawData);
-            } catch (rawDataError) {
-              console.error('Error processing raw data:', rawDataError);
-              sendProgress('fetching', 15, 100, `Captured raw data from BigCommerce (page ${page}) - sanitization failed`);
-            }
-          }
-          
-          // Only add products up to the limit
-          const remainingSlots = productLimit - allProducts.length;
-          const productsToAdd = pageProducts.slice(0, remainingSlots);
-          allProducts.push(...productsToAdd);
-          
-          // Add corresponding variants
-          const addedProductIds = new Set(productsToAdd.map(p => p.id));
-          const correspondingVariants = pageVariants.filter((v: any) => addedProductIds.has(v.productId));
-          allVariants.push(...correspondingVariants);
-          
-          console.log(`Added ${productsToAdd.length} products and ${correspondingVariants.length} variants. Total: ${allProducts.length} products, ${allVariants.length} variants`);
-          
-          // Update fetching progress
-          const fetchProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
-          sendProgress('fetching', fetchProgress, 100, `Fetched ${allProducts.length}/${effectiveLimit} products with variants`);
-          
-          // Check if there are more pages and we haven't hit our limit
-          const total = productsResponse.total || 0;
-          const currentCount = page * 50;
-          hasMorePages = currentCount < total && allProducts.length < productLimit;
-          
-          console.log(`Pagination check: currentCount=${currentCount}, total=${total}, hasMorePages=${hasMorePages}, allProducts.length=${allProducts.length}, productLimit=${productLimit}`);
-          
-          page++;
-          
-          // Stop if we got no products from this page
-          if (pageProducts.length === 0) {
-            console.log(`No products returned from page ${page - 1}, stopping pagination`);
-            break;
-          }
-          
-        } catch (error: any) {
-          console.error(`Error fetching page ${page}:`, error);
-          
-          // Check if it's a rate limit or timeout error
-          if (error.response?.status === 429) {
-            console.log(`Rate limited on page ${page}, waiting 2 seconds before retrying...`);
-            const currentProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
-            sendProgress('fetching', currentProgress, 100, `Rate limited, waiting before retry...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            page--; // Retry the same page
-            continue;
-          }
-          
-          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            console.log(`Timeout on page ${page}, retrying once...`);
-            const currentProgress = 10 + Math.round((allProducts.length / effectiveLimit) * 30);
-            sendProgress('fetching', currentProgress, 100, `Request timeout, retrying...`);
-            page--; // Retry the same page
-            continue;
-          }
-          
-          console.error(`Fatal error on page ${page}, stopping sync:`, error.message);
-          sendProgress('error', 10, 100, `Error fetching products: ${error.message}`);
-          break;
-        }
-      }
-
-      console.log(`🔍 LOOP EXIT: hasMorePages=${hasMorePages}, allProducts.length=${allProducts.length}, productLimit=${productLimit}`);
-
-      // Check if user was limited
-      const isLimited = allProducts.length >= productLimit;
-
-      console.log(`🎯 CRITICAL DEBUG: Fetching complete. Got ${allProducts.length} products and ${allVariants.length} variants for user ${userId} (limit: ${productLimit}, plan: ${subscriptionPlan})`);
-      console.log(`🎯 FIRST 3 PRODUCTS:`, allProducts.slice(0, 3).map(p => ({ id: p.id, name: p.name })));
-      console.log(`🎯 LAST 3 PRODUCTS:`, allProducts.slice(-3).map(p => ({ id: p.id, name: p.name })));
-      
-      if (allProducts.length === 0) {
-        sendProgress('completed', 100, 100, 'No products found to sync');
-        res.write(`data: ${JSON.stringify({ stage: 'completed', current: 100, total: 100, percentage: 100, message: 'Sync completed - no products found' })}\n\n`);
-        res.end();
-        return;
-      }
-
-      sendProgress('processing', 40, 100, 'Storing products in database...');
-      
-      // Store products directly - no loops, no complications
-      console.log(`💾 DIRECT STORAGE: Storing ${allProducts.length} products directly`);
-      
-      let storedCount = 0;
-      for (const product of allProducts) {
-        try {
-          await storage.createProduct(userId, {
-            id: product.id.toString(),
-            name: product.name,
-            sku: product.sku || '',
-            description: product.description || '',
-            category: product.category || null,
-            regularPrice: product.regularPrice?.toString() || '0',
-            salePrice: product.salePrice?.toString() || null,
-            stock: product.stock || 0,
-            weight: product.weight?.toString() || '0',
-            status: product.status || 'draft',
-          });
-          storedCount++;
-          
-          // Update progress every 10 products
-          if (storedCount % 10 === 0) {
-            const progress = 40 + Math.round((storedCount / allProducts.length) * 35);
-            sendProgress('processing', progress, 100, `Stored ${storedCount}/${allProducts.length} products`);
-          }
-        } catch (error) {
-          console.error(`Failed to store product ${product.id}:`, error);
-        }
-      }
-      
-      console.log(`💾 STORAGE COMPLETE: Successfully stored ${storedCount}/${allProducts.length} products`);
-
-      sendProgress('processing', 75, 100, `Storing ${allVariants.length} product variants...`);
-
-      // Store all variants in database
-      for (let i = 0; i < allVariants.length; i++) {
-        // Check if sync was cancelled
-        if (controller.signal.aborted) {
-          console.log('Sync cancelled during variant storage phase');
-          activeSyncs.delete(userId);
-          return;
-        }
-        
-        const variant = allVariants[i];
-        
-        try {
-          // Use the UPSERT logic in createProductVariant
-          await storage.createProductVariant(userId, {
-            id: variant.id,
-            productId: variant.productId,
-            variantSku: variant.variantSku,
-            regularPrice: variant.regularPrice,
-            salePrice: variant.salePrice,
-            stock: variant.stock,
-            optionValues: variant.optionValues,
-          });
-          
-          // Update progress for variants
-          if (i % 10 === 0 || i === allVariants.length - 1) {
-            const variantProgress = 75 + Math.round(((i + 1) / allVariants.length) * 15);
-            sendProgress('processing', variantProgress, 100, `Stored ${i + 1}/${allVariants.length} variants`);
-          }
-          
-        } catch (variantError) {
-          console.error(`Error storing variant ${variant.id}:`, variantError);
-          console.error('Variant data that failed:', JSON.stringify(variant, null, 2));
-        }
-      }
-
-      console.log(`🎯 ACTUAL STORAGE: Attempted to store ${allProducts.length} products, checking database...`);
-      
-      // Verify what was actually stored in database
-      const actualStoredCount = await storage.getProducts(userId, { page: 1, limit: 1000 });
-      console.log(`🎯 DATABASE REALITY: ${actualStoredCount.products.length} products actually in database`);
-      
-      if (actualStoredCount.products.length !== allProducts.length) {
-        console.error(`🚨 STORAGE MISMATCH: Expected ${allProducts.length}, got ${actualStoredCount.products.length}`);
-      }
-
-      sendProgress('processing', 90, 100, 'Finalizing database updates...');
-
-      // Update lastSyncAt in API settings
-      await storage.updateApiSettingsLastSync(userId, new Date());
-      
-      sendProgress('completing', 95, 100, 'Finalizing sync...');
-
-      // Create appropriate response message
-      let message = `Successfully synced ${allProducts.length} products`;
-      let warning = null;
-
-      if (isLimited && totalAvailable > productLimit) {
-        message = `Synced ${allProducts.length} products (limited by ${subscriptionPlan} plan)`;
-        warning = `Your ${subscriptionPlan} plan allows up to ${productLimit} products. You have ${totalAvailable} products in your BigCommerce store. Upgrade your plan to sync more products.`;
-      }
-
-      // Send final progress
       sendProgress('complete', 100, 100, message);
       
-      // End the stream with the final result
-      try {
-        const result = {
-          message,
-          warning,
-          count: allProducts.length,
-          totalAvailable,
-          productLimit,
-          subscriptionPlan,
-          isLimited
-        };
-        res.write(`result: ${JSON.stringify(result).replace(/[\u0000-\u0019]+/g, '')}\n\n`);
-      } catch (jsonError) {
-        console.error('JSON stringify error:', jsonError);
-        res.write(`result: ${JSON.stringify({ message: "Sync completed", count: allProducts.length })}\n\n`);
-      }
+      const finalResult = {
+        message,
+        warning,
+        count: result.storedCount,
+        totalAvailable: result.totalAvailable,
+        productLimit: result.productLimit,
+        subscriptionPlan: result.subscriptionPlan,
+        isLimited: result.isLimited,
+        errors: result.errorCount
+      };
       
+      res.write(`result: ${JSON.stringify(finalResult)}\n\n`);
       res.end();
-      
-      // Clean up active sync
-      activeSyncs.delete(req.user.uid);
-      
+
     } catch (error: any) {
-      console.error("Error in /api/sync:", error);
-      
-      // Clean up active sync on error
-      activeSyncs.delete(req.user.uid);
-      
-      try {
-        res.write(`error: ${JSON.stringify({ message: error.message })}\n\n`);
-        res.end();
-      } catch (writeError) {
-        // Response may already be closed
-        console.error("Error writing to response:", writeError);
-      }
+      console.error("❌ SYNC ERROR:", error);
+      res.write(`error: ${JSON.stringify({ message: error.message })}\n\n`);
+      res.end();
     } finally {
-      // Ensure cleanup happens
-      activeSyncs.delete(req.user.uid);
+      activeSyncs.delete(userId);
     }
   });
 
