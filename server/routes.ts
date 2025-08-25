@@ -356,9 +356,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
 
+      console.log(`🔥 CHECKPOINT 1: After sendProgress, about to store products`);
+      
       // Store products in database  
       console.log(`🟢 BEFORE LOOP: About to process ${allProducts.length} products`);
       console.log(`🚀 SYNC: Starting to store ${allProducts.length} products`);
+      
+      console.log(`🔥 CHECKPOINT 2: About to enter for loop with ${allProducts.length} products`);
       for (let i = 0; i < allProducts.length; i++) {
         // Check if sync was cancelled
         if (controller.signal.aborted) {
@@ -394,6 +398,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Product data that failed:', JSON.stringify(product, null, 2));
         }
       }
+      
+      console.log(`🔥 CHECKPOINT 3: Finished processing all ${allProducts.length} products`);
 
       sendProgress('processing', 75, 100, `Storing ${allVariants.length} product variants...`);
 
