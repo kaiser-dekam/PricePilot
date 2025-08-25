@@ -377,6 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
         } catch (productError) {
           console.error(`Error storing product ${product.id}:`, productError);
+          console.error('Product data that failed:', JSON.stringify(product, null, 2));
         }
       }
 
@@ -413,6 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
         } catch (variantError) {
           console.error(`Error storing variant ${variant.id}:`, variantError);
+          console.error('Variant data that failed:', JSON.stringify(variant, null, 2));
         }
       }
 
