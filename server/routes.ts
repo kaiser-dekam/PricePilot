@@ -345,11 +345,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
 
-      // Clear existing products for this user before syncing new ones
-      await storage.clearUserProducts(userId);
-      
-      sendProgress('processing', 50, 100, 'Cleared existing products');
-
       // Store products in database
       for (let i = 0; i < allProducts.length; i++) {
         // Check if sync was cancelled
@@ -362,36 +357,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const product = allProducts[i];
         
         try {
-          // Use upsert logic to either create or update existing products
-          const existingProduct = await storage.getProduct(userId, product.id);
-          if (existingProduct) {
-            // Update existing product
-            await storage.updateProduct(userId, product.id, {
-              name: product.name,
-              sku: product.sku || '',
-              description: product.description || '',
-              category: product.category || null,
-              regularPrice: product.regularPrice || '0',
-              salePrice: product.salePrice || null,
-              stock: product.stock || 0,
-              weight: product.weight || '0',
-              status: product.status || 'draft',
-            });
-          } else {
-            // Create new product
-            await storage.createProduct(userId, {
-              id: product.id,
-              name: product.name,
-              sku: product.sku || '',
-              description: product.description || '',
-              category: product.category || null,
-              regularPrice: product.regularPrice || '0',
-              salePrice: product.salePrice || null,
-              stock: product.stock || 0,
-              weight: product.weight || '0',
-              status: product.status || 'draft',
-            });
-          }
+          // Use the UPSERT logic in createProduct 
+          await storage.createProduct(userId, {
+            id: product.id,
+            name: product.name,
+            sku: product.sku || '',
+            description: product.description || '',
+            category: product.category || null,
+            regularPrice: product.regularPrice || '0',
+            salePrice: product.salePrice || null,
+            stock: product.stock || 0,
+            weight: product.weight || '0',
+            status: product.status || 'draft',
+          });
           
           // Update progress
           const processProgress = 50 + Math.round(((i + 1) / allProducts.length) * 25);
@@ -416,29 +394,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const variant = allVariants[i];
         
         try {
-          // Use upsert logic for variants too
-          const existingVariant = await storage.getProductVariant(userId, variant.id);
-          if (existingVariant) {
-            // Update existing variant
-            await storage.updateProductVariant(userId, variant.id, {
-              variantSku: variant.variantSku,
-              regularPrice: variant.regularPrice,
-              salePrice: variant.salePrice,
-              stock: variant.stock,
-              optionValues: variant.optionValues,
-            });
-          } else {
-            // Create new variant
-            await storage.createProductVariant(userId, {
-              id: variant.id,
-              productId: variant.productId,
-              variantSku: variant.variantSku,
-              regularPrice: variant.regularPrice,
-              salePrice: variant.salePrice,
-              stock: variant.stock,
-              optionValues: variant.optionValues,
-            });
-          }
+          // Use the UPSERT logic in createProductVariant
+          await storage.createProductVariant(userId, {
+            id: variant.id,
+            productId: variant.productId,
+            variantSku: variant.variantSku,
+            regularPrice: variant.regularPrice,
+            salePrice: variant.salePrice,
+            stock: variant.stock,
+            optionValues: variant.optionValues,
+          });
           
           // Update progress for variants
           if (i % 10 === 0 || i === allVariants.length - 1) {
