@@ -346,6 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
 
       // Store products in database
+      console.log(`🚀 SYNC: Starting to store ${allProducts.length} products`);
       for (let i = 0; i < allProducts.length; i++) {
         // Check if sync was cancelled
         if (controller.signal.aborted) {
@@ -355,6 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const product = allProducts[i];
+        console.log(`🔍 SYNC: Processing product ${i+1}/${allProducts.length}: ID=${product.id}, Name=${product.name}`);
         
         try {
           // Use the UPSERT logic in createProduct 
@@ -440,15 +442,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sendProgress('complete', 100, 100, message);
       
       // End the stream with the final result
-      res.write(`result: ${JSON.stringify({ 
-        message,
-        warning,
-        count: allProducts.length,
-        totalAvailable,
-        productLimit,
-        subscriptionPlan,
-        isLimited
-      })}\n\n`);
+      try {
+        const result = {
+          message,
+          warning,
+          count: allProducts.length,
+          totalAvailable,
+          productLimit,
+          subscriptionPlan,
+          isLimited
+        };
+        res.write(`result: ${JSON.stringify(result).replace(/[\u0000-\u0019]+/g, '')}\n\n`);
+      } catch (jsonError) {
+        console.error('JSON stringify error:', jsonError);
+        res.write(`result: ${JSON.stringify({ message: "Sync completed", count: allProducts.length })}\n\n`);
+      }
       
       res.end();
       
