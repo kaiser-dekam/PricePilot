@@ -18,9 +18,6 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
   const productLimit = user.company.productLimit || 5;
   const subscriptionPlan = user.company.subscriptionPlan || 'trial';
   
-  console.log(`🔍 LIMIT DEBUG: User ${userId}`);
-  console.log(`🔍 LIMIT DEBUG: Company:`, JSON.stringify(user.company, null, 2));
-  console.log(`🔍 LIMIT DEBUG: productLimit = ${productLimit}, subscriptionPlan = ${subscriptionPlan}`);
 
   console.log(`📋 Plan: ${subscriptionPlan}, Limit: ${productLimit}`);
 
@@ -63,13 +60,9 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
   console.log(`🎯 FETCH COMPLETE: ${allProducts.length} products from ${page} pages`);
 
   // Apply subscription limits
-  console.log(`🚨 CRITICAL: allProducts.length=${allProducts.length}, productLimit=${productLimit}, subscriptionPlan=${subscriptionPlan}`);
   const isLimited = allProducts.length > productLimit;
   if (isLimited) {
     allProducts = allProducts.slice(0, productLimit);
-    console.log(`⚠️ LIMITED: Reduced to ${productLimit} products`);
-  } else {
-    console.log(`✅ NO LIMIT: ${allProducts.length} products < ${productLimit} limit`);
   }
 
   // Store products

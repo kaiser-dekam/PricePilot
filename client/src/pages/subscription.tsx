@@ -191,7 +191,11 @@ export default function Subscription() {
 
             if (data?.checkoutUrl) {
               console.log("Redirecting to:", data.checkoutUrl);
-              window.location.href = data.checkoutUrl;
+              // Try window.open first, then fallback to direct redirect
+              const newWindow = window.open(data.checkoutUrl, '_self');
+              if (!newWindow) {
+                window.location.href = data.checkoutUrl;
+              }
             } else {
               console.error("No checkout URL in parsed data:", data);
               toast({

@@ -111,12 +111,6 @@ export class DbStorage implements IStorage {
       role: user.role
     });
     
-    console.log('🔍 COMPANY DEBUG:', {
-      hasCompany: !!user.company,
-      productLimit: user.company?.productLimit,
-      subscriptionPlan: user.company?.subscriptionPlan,
-      companyId: user.company?.id
-    });
     
     return user;
   }
