@@ -431,7 +431,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log(`Successfully stored ${allProducts.length} products and ${allVariants.length} variants`);
+      console.log(`🎯 ACTUAL STORAGE: Attempted to store ${allProducts.length} products, checking database...`);
+      
+      // Verify what was actually stored in database
+      const actualStoredCount = await storage.getProducts(userId, { page: 1, limit: 1000 });
+      console.log(`🎯 DATABASE REALITY: ${actualStoredCount.products.length} products actually in database`);
+      
+      if (actualStoredCount.products.length !== allProducts.length) {
+        console.error(`🚨 STORAGE MISMATCH: Expected ${allProducts.length}, got ${actualStoredCount.products.length}`);
+      }
 
       sendProgress('processing', 90, 100, 'Finalizing database updates...');
 

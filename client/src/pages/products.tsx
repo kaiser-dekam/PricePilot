@@ -118,10 +118,11 @@ export default function Products() {
           
           for (const line of lines) {
             if (line.startsWith('data: ')) {
-              const progressData = JSON.parse(line.slice(6));
-              setSyncProgress({
-                stage: progressData.stage,
-                percentage: progressData.percentage,
+              try {
+                const progressData = JSON.parse(line.slice(6));
+                setSyncProgress({
+                  stage: progressData.stage,
+                  percentage: progressData.percentage,
                 message: progressData.message || '',
                 isActive: progressData.stage !== 'complete' && progressData.stage !== 'cancelled'
               });
@@ -135,11 +136,24 @@ export default function Products() {
               if (progressData.stage === 'cancelled') {
                 break;
               }
+              } catch (parseError) {
+                console.error('Failed to parse progress data:', line, parseError);
+                // Continue processing other lines
+              }
             } else if (line.startsWith('result: ')) {
-              result = JSON.parse(line.slice(8));
+              try {
+                result = JSON.parse(line.slice(8));
+              } catch (parseError) {
+                console.error('Failed to parse result:', line, parseError);
+              }
             } else if (line.startsWith('error: ')) {
-              const errorData = JSON.parse(line.slice(7));
-              throw new Error(errorData.message);
+              try {
+                const errorData = JSON.parse(line.slice(7));
+                throw new Error(errorData.message);
+              } catch (parseError) {
+                console.error('Failed to parse error:', line, parseError);
+                throw new Error('Unknown sync error occurred');
+              }
             }
           }
         }
