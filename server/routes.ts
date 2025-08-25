@@ -354,7 +354,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      console.log(`🚨 BEFORE STORAGE PREP: About to call sendProgress for database storage`);
       sendProgress('processing', 40, 100, 'Preparing to sync products to database...');
+      console.log(`🚨 AFTER STORAGE PREP: sendProgress completed successfully`);
 
       console.log(`🔥 CHECKPOINT 1: After sendProgress, about to store products`);
       
