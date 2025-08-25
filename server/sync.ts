@@ -17,6 +17,10 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
 
   const productLimit = user.company.productLimit || 5;
   const subscriptionPlan = user.company.subscriptionPlan || 'trial';
+  
+  console.log(`🔍 LIMIT DEBUG: User ${userId}`);
+  console.log(`🔍 LIMIT DEBUG: Company:`, JSON.stringify(user.company, null, 2));
+  console.log(`🔍 LIMIT DEBUG: productLimit = ${productLimit}, subscriptionPlan = ${subscriptionPlan}`);
 
   console.log(`📋 Plan: ${subscriptionPlan}, Limit: ${productLimit}`);
 
