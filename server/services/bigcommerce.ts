@@ -252,12 +252,12 @@ export class BigCommerceService {
         }
       }
 
-      // Prepare safe raw data for debugging (only on first page to avoid large payloads)
+      // Prepare comprehensive raw data for debugging (only on first page to avoid large payloads)
       const rawData = page === 1 ? {
         page: page,
         totalProducts: products.length,
         totalVariants: variants.length,
-        sampleProducts: productsResponse.data.data.slice(0, 2).map((p: any) => ({
+        allProducts: productsResponse.data.data.map((p: any) => ({
           id: p.id,
           name: p.name,
           sku: p.sku,
@@ -265,15 +265,28 @@ export class BigCommerceService {
           price: p.price,
           sale_price: p.sale_price,
           inventory_level: p.inventory_level,
-          is_visible: p.is_visible
+          is_visible: p.is_visible,
+          weight: p.weight,
+          description: p.description ? p.description.substring(0, 100) + '...' : ''
         })),
-        sampleVariants: variants.slice(0, 2),
-        categoriesCount: categoriesResponse.data.data.length,
-        sampleCategories: categoriesResponse.data.data.slice(0, 5).map((cat: any) => ({
+        allVariants: variants.map((v: any) => ({
+          id: v.id,
+          productId: v.productId,
+          variantSku: v.variantSku,
+          regularPrice: v.regularPrice,
+          salePrice: v.salePrice,
+          stock: v.stock,
+          optionValues: v.optionValues
+        })),
+        allCategories: categoriesResponse.data.data.map((cat: any) => ({
           id: cat.id,
           name: cat.name,
           parent_id: cat.parent_id
         })),
+        apiResponseMeta: {
+          productsPagination: productsResponse.data.meta,
+          categoriesTotal: categoriesResponse.data.data.length
+        },
         product407Found: productsResponse.data.data.find((p: any) => p.id === 407) ? true : false
       } : undefined;
 
