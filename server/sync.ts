@@ -71,9 +71,14 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
   let storedCount = 0;
   let errorCount = 0;
   
-  for (const product of allProducts) {
+  console.log(`🔄 STARTING STORAGE: Processing ${allProducts.length} products`);
+  
+  for (let i = 0; i < allProducts.length; i++) {
+    const product = allProducts[i];
     try {
-      await storage.createProduct(userId, {
+      console.log(`📦 STORING [${i+1}/${allProducts.length}]: Product ${product.id} - ${product.name}`);
+      
+      const result = await storage.createProduct(userId, {
         id: product.id.toString(),
         name: product.name,
         sku: product.sku || '',
@@ -85,18 +90,30 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
         weight: product.weight?.toString() || '0',
         status: product.status || 'draft',
       });
+      
       storedCount++;
+      console.log(`✅ SUCCESS [${i+1}/${allProducts.length}]: Stored product ${product.id}`);
+      
     } catch (error) {
-      console.error(`❌ Failed to store product ${product.id}:`, error);
+      console.error(`❌ ERROR [${i+1}/${allProducts.length}]: Failed to store product ${product.id}:`, error);
+      console.error(`❌ PRODUCT DATA:`, JSON.stringify({
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        category: product.category,
+        status: product.status
+      }, null, 2));
       errorCount++;
     }
     
     // Progress update every 10 products
     if ((storedCount + errorCount) % 10 === 0) {
       const progress = 50 + Math.round(((storedCount + errorCount) / allProducts.length) * 30);
-      sendProgress('processing', progress, 100, `Stored ${storedCount}/${allProducts.length} products`);
+      sendProgress('processing', progress, 100, `Stored ${storedCount}/${allProducts.length} products (${errorCount} errors)`);
     }
   }
+  
+  console.log(`📊 STORAGE SUMMARY: ${storedCount} success, ${errorCount} errors out of ${allProducts.length} total`);
 
   // Store variants
   sendProgress('processing', 80, 100, `Storing ${allVariants.length} variants...`);
