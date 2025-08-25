@@ -63,10 +63,13 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
   console.log(`🎯 FETCH COMPLETE: ${allProducts.length} products from ${page} pages`);
 
   // Apply subscription limits
+  console.log(`🚨 CRITICAL: allProducts.length=${allProducts.length}, productLimit=${productLimit}, subscriptionPlan=${subscriptionPlan}`);
   const isLimited = allProducts.length > productLimit;
   if (isLimited) {
     allProducts = allProducts.slice(0, productLimit);
     console.log(`⚠️ LIMITED: Reduced to ${productLimit} products`);
+  } else {
+    console.log(`✅ NO LIMIT: ${allProducts.length} products < ${productLimit} limit`);
   }
 
   // Store products
