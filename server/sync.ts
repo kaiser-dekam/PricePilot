@@ -91,8 +91,15 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
         status: product.status || 'draft',
       });
       
-      storedCount++;
-      console.log(`✅ SUCCESS [${i+1}/${allProducts.length}]: Stored product ${product.id}`);
+      // VERIFY it actually got stored
+      const verification = await storage.getProduct(userId, product.id.toString());
+      if (verification) {
+        storedCount++;
+        console.log(`✅ VERIFIED [${i+1}/${allProducts.length}]: Product ${product.id} successfully stored`);
+      } else {
+        console.error(`❌ PHANTOM [${i+1}/${allProducts.length}]: Product ${product.id} - createProduct succeeded but not in database!`);
+        errorCount++;
+      }
       
     } catch (error) {
       console.error(`❌ ERROR [${i+1}/${allProducts.length}]: Failed to store product ${product.id}:`, error);
