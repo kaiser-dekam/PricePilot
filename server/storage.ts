@@ -707,6 +707,17 @@ export class DbStorage implements IStorage {
     const result = await this.db.insert(productVariants).values({
       ...variant,
       companyId: user.companyId,
+    }).onConflictDoUpdate({
+      target: productVariants.id,
+      set: {
+        productId: variant.productId,
+        variantSku: variant.variantSku,
+        regularPrice: variant.regularPrice,
+        salePrice: variant.salePrice,
+        stock: variant.stock,
+        optionValues: variant.optionValues,
+        lastUpdated: new Date(),
+      },
     }).returning();
     
     return result[0];
