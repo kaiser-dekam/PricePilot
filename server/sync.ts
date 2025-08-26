@@ -78,8 +78,11 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
     try {
       console.log(`📦 STORING [${i+1}/${allProducts.length}]: Product ${product.id} - ${product.name}`);
       
+      // Create unique product ID by combining company and BigCommerce product ID
+      const uniqueProductId = `${user.companyId}_${product.id}`;
+      
       const result = await storage.createProduct(userId, {
-        id: product.id.toString(),
+        id: uniqueProductId,
         name: product.name,
         sku: product.sku || '',
         description: product.description || '',
@@ -92,7 +95,7 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
       });
       
       // VERIFY it actually got stored
-      const verification = await storage.getProduct(userId, product.id.toString());
+      const verification = await storage.getProduct(userId, uniqueProductId);
       if (verification) {
         storedCount++;
         console.log(`✅ VERIFIED [${i+1}/${allProducts.length}]: Product ${product.id} successfully stored`);
@@ -128,7 +131,15 @@ export async function performSync(userId: string, sendProgress: (stage: string, 
   let variantStoredCount = 0;
   for (const variant of allVariants) {
     try {
-      await storage.createProductVariant(userId, variant);
+      // Create unique variant ID and reference unique product ID  
+      const uniqueVariantId = `${user.companyId}_${variant.id}`;
+      const uniqueProductId = `${user.companyId}_${variant.productId}`;
+      
+      await storage.createProductVariant(userId, {
+        ...variant,
+        id: uniqueVariantId,
+        productId: uniqueProductId,
+      });
       variantStoredCount++;
     } catch (error) {
       console.error(`❌ Failed to store variant ${variant.id}:`, error);
