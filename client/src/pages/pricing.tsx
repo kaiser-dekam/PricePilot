@@ -16,7 +16,7 @@ export default function Pricing({}: PricingProps) {
     {
       name: 'Trial',
       price: 0,
-      period: '14-day free trial',
+      period: 'FREE during Labor Day Sale',
       description: 'Perfect for testing our platform with a small product catalog',
       icon: <Zap className="h-6 w-6 text-green-600" />,
       features: [
@@ -31,14 +31,14 @@ export default function Pricing({}: PricingProps) {
         'No team collaboration',
         'Limited to 25 products',
       ],
-      buttonText: 'Start for Free',
+      buttonText: 'Get Free Access',
       buttonStyle: 'outline',
       popular: false,
     },
     {
       name: 'Starter',
-      price: 5,
-      period: 'per month',
+      price: 0,
+      period: 'FREE during Labor Day Sale',
       description: 'Ideal for small businesses ready to automate their pricing',
       icon: <Star className="h-6 w-6 text-blue-600" />,
       features: [
@@ -51,14 +51,14 @@ export default function Pricing({}: PricingProps) {
         'Priority email support',
       ],
       limitations: [],
-      buttonText: 'Choose Starter',
+      buttonText: 'Get Free Access',
       buttonStyle: 'default',
       popular: true,
     },
     {
       name: 'Premium',
-      price: 10,
-      period: 'per month',
+      price: 0,
+      period: 'FREE during Labor Day Sale',
       description: 'Complete solution for growing businesses with advanced needs',
       icon: <Crown className="h-6 w-6 text-purple-600" />,
       features: [
@@ -73,7 +73,7 @@ export default function Pricing({}: PricingProps) {
         'Custom integrations',
       ],
       limitations: [],
-      buttonText: 'Choose Premium',
+      buttonText: 'Get Free Access',
       buttonStyle: 'default',
       popular: false,
     },
@@ -103,12 +103,18 @@ export default function Pricing({}: PricingProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-16">
+            {/* Labor Day Sale Banner */}
+            <div className="bg-gradient-to-r from-red-600 to-blue-600 text-white py-3 px-6 rounded-lg mb-8 max-w-2xl mx-auto">
+              <h2 className="text-lg font-bold mb-1">🎉 Labor Day Sale!</h2>
+              <p className="text-sm">All plans are completely FREE until September 8th. No credit card required!</p>
+            </div>
+            
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Simple, Transparent Pricing
+              Labor Day Special - Everything Free!
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Choose the plan that fits your business size. Start with our free trial, 
-              then scale as you grow. No hidden fees, cancel anytime.
+              Get full access to all plans at zero cost during our Labor Day Sale. 
+              Choose any tier and start managing your BigCommerce products today!
             </p>
           </div>
 

@@ -36,9 +36,9 @@ export default function Landing() {
               />
             </div>
             
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-red-600 to-blue-600 text-white text-sm font-bold mb-6">
               <Star className="w-4 h-4" />
-              Navigate your catalog with confidence
+              🎉 Labor Day Sale - All Plans FREE Until Sept 8!
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
@@ -59,7 +59,7 @@ export default function Landing() {
             </div>
             
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Trial Plan Available • No credit card required
+              🎉 Labor Day Special: All plans completely FREE until September 8th • No credit card required
             </p>
           </div>
 
@@ -248,19 +248,19 @@ export default function Landing() {
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Ready to take control of your catalog?
+            🎉 Labor Day Sale - Everything Free!
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            Get started today for free with our trial plan.
+            Get full access to all features at zero cost until September 8th!
           </p>
           <Link href="/login">
-            <button className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-primary to-blue-600 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              Start for Free
+            <button className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-red-600 to-blue-600 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              Get Free Access
               <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-            Free trial plan available · No credit card required · Cancel anytime
+            All plans FREE during Labor Day Sale · No credit card required · Sale ends September 8th
           </p>
         </div>
       </section>

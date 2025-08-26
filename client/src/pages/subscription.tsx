@@ -19,7 +19,7 @@ const PLANS = [
   {
     name: "Trial",
     price: "$0",
-    period: "forever",
+    period: "FREE during Labor Day Sale",
     description: "Perfect for getting started",
     productLimit: 5,
     features: [
@@ -33,8 +33,8 @@ const PLANS = [
   },
   {
     name: "Starter",
-    price: "$5",
-    period: "per month",
+    price: "$0",
+    period: "FREE during Labor Day Sale",
     description: "Great for small businesses",
     productLimit: 100,
     features: [
@@ -48,8 +48,8 @@ const PLANS = [
   },
   {
     name: "Premium",
-    price: "$10",
-    period: "per month",
+    price: "$0",
+    period: "FREE during Labor Day Sale",
     description: "Best for growing businesses",
     productLimit: 1000,
     features: [
@@ -229,13 +229,18 @@ export default function Subscription() {
     <div className="h-full overflow-y-auto">
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto">
+          {/* Labor Day Sale Banner */}
+          <div className="bg-gradient-to-r from-red-600 to-blue-600 text-white py-4 px-6 rounded-lg mb-8 text-center">
+            <h2 className="text-xl font-bold mb-1">🎉 Labor Day Sale!</h2>
+            <p className="text-sm">All subscription plans are completely FREE until September 8th. Upgrade now at zero cost!</p>
+          </div>
+          
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Choose Your Plan
+              Labor Day Special - All Plans FREE!
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Scale your BigCommerce management with plans designed for
-              businesses of all sizes
+              Get full access to any plan at zero cost until September 8th. No credit card required!
             </p>
           </div>
 
