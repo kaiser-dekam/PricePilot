@@ -538,13 +538,32 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getProductPriceHistory(userId: string, productId: string): Promise<PriceHistory[]> {
+  async getProductPriceHistory(userId: string, productId: string): Promise<Array<PriceHistory & { changedByUser?: { email: string; firstName?: string; lastName?: string } }>> {
     const user = await this.getUser(userId);
     if (!user?.companyId) return [];
     
     const result = await this.db
-      .select()
+      .select({
+        id: priceHistory.id,
+        productId: priceHistory.productId,
+        variantId: priceHistory.variantId,
+        companyId: priceHistory.companyId,
+        oldRegularPrice: priceHistory.oldRegularPrice,
+        newRegularPrice: priceHistory.newRegularPrice,
+        oldSalePrice: priceHistory.oldSalePrice,
+        newSalePrice: priceHistory.newSalePrice,
+        changeType: priceHistory.changeType,
+        workOrderId: priceHistory.workOrderId,
+        changedBy: priceHistory.changedBy,
+        createdAt: priceHistory.createdAt,
+        changedByUser: {
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        }
+      })
       .from(priceHistory)
+      .leftJoin(users, eq(priceHistory.changedBy, users.id))
       .where(and(eq(priceHistory.companyId, user.companyId), eq(priceHistory.productId, productId)))
       .orderBy(desc(priceHistory.createdAt));
     return result;

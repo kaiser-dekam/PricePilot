@@ -421,14 +421,23 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                 {priceHistory.map((entry) => (
                   <div key={entry.id} className="border rounded-lg p-3 bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge 
-                        variant={entry.changeType === 'manual' ? 'default' : entry.changeType === 'work_order' ? 'secondary' : 'outline'}
-                        className="text-xs"
-                      >
-                        {entry.changeType === 'manual' ? 'Manual Update' : 
-                         entry.changeType === 'work_order' ? 'Work Order' : 
-                         'System Sync'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={entry.changeType === 'manual' ? 'default' : entry.changeType === 'work_order' ? 'secondary' : 'outline'}
+                          className="text-xs"
+                        >
+                          {entry.changeType === 'manual' ? 'Manual Update' : 
+                           entry.changeType === 'work_order' ? 'Work Order' : 
+                           'System Sync'}
+                        </Badge>
+                        {(entry as any).changedByUser && (
+                          <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            by {(entry as any).changedByUser.firstName && (entry as any).changedByUser.lastName 
+                              ? `${(entry as any).changedByUser.firstName} ${(entry as any).changedByUser.lastName}` 
+                              : (entry as any).changedByUser.email}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-500">
                         {format(new Date(entry.createdAt!), 'MMM d, h:mm a')}
                       </span>

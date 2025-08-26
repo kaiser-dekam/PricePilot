@@ -38,7 +38,7 @@ export default function Landing() {
             
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-red-600 to-blue-600 text-white text-sm font-bold mb-6">
               <Star className="w-4 h-4" />
-              🎉 Labor Day Sale - All Plans FREE Until Sept 8!
+              🎉 Labor Day Sale - Premium Plan is FREE. Ends Sept 8!
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
@@ -59,7 +59,7 @@ export default function Landing() {
             </div>
             
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              🎉 Labor Day Special: All plans completely FREE until September 8th • No credit card required
+              🎉 Labor Day Special: Grab a premium plan for FREE. Deal ends September 8th • No credit card required
             </p>
           </div>
 
