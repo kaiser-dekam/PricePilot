@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { X, History, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { X, History, Clock, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,6 +131,12 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
     enabled: !!product?.id && isOpen,
   });
 
+  // Fetch API settings to get store hash for BigCommerce URL
+  const { data: apiSettings } = useQuery({
+    queryKey: ["/api/settings"],
+    enabled: isOpen,
+  });
+
   const updateMutation = useMutation({
     mutationFn: (data: { regularPrice?: string; salePrice?: string }) =>
       apiRequest("PUT", `/api/products/${product?.id}`, data),
@@ -254,6 +260,35 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
     }
 
     updateVariantMutation.mutate({ variantId: variant.id, data: filteredUpdates });
+  };
+
+  // Get BigCommerce product ID from our internal ID format
+  const getBigCommerceProductId = (productId: string) => {
+    // Product IDs are in format: companyId_bigCommerceProductId
+    const parts = productId.split('_');
+    return parts.length > 1 ? parts[1] : null;
+  };
+
+  // Construct BigCommerce store product URL
+  const getBigCommerceStoreUrl = () => {
+    const storeHash = (apiSettings as any)?.storeHash;
+    if (!storeHash || !product?.id) return null;
+    const productId = getBigCommerceProductId(product.id);
+    if (!productId) return null;
+    return `https://${storeHash}.mybigcommerce.com/product/${productId}`;
+  };
+
+  const handleViewOnStore = () => {
+    const storeUrl = getBigCommerceStoreUrl();
+    if (storeUrl) {
+      window.open(storeUrl, '_blank');
+    } else {
+      toast({
+        title: "Unable to open store",
+        description: "Store URL could not be constructed",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!product) return null;
@@ -395,6 +430,21 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                 </Badge>
               </div>
             </div>
+            
+            {/* View on Store Button */}
+            {(apiSettings as any)?.storeHash && getBigCommerceProductId(product.id) && (
+              <div className="mt-4">
+                <Button
+                  onClick={handleViewOnStore}
+                  variant="outline"
+                  className="w-full"
+                  data-testid="button-view-on-store"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View on BigCommerce Store
+                </Button>
+              </div>
+            )}
           </div>
 
           <Separator className="my-6" />
