@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { X, History, Clock, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { X, History, Clock, ChevronDown, ChevronRight, ExternalLink, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -269,25 +269,56 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
     return parts.length > 1 ? parts[1] : null;
   };
 
-  // Construct BigCommerce store product URL
-  const getBigCommerceStoreUrl = () => {
+  // Generate BigCommerce store URLs
+  const getBigCommerceUrls = () => {
     const storeHash = (apiSettings as any)?.storeHash;
     if (!storeHash || !product?.id) return null;
     const productId = getBigCommerceProductId(product.id);
     if (!productId) return null;
-    return `https://${storeHash}.mybigcommerce.com/product/${productId}`;
+    
+    // Create a simple slug from product name for SEO URLs
+    const productSlug = product.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim();
+    
+    return {
+      // Try the most common SEO format first
+      seoUrl: `https://${storeHash}.mybigcommerce.com/${productSlug}`,
+      // Fallback to add-to-cart URL which always works
+      addToCartUrl: `https://${storeHash}.mybigcommerce.com/cart.php?action=add&product_id=${productId}`,
+      // Alternative SEO format
+      altSeoUrl: `https://${storeHash}.mybigcommerce.com/products/${productSlug}`
+    };
   };
 
   const handleViewOnStore = () => {
-    const storeUrl = getBigCommerceStoreUrl();
-    if (storeUrl) {
-      window.open(storeUrl, '_blank');
+    const urls = getBigCommerceUrls();
+    if (urls) {
+      // Try opening the SEO-friendly URL first
+      // If it doesn't work, the user can manually try the add-to-cart URL
+      window.open(urls.seoUrl, '_blank');
+      
+      // Show a toast with alternative options
+      toast({
+        title: "Product page opened",
+        description: "If the page doesn't load correctly, try the direct add-to-cart option from the button menu",
+      });
     } else {
       toast({
         title: "Unable to open store",
         description: "Store URL could not be constructed",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleAddToCart = () => {
+    const urls = getBigCommerceUrls();
+    if (urls) {
+      window.open(urls.addToCartUrl, '_blank');
     }
   };
 
@@ -431,9 +462,9 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
               </div>
             </div>
             
-            {/* View on Store Button */}
+            {/* Store Actions */}
             {(apiSettings as any)?.storeHash && getBigCommerceProductId(product.id) && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-2">
                 <Button
                   onClick={handleViewOnStore}
                   variant="outline"
@@ -441,7 +472,17 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                   data-testid="button-view-on-store"
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  View on BigCommerce Store
+                  View Product Page
+                </Button>
+                <Button
+                  onClick={handleAddToCart}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  data-testid="button-add-to-cart"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Add to Cart (Direct)
                 </Button>
               </div>
             )}
