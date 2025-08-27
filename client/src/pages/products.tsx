@@ -381,15 +381,6 @@ export default function Products() {
                 >
                   Clear Filters
                 </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLocation("/category-demo")}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  Compare Category Selectors
-                </Button>
               </div>
               
               <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-600">
