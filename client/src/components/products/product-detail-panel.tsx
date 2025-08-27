@@ -387,9 +387,10 @@ export default function ProductDetailPanel({ product, isOpen, onClose }: Product
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-4">
-                  <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {product.description}
-                  </div>
+                  <div 
+                    className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
                 </CollapsibleContent>
               </Collapsible>
             </div>
