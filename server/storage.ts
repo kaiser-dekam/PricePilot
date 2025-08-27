@@ -291,13 +291,13 @@ export class DbStorage implements IStorage {
         // Products on sale have a sale price that's different from regular price
         conditions.push(and(
           isNotNull(products.salePrice),
-          ne(products.salePrice, products.price)
+          ne(products.salePrice, products.regularPrice)
         ));
       } else if (filters.saleStatus === "not_on_sale") {
         // Products not on sale either have no sale price or sale price equals regular price
         conditions.push(or(
           isNull(products.salePrice),
-          eq(products.salePrice, products.price)
+          eq(products.salePrice, products.regularPrice)
         ));
       }
     }
