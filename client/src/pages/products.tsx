@@ -256,22 +256,30 @@ export default function Products() {
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
             </div>
             
-            <div className="flex space-x-2">
-              <Button
-                onClick={handleSync}
-                disabled={syncMutation.isPending || syncProgress.isActive}
-                variant={isApiConnected ? "default" : "outline"}
-                className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${(syncMutation.isPending || syncProgress.isActive) ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">{syncMutation.isPending || syncProgress.isActive ? "Syncing..." : "Sync"}</span>
-              </Button>
+            <div className="flex flex-col space-y-2">
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handleSync}
+                  disabled={syncMutation.isPending || syncProgress.isActive}
+                  variant={isApiConnected ? "default" : "outline"}
+                  className={isApiConnected ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${(syncMutation.isPending || syncProgress.isActive) ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">{syncMutation.isPending || syncProgress.isActive ? "Syncing..." : "Sync"}</span>
+                </Button>
+                
+                <Button onClick={() => setLocation('/work-orders/create')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Create Work Order</span>
+                  <span className="sm:hidden">Create</span>
+                </Button>
+              </div>
               
-              <Button onClick={() => setLocation('/work-orders/create')}>
-                <Plus className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Create Work Order</span>
-                <span className="sm:hidden">Create</span>
-              </Button>
+              {(apiSettings as any)?.lastSyncAt && (
+                <div className="text-xs text-gray-500 text-center sm:text-left">
+                  Last Sync'd: {new Date((apiSettings as any).lastSyncAt).toLocaleString()}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -407,11 +415,6 @@ export default function Products() {
                   <span>{total}</span>
                   <span>products found</span>
                 </div>
-                {(apiSettings as any)?.lastSyncAt && (
-                  <div className="text-xs text-gray-500">
-                    Last Sync'd: {new Date((apiSettings as any).lastSyncAt).toLocaleString()}
-                  </div>
-                )}
               </div>
             </div>
           </div>
