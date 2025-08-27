@@ -289,16 +289,22 @@ export class DbStorage implements IStorage {
     if (filters?.saleStatus && filters.saleStatus !== "all") {
       if (filters.saleStatus === "on_sale") {
         // Products on sale have a sale price that's different from regular price
-        conditions.push(and(
+        const saleCondition = and(
           isNotNull(products.salePrice),
           ne(products.salePrice, products.regularPrice)
-        ));
+        );
+        if (saleCondition) {
+          conditions.push(saleCondition);
+        }
       } else if (filters.saleStatus === "not_on_sale") {
         // Products not on sale either have no sale price or sale price equals regular price
-        conditions.push(or(
+        const notOnSaleCondition = or(
           isNull(products.salePrice),
           eq(products.salePrice, products.regularPrice)
-        ));
+        );
+        if (notOnSaleCondition) {
+          conditions.push(notOnSaleCondition);
+        }
       }
     }
     
