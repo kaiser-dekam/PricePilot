@@ -98,13 +98,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const { category, search, page = "1", limit = "20", sync = "false" } = req.query;
+      const { category, search, saleStatus, page = "1", limit = "20", sync = "false" } = req.query;
       
       // Note: Sync functionality moved to dedicated POST /api/sync endpoint
 
       const filters = {
         category: category as string,
         search: search as string,
+        saleStatus: saleStatus as string,
         page: parseInt(page as string),
         limit: parseInt(limit as string),
       };

@@ -12,7 +12,7 @@ import {
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, ilike, and, desc, count, or, like } from "drizzle-orm";
+import { eq, ilike, and, desc, count, or, like, isNotNull, isNull, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -32,7 +32,7 @@ export interface IStorage {
   saveRawSyncData(userId: string, rawData: any): Promise<void>;
   
   // Products
-  getProducts(userId: string, filters?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }>;
+  getProducts(userId: string, filters?: { category?: string; search?: string; saleStatus?: string; page?: number; limit?: number }): Promise<{ products: Product[]; total: number }>;
   getAllCategories(userId: string): Promise<string[]>;
   getProduct(userId: string, id: string): Promise<Product | undefined>;
   createProduct(userId: string, product: InsertProduct & { id: string }): Promise<Product>;
@@ -238,7 +238,7 @@ export class DbStorage implements IStorage {
   }
 
   // Products
-  async getProducts(userId: string, filters?: { category?: string | string[]; search?: string; page?: number; limit?: number }): Promise<{ products: (Product & { variants?: ProductVariant[] })[]; total: number }> {
+  async getProducts(userId: string, filters?: { category?: string | string[]; search?: string; saleStatus?: string; page?: number; limit?: number }): Promise<{ products: (Product & { variants?: ProductVariant[] })[]; total: number }> {
     const user = await this.getUser(userId);
     if (!user?.companyId) {
       return { products: [], total: 0 };
@@ -282,6 +282,23 @@ export class DbStorage implements IStorage {
       );
       if (searchCondition) {
         conditions.push(searchCondition);
+      }
+    }
+    
+    // Handle sale status filtering
+    if (filters?.saleStatus && filters.saleStatus !== "all") {
+      if (filters.saleStatus === "on_sale") {
+        // Products on sale have a sale price that's different from regular price
+        conditions.push(and(
+          isNotNull(products.salePrice),
+          ne(products.salePrice, products.price)
+        ));
+      } else if (filters.saleStatus === "not_on_sale") {
+        // Products not on sale either have no sale price or sale price equals regular price
+        conditions.push(or(
+          isNull(products.salePrice),
+          eq(products.salePrice, products.price)
+        ));
       }
     }
     
